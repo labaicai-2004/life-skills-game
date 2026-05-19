@@ -993,7 +993,7 @@ function buildScene(levelId, step) {
         <div class="drop-zone" style="left:28%;bottom:18%;width:70px;height:70px;transform:translateX(-50%);"></div>
         <div class="drop-zone-label" style="left:28%;">👈 刷左边</div>
       </div>
-      <div style="position:absolute;bottom:5%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(180,130)}</div>`;
+      <div style="position:absolute;bottom:5%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(260,190)}</div>`;
       guide = arrowHTML('updown', '44%', '22%', '拖拽牙刷到左边上下刷');
     } else if (sid===5) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
@@ -1001,7 +1001,7 @@ function buildScene(levelId, step) {
         <div class="drop-zone" style="left:72%;bottom:18%;width:70px;height:70px;transform:translateX(-50%);"></div>
         <div class="drop-zone-label" style="left:72%;">👉 刷右边</div>
       </div>
-      <div style="position:absolute;bottom:5%;left:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(180,130)}</div>`;
+      <div style="position:absolute;bottom:5%;left:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(260,190)}</div>`;
       guide = arrowHTML('updown', '44%', '58%', '拖拽牙刷到右边上下刷');
     } else if (sid===6) {
       objects = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;">${svgCup()}</div>`;
