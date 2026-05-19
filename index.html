@@ -990,19 +990,19 @@ function buildScene(levelId, step) {
     } else if (sid===4) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
         <img src="brush-boy.png?v=1" width="240" height="280" class="char-photo" draggable="false" style="object-fit:cover;border-radius:18px;border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="刷牙">
-        <div class="drop-zone" style="left:50%;bottom:18%;width:130px;height:70px;transform:translateX(-50%);"></div>
-        <div class="drop-zone-label">👄 刷这里</div>
+        <div class="drop-zone" style="left:28%;bottom:18%;width:70px;height:70px;transform:translateX(-50%);"></div>
+        <div class="drop-zone-label" style="left:28%;">👈 刷左边</div>
       </div>
       <div style="position:absolute;bottom:5%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(180,130)}</div>`;
-      guide = arrowHTML('updown', '44%', '22%', '拖拽牙刷到嘴边上下刷');
+      guide = arrowHTML('updown', '44%', '22%', '拖拽牙刷到左边上下刷');
     } else if (sid===5) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
         <img src="brush-boy.png?v=1" width="240" height="280" class="char-photo" draggable="false" style="object-fit:cover;border-radius:18px;border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="刷牙">
-        <div class="drop-zone" style="left:50%;bottom:18%;width:130px;height:70px;transform:translateX(-50%);"></div>
-        <div class="drop-zone-label">👄 刷这里</div>
+        <div class="drop-zone" style="left:72%;bottom:18%;width:70px;height:70px;transform:translateX(-50%);"></div>
+        <div class="drop-zone-label" style="left:72%;">👉 刷右边</div>
       </div>
       <div style="position:absolute;bottom:5%;left:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(180,130)}</div>`;
-      guide = arrowHTML('updown', '44%', '58%', '拖拽牙刷到嘴边上下刷');
+      guide = arrowHTML('updown', '44%', '58%', '拖拽牙刷到右边上下刷');
     } else if (sid===6) {
       objects = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;">${svgCup()}</div>`;
       guide = arrowHTML(arrow, '50%', '40%', '点击水杯');
