@@ -216,6 +216,62 @@ html, body {
   inset: -6px; border-width: 3px;
 }
 
+/* ===== PARENT RECORDS PANEL ===== */
+.parent-entry {
+  position: absolute; bottom: 24px; right: 28px; z-index: 10;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(255,255,255,0.85); border: 2px solid rgba(139,115,85,0.2);
+  font-size: 22px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.parent-entry:active { transform: scale(0.9); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+.records-overlay {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.45); opacity: 0; pointer-events: none; transition: opacity 0.35s;
+}
+.records-overlay.active { opacity: 1; pointer-events: auto; }
+.records-panel {
+  background: #FFFFFF; border-radius: var(--radius);
+  padding: 36px 30px 24px; text-align: center;
+  box-shadow: var(--shadow-lg); animation: slideInUp 0.45s ease;
+  max-width: 400px; width: 90%;
+}
+.records-title {
+  font-size: 22px; font-weight: 800; color: var(--text);
+  margin-bottom: 6px;
+}
+.records-hint {
+  font-size: 13px; color: var(--text-light); margin-bottom: 20px;
+}
+.level-record {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; margin-bottom: 10px;
+  background: #FFFAF5; border-radius: 16px;
+  text-align: left;
+}
+.level-record .rec-icon { font-size: 36px; flex-shrink: 0; }
+.level-record .rec-info { flex: 1; }
+.level-record .rec-name { font-size: 17px; font-weight: 700; color: var(--text); }
+.level-record .rec-detail { font-size: 13px; color: var(--text-light); margin-top: 2px; }
+.level-record .rec-count {
+  font-size: 28px; font-weight: 800; color: var(--primary);
+  flex-shrink: 0; min-width: 36px; text-align: center;
+}
+.record-empty {
+  padding: 24px; color: var(--text-light); font-size: 15px;
+}
+.records-btns { display: flex; gap: 10px; margin-top: 18px; justify-content: center; }
+.records-btn {
+  padding: 12px 28px; border-radius: 50px; border: none;
+  font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.12s;
+}
+.records-btn:active { transform: scale(0.94); }
+.records-btn.close { background: var(--primary); color: white; box-shadow: 0 4px 14px rgba(255,140,66,0.3); }
+.records-btn.clear { background: #F5F0EB; color: var(--text-light); }
+
 /* ===== ANIMATIONS ===== */
 @keyframes bounce {
   0%,100% { transform:translateY(0); }
@@ -357,6 +413,7 @@ html, body {
       <div class="card-title">穿衣</div><div class="card-hint">学习自己穿衣</div>
     </div>
   </div>
+  <div class="parent-entry" onclick="showRecords()" title="学习记录">📋</div>
 </div>
 
 <!-- ===== GAME SCREEN ===== -->
@@ -373,6 +430,19 @@ html, body {
   </div>
   <div class="interaction-area" id="interaction-area">
     <div class="scene" id="scene"></div>
+  </div>
+</div>
+
+<!-- ===== PARENT RECORDS PANEL ===== -->
+<div class="records-overlay" id="records-overlay" onclick="if(event.target===this)hideRecords()">
+  <div class="records-panel">
+    <div class="records-title">📋 学习记录</div>
+    <div class="records-hint">孩子每次完成关卡都会自动记录</div>
+    <div id="records-list"></div>
+    <div class="records-btns">
+      <button class="records-btn clear" onclick="clearRecords()">清空记录</button>
+      <button class="records-btn close" onclick="hideRecords()">关闭</button>
+    </div>
   </div>
 </div>
 
@@ -1125,6 +1195,7 @@ function handleStepWrong(area) {
 
 function handleLevelComplete() {
   const level=LEVELS[state.currentLevel]; playCelebrationSound();
+  saveRecord(level.id, level.name, level.icon);
   document.getElementById('celebration-title').textContent=`${level.icon} ${level.name}完成啦！`;
   document.getElementById('celebration-sub').textContent='你真的太厉害了！';
   document.getElementById('celebration').classList.add('active');
@@ -1163,6 +1234,65 @@ function spawnConfetti() {
       document.body.appendChild(el); setTimeout(()=>el.remove(),3500);
     }, i*25);
   }
+}
+
+/* ================================================================
+   LEARNING RECORDS (localStorage)
+   ================================================================ */
+const RECORDS_KEY = 'life-skills-records';
+
+function getRecords() {
+  try {
+    const raw = localStorage.getItem(RECORDS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+
+function saveRecord(levelId, levelName, levelIcon) {
+  const records = getRecords();
+  if (!records[levelId]) {
+    records[levelId] = { name: levelName, icon: levelIcon, count: 0, lastDate: null };
+  }
+  records[levelId].count += 1;
+  records[levelId].lastDate = new Date().toLocaleDateString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit' });
+  try { localStorage.setItem(RECORDS_KEY, JSON.stringify(records)); } catch(e) {}
+}
+
+function clearRecords() {
+  try { localStorage.removeItem(RECORDS_KEY); } catch(e) {}
+  renderRecordsList();
+}
+
+function showRecords() {
+  renderRecordsList();
+  document.getElementById('records-overlay').classList.add('active');
+}
+
+function hideRecords() {
+  document.getElementById('records-overlay').classList.remove('active');
+}
+
+function renderRecordsList() {
+  const records = getRecords();
+  const ids = Object.keys(records);
+  const list = document.getElementById('records-list');
+
+  if (ids.length === 0) {
+    list.innerHTML = '<div class="record-empty">还没有学习记录<br>完成关卡后会自动出现在这里</div>';
+    return;
+  }
+
+  list.innerHTML = ids.map(id => {
+    const r = records[id];
+    return `<div class="level-record">
+      <span class="rec-icon">${r.icon}</span>
+      <div class="rec-info">
+        <div class="rec-name">${r.name}</div>
+        <div class="rec-detail">最近完成：${r.lastDate || '—'}</div>
+      </div>
+      <div class="rec-count">${r.count}</div>
+    </div>`;
+  }).join('');
 }
 
 // Init
