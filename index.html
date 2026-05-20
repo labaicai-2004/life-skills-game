@@ -984,9 +984,10 @@ function buildScene(levelId, step) {
       objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;">${sinkFaucetImg()}</div>`;
       guide = arrowHTML(arrow, '50%', '35%', '点击牙刷');
     } else if (sid===2) {
-      objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;align-items:center;gap:40px;">
-      ${svgToothpaste()}${svgToothbrush(550,400)}</div>`;
-      guide = arrowHTML(arrow, '14%', '20%', '向下滑动挤牙膏');
+      objects = `<div style="position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;">
+      <img src="toothpaste.png?v=2" width="110" height="260" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;margin-bottom:-25px;" alt="牙膏">
+      ${svgToothbrush(520,360)}</div>`;
+      guide = arrowHTML(arrow, '12%', '20%', '向下滑动挤牙膏');
     } else if (sid===4) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
         <img src="brush-boy.png?v=1" width="240" height="280" class="char-photo" draggable="false" style="object-fit:cover;border-radius:18px;border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="刷牙">
