@@ -986,7 +986,7 @@ function buildScene(levelId, step) {
     } else if (sid===2) {
       objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;">
       <div style="width:480px;height:160px;transform:rotate(-90deg);filter:drop-shadow(0 12px 36px rgba(0,0,0,0.4));margin-bottom:-45px;"><img src="toothpaste.png?v=4" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;-webkit-touch-callout:none;" alt="牙膏"></div>
-      <div style="transform:rotate(-90deg);">${svgToothbrush(380,250)}</div></div>`;
+      <div style="width:380px;height:250px;transform:rotate(-90deg);filter:drop-shadow(0 12px 36px rgba(0,0,0,0.4));"><img src="toothbrush.png?v=4" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;-webkit-touch-callout:none;" alt="牙刷"></div></div>`;
       guide = arrowHTML(arrow, '12%', '20%', '向下滑动挤牙膏');
     } else if (sid===4) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
