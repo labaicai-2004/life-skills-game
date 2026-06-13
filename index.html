@@ -1302,7 +1302,7 @@ function handleStepSuccess(area) {
     area.classList.remove('success');
     if(state.currentStep<level.steps.length-1) { loadStep(state.currentStep+1); }
     else { handleLevelComplete(); }
-  }, 2000);
+  }, 4000);
 }
 
 function handleStepWrong(area) {
