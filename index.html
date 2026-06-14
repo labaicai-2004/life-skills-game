@@ -763,72 +763,69 @@ function playCelebrationSound() {
   [523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>playTone(f,0.15,'sine',0.1),i*80));
 }
 
-function getBestVoice() {
-  return new Promise(resolve => {
-    if (!window.speechSynthesis) { resolve(null); return; }
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length) {
-      // Log ALL voices for debugging (not just zh)
-      console.log('浏览器:', navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'Safari' : 'Other');
-      console.log('全部中文语音:', voices.filter(v => v.lang.toLowerCase().startsWith('zh')).map(v => `${v.name}(${v.lang},uri:${v.voiceURI?.substring(0,30)})`));
+/* ================================================================
+   PRE-RECORDED VOICE MAP (Tingting female voice, Mac-generated)
+   ================================================================ */
+const VOICE_MAP = {
+  '小朋友，我们先找到牙刷吧。看到发光的牙刷了吗？点一下它。': 'voice/v00.mp3',
+  '现在把牙膏挤到牙刷上。用手指在牙膏上面，从上往下滑。': 'voice/v01.mp3',
+  '牙膏挤好了，拿起牙刷准备刷牙吧。点一下牙刷。': 'voice/v02.mp3',
+  '先刷左边的牙齿。把牙刷拖到小朋友嘴边，上下刷一刷。': 'voice/v03.mp3',
+  '真棒！现在刷右边的牙齿。把牙刷拖到小朋友嘴边，继续上下刷。': 'voice/v04.mp3',
+  '刷好啦，用水杯漱漱口。点一下水杯。': 'voice/v05.mp3',
+  '最后一步，把毛巾拖到嘴巴上，擦擦嘴巴。': 'voice/v06.mp3',
+  '先打开水龙头。把小手拖到水龙头上，往上推一下。': 'voice/v07.mp3',
+  '水出来了！用手接一点水。点一下出水的地方。': 'voice/v08.mp3',
+  '把毛巾打湿。把小手拖到毛巾上，上下搓一搓。': 'voice/v09.mp3',
+  '把毛巾拧干一点。把小手拖到毛巾上，上下搓一搓。': 'voice/v10.mp3',
+  '现在用毛巾擦擦脸。把小手拖到脸上，上下擦一擦，把脸洗干净。': 'voice/v11.mp3',
+  '毛巾脏了，用水冲一冲。点一下出水的地方冲洗毛巾。': 'voice/v12.mp3',
+  '洗好了，关掉水龙头。把小手拖到水龙头上，往下推。': 'voice/v13.mp3',
+  '先找到要穿的衣服。看到发光的外套了吗？点一下它。': 'voice/v14.mp3',
+  '穿衣服之前要分清正面和反面。点一下衣服的正面。': 'voice/v15.mp3',
+  '先把左手伸进左边的袖子。把小手拖到左边袖口，向左滑。': 'voice/v16.mp3',
+  '再把右手伸进右边的袖子。把小手拖到右边袖口，向右滑。': 'voice/v17.mp3',
+  '把衣服往下拉好。把小手拖到衣服中间，往下拉。': 'voice/v18.mp3',
+  '现在拉上拉链。把小手拖到拉链上，往上拉。': 'voice/v19.mp3',
+  '最后整理一下衣领。把小手拖到领口，左右整理一下。衣服穿得整整齐齐。': 'voice/v20.mp3',
+  '太棒了！做得真好！': 'voice/v21.mp3',
+  '真厉害！继续加油！': 'voice/v22.mp3',
+  '非常好！你真聪明！': 'voice/v23.mp3',
+  '好棒哦！就是这样！': 'voice/v24.mp3',
+  '太好了！给你点赞！': 'voice/v25.mp3',
+  '没关系，再试一次哦！': 'voice/v26.mp3',
+  '差一点点，再来一次吧！': 'voice/v27.mp3',
+  '加油，你可以的！再试试看。': 'voice/v28.mp3',
+  '慢慢来，不着急，再试一次。': 'voice/v29.mp3',
+  '太厉害了！你已经学会刷牙了！': 'voice/v30.mp3',
+  '太厉害了！你已经学会洗脸了！': 'voice/v31.mp3',
+  '太厉害了！你已经学会穿衣了！': 'voice/v32.mp3',
+};
 
-      // Collect ALL Mandarin voices
-      const mandarin = voices.filter(v => {
-        const l = v.lang.toLowerCase();
-        return l === 'zh-cn' || l.startsWith('zh-cn-') || l.includes('hans');
-      });
+let currentAudio = null;
 
-      // Try to find female voice — check name first
-      const femaleKeywords = ['ting','sin','mei','lili','yao','xiao','yun','xia','lin','yi','wen','shu','qin','lan','hua','fei','li','na','zhen','xue','jing','ying','fang'];
-      const maleKeywords = ['kang','hong','qiang','ming','wei','feng','gang','jun','cheng','liang','xiang','peng','hao','chao','jian','guo','dong'];
-
-      // Score voices: +1 for each female keyword, -10 for each male keyword
-      const scored = mandarin.map(v => {
-        const name = v.name.toLowerCase();
-        let score = 0;
-        for (const kw of femaleKeywords) score += name.includes(kw) ? 1 : 0;
-        for (const kw of maleKeywords) score -= name.includes(kw) ? 10 : 0;
-        // Prefer voices with 'compact' or 'premium' (higher quality)
-        if (name.includes('compact') || name.includes('premium') || name.includes('enhanced')) score += 2;
-        return { voice: v, score };
-      });
-
-      // Sort by score descending
-      scored.sort((a, b) => b.score - a.score);
-
-      if (scored.length > 0 && scored[0].score >= 0) {
-        console.log('选中语音:', scored[0].voice.name, '得分:', scored[0].score);
-        resolve(scored[0].voice);
-        return;
-      }
-
-      // No good female voice found — let system pick the default
-      console.log('无合适女声，使用系统默认语音');
-      resolve(null);
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => getBestVoice().then(resolve);
-    }
-  });
-}
-
-async function speak(text, onEnd) {
+function speak(text, onEnd) {
   if (state.muted) { if(onEnd) onEnd(); return; }
-  if (!window.speechSynthesis) { if(onEnd) onEnd(); return; }
-  window.speechSynthesis.cancel();
-  // Small delay after cancel to let iOS Safari reset
-  await new Promise(r => setTimeout(r, 80));
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang='zh-CN'; utter.rate=0.85; utter.pitch=1.0; utter.volume=0.95;
-  const voice = await getBestVoice();
-  if (voice) utter.voice = voice;
-  if (onEnd) utter.onend = onEnd;
-  window.speechSynthesis.speak(utter);
+  // Stop any currently playing audio
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+
+  const file = VOICE_MAP[text];
+  if (file) {
+    const audio = new Audio(file);
+    currentAudio = audio;
+    audio.onended = () => { currentAudio = null; if (onEnd) onEnd(); };
+    audio.onerror = () => { currentAudio = null; if (onEnd) onEnd(); };
+    audio.play().catch(() => { currentAudio = null; if (onEnd) onEnd(); });
+  } else {
+    // Fallback: text not in VOICE_MAP — do nothing
+    if (onEnd) onEnd();
+  }
 }
 
 function toggleMute() {
   state.muted = !state.muted;
   document.getElementById('volume-btn').textContent = state.muted?'🔇':'🔊';
-  if (state.muted && window.speechSynthesis) window.speechSynthesis.cancel();
+  if (state.muted && currentAudio) { currentAudio.pause(); currentAudio = null; }
 }
 
 function replayVoice() {
@@ -845,7 +842,7 @@ function showScreen(id) {
   const el=document.getElementById(id); if(el) el.classList.add('active');
 }
 function goHome() {
-  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(currentAudio) { currentAudio.pause(); currentAudio = null; }
   state.currentLevel=-1; state.currentStep=0; state.stepCompleted=new Set();
   showScreen('start-screen');
 }
@@ -1427,7 +1424,6 @@ function spawnCanvasConfetti() {
 
 // Init
 (function(){
-  if(window.speechSynthesis) window.speechSynthesis.getVoices();
   window.addEventListener('load', ()=>{
     setTimeout(()=>{
       const ls = document.getElementById('loading-screen');
