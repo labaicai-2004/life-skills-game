@@ -167,6 +167,21 @@ html, body {
   transition:transform 0.15s cubic-bezier(0.68,-0.55,0.265,1.55);
 }
 .replay-btn:active { transform:scale(1.1); }
+.next-step-btn {
+  display:none; margin-top:12px; padding:14px 36px;
+  background:linear-gradient(180deg,var(--green),#4CAF50);
+  color:white; border:none; border-radius:50px;
+  font-size:18px; font-weight:800; cursor:pointer;
+  box-shadow:0 6px 0 #388E3C, 0 8px 20px rgba(107,203,119,0.4);
+  transition:transform 0.15s cubic-bezier(0.68,-0.55,0.265,1.55);
+  animation:nextBtnPulse 0.8s ease-in-out infinite;
+}
+.next-step-btn.show { display:inline-flex; align-items:center; gap:8px; }
+.next-step-btn:active { transform:scale(1.1) translateY(2px); box-shadow:0 3px 0 #388E3C, 0 4px 12px rgba(107,203,119,0.3); }
+@keyframes nextBtnPulse {
+  0%,100% { box-shadow:0 6px 0 #388E3C, 0 8px 20px rgba(107,203,119,0.4); }
+  50% { box-shadow:0 6px 0 #388E3C, 0 8px 32px rgba(107,203,119,0.7); }
+}
 
 /* ===== INTERACTION AREA ===== */
 .interaction-area {
@@ -532,6 +547,7 @@ html, body {
     <div class="step-number" id="step-number-label"></div>
     <div class="step-instruction" id="step-instruction"></div>
     <button class="replay-btn" id="replay-btn" onclick="replayVoice()">🔁 再听一次</button>
+    <button class="next-step-btn" id="next-step-btn" onclick="goNextStep()">✅ 下一步</button>
   </div>
   <div class="interaction-area" id="interaction-area">
     <div class="scene" id="scene"></div>
@@ -870,6 +886,9 @@ function loadStep(idx) {
   state.currentStep=idx;
   // Abort previous step's gesture listeners immediately
   if (state.stepAbortController) { state.stepAbortController.abort(); state.stepAbortController=null; }
+  // Hide next-step button
+  const nextBtn = document.getElementById('next-step-btn');
+  if (nextBtn) nextBtn.classList.remove('show');
   const level=LEVELS[state.currentLevel], step=level.steps[idx];
   document.getElementById('step-number-label').textContent=`第 ${step.id} 步 / 共 7 步`;
   document.getElementById('step-instruction').textContent=step.instruction;
@@ -1312,11 +1331,29 @@ function handleStepSuccess(area) {
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
   speak(p[Math.floor(Math.random()*p.length)]);
   spawnParticles(8); renderProgressDots();
-  setTimeout(()=>{
-    area.classList.remove('success');
-    if(state.currentStep<level.steps.length-1) { loadStep(state.currentStep+1); }
-    else { handleLevelComplete(); }
-  }, 4000);
+  // Show "next step" button instead of auto-advancing
+  const btn = document.getElementById('next-step-btn');
+  if (btn) {
+    if (state.currentStep < level.steps.length - 1) {
+      btn.textContent = '✅ 下一步';
+    } else {
+      btn.textContent = '🎉 完成关卡';
+    }
+    btn.classList.add('show');
+  }
+}
+
+function goNextStep() {
+  const btn = document.getElementById('next-step-btn');
+  if (btn) btn.classList.remove('show');
+  const area = document.getElementById('interaction-area');
+  area.classList.remove('success');
+  const level = LEVELS[state.currentLevel];
+  if (state.currentStep < level.steps.length - 1) {
+    loadStep(state.currentStep + 1);
+  } else {
+    handleLevelComplete();
+  }
 }
 
 function handleStepWrong(area) {
