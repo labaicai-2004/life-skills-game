@@ -802,18 +802,9 @@ function getBestVoice() {
         return;
       }
 
-      // Fallback: any Mandarin
-      if (mandarin.length > 0) { console.log('回退:', mandarin[0].name); resolve(mandarin[0]); return; }
-
-      // Broader fallback
-      const zhCN = voices.find(v => v.lang === 'zh-CN');
-      if (zhCN) { resolve(zhCN); return; }
-
-      const any = voices.find(v => {
-        const l = v.lang.toLowerCase();
-        return l.startsWith('zh') && !l.includes('hk') && !l.includes('tw');
-      });
-      resolve(any || null);
+      // No good female voice found — let system pick the default
+      console.log('无合适女声，使用系统默认语音');
+      resolve(null);
     } else {
       window.speechSynthesis.onvoiceschanged = () => getBestVoice().then(resolve);
     }
