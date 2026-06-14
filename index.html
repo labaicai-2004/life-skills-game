@@ -768,23 +768,48 @@ function getBestVoice() {
     if (!window.speechSynthesis) { resolve(null); return; }
     const voices = window.speechSynthesis.getVoices();
     if (voices.length) {
+      // Log available zh voices for debugging
+      const zhVoices = voices.filter(v => v.lang.toLowerCase().startsWith('zh'));
+      console.log('可用中文语音:', zhVoices.map(v => `${v.name}(${v.lang})`).join(', '));
+
       // Only consider Mandarin voices (zh-CN, zh-Hans-CN, zh-Hans, zh-CN-*)
       const mandarin = voices.filter(v => {
         const l = v.lang.toLowerCase();
         return l === 'zh-cn' || l.startsWith('zh-cn-') || l.includes('hans');
       });
-      // Preferred natural-sounding female voices
-      const pref = ['Tingting','Sinji','Meijia','Lili','Ting-Ting','Sin-Ji','Mei-Jia','Li-Li'];
-      for (const n of pref) {
-        const v = mandarin.find(v => v.name.includes(n));
-        if (v) { resolve(v); return; }
+
+      // Female markers to detect (iOS/macOS/Android all differ)
+      const femalePref = [
+        'Tingting','Ting-Ting','Ting Ting','tingting',
+        'Sinji','Sin-Ji','Sin Ji','sinji',
+        'Meijia','Mei-Jia','Mei Jia','meijia',
+        'Lili','Li-Li','Li Li','lili',
+        'Yaoyao','Yao-Yao','yaoyao',
+        'Xiaoxiao','Xiao-Xiao','xiaoxiao',
+        'Yunxia','yunxia'
+      ];
+      for (const n of femalePref) {
+        const v = mandarin.find(v => v.name.toLowerCase().includes(n.toLowerCase()));
+        if (v) { console.log('选中女声:', v.name); resolve(v); return; }
       }
-      // Any Mandarin voice
-      if (mandarin.length > 0) { resolve(mandarin[0]); return; }
-      // Fallback: zh-CN exact match in full list
+
+      // Filter to only female voices (most platforms mark gender in voiceURI or name)
+      const femaleOnly = mandarin.filter(v => {
+        const name = v.name.toLowerCase();
+        // Common male voice names to exclude
+        const maleNames = ['kang','hong','qiang','ming','wei','feng','gang','jun','hua','cheng','liang','xiang'];
+        return !maleNames.some(m => name.includes(m));
+      });
+      if (femaleOnly.length > 0) { console.log('回退女声:', femaleOnly[0].name); resolve(femaleOnly[0]); return; }
+
+      // Any Mandarin voice as last resort
+      if (mandarin.length > 0) { console.log('回退任意:', mandarin[0].name); resolve(mandarin[0]); return; }
+
+      // Fallback: zh-CN exact match
       const zhCN = voices.find(v => v.lang === 'zh-CN');
       if (zhCN) { resolve(zhCN); return; }
-      // Last resort: any zh voice EXCEPT Cantonese (zh-HK) and Taiwanese (zh-TW)
+
+      // Last resort: any zh voice except Cantonese/Taiwanese
       const any = voices.find(v => {
         const l = v.lang.toLowerCase();
         return l.startsWith('zh') && !l.includes('hk') && !l.includes('tw');
@@ -800,8 +825,10 @@ async function speak(text, onEnd) {
   if (state.muted) { if(onEnd) onEnd(); return; }
   if (!window.speechSynthesis) { if(onEnd) onEnd(); return; }
   window.speechSynthesis.cancel();
+  // Small delay after cancel to let iOS Safari reset
+  await new Promise(r => setTimeout(r, 80));
   const utter = new SpeechSynthesisUtterance(text);
-  utter.lang='zh-CN'; utter.rate=0.75; utter.pitch=1.0; utter.volume=0.95;
+  utter.lang='zh-CN'; utter.rate=0.85; utter.pitch=1.0; utter.volume=0.95;
   const voice = await getBestVoice();
   if (voice) utter.voice = voice;
   if (onEnd) utter.onend = onEnd;
