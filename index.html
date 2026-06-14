@@ -768,48 +768,47 @@ function getBestVoice() {
     if (!window.speechSynthesis) { resolve(null); return; }
     const voices = window.speechSynthesis.getVoices();
     if (voices.length) {
-      // Log available zh voices for debugging
-      const zhVoices = voices.filter(v => v.lang.toLowerCase().startsWith('zh'));
-      console.log('可用中文语音:', zhVoices.map(v => `${v.name}(${v.lang})`).join(', '));
+      // Log ALL voices for debugging (not just zh)
+      console.log('浏览器:', navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'Safari' : 'Other');
+      console.log('全部中文语音:', voices.filter(v => v.lang.toLowerCase().startsWith('zh')).map(v => `${v.name}(${v.lang},uri:${v.voiceURI?.substring(0,30)})`));
 
-      // Only consider Mandarin voices (zh-CN, zh-Hans-CN, zh-Hans, zh-CN-*)
+      // Collect ALL Mandarin voices
       const mandarin = voices.filter(v => {
         const l = v.lang.toLowerCase();
         return l === 'zh-cn' || l.startsWith('zh-cn-') || l.includes('hans');
       });
 
-      // Female markers to detect (iOS/macOS/Android all differ)
-      const femalePref = [
-        'Tingting','Ting-Ting','Ting Ting','tingting',
-        'Sinji','Sin-Ji','Sin Ji','sinji',
-        'Meijia','Mei-Jia','Mei Jia','meijia',
-        'Lili','Li-Li','Li Li','lili',
-        'Yaoyao','Yao-Yao','yaoyao',
-        'Xiaoxiao','Xiao-Xiao','xiaoxiao',
-        'Yunxia','yunxia'
-      ];
-      for (const n of femalePref) {
-        const v = mandarin.find(v => v.name.toLowerCase().includes(n.toLowerCase()));
-        if (v) { console.log('选中女声:', v.name); resolve(v); return; }
+      // Try to find female voice — check name first
+      const femaleKeywords = ['ting','sin','mei','lili','yao','xiao','yun','xia','lin','yi','wen','shu','qin','lan','hua','fei','li','na','zhen','xue','jing','ying','fang'];
+      const maleKeywords = ['kang','hong','qiang','ming','wei','feng','gang','jun','cheng','liang','xiang','peng','hao','chao','jian','guo','dong'];
+
+      // Score voices: +1 for each female keyword, -10 for each male keyword
+      const scored = mandarin.map(v => {
+        const name = v.name.toLowerCase();
+        let score = 0;
+        for (const kw of femaleKeywords) score += name.includes(kw) ? 1 : 0;
+        for (const kw of maleKeywords) score -= name.includes(kw) ? 10 : 0;
+        // Prefer voices with 'compact' or 'premium' (higher quality)
+        if (name.includes('compact') || name.includes('premium') || name.includes('enhanced')) score += 2;
+        return { voice: v, score };
+      });
+
+      // Sort by score descending
+      scored.sort((a, b) => b.score - a.score);
+
+      if (scored.length > 0 && scored[0].score >= 0) {
+        console.log('选中语音:', scored[0].voice.name, '得分:', scored[0].score);
+        resolve(scored[0].voice);
+        return;
       }
 
-      // Filter to only female voices (most platforms mark gender in voiceURI or name)
-      const femaleOnly = mandarin.filter(v => {
-        const name = v.name.toLowerCase();
-        // Common male voice names to exclude
-        const maleNames = ['kang','hong','qiang','ming','wei','feng','gang','jun','hua','cheng','liang','xiang'];
-        return !maleNames.some(m => name.includes(m));
-      });
-      if (femaleOnly.length > 0) { console.log('回退女声:', femaleOnly[0].name); resolve(femaleOnly[0]); return; }
+      // Fallback: any Mandarin
+      if (mandarin.length > 0) { console.log('回退:', mandarin[0].name); resolve(mandarin[0]); return; }
 
-      // Any Mandarin voice as last resort
-      if (mandarin.length > 0) { console.log('回退任意:', mandarin[0].name); resolve(mandarin[0]); return; }
-
-      // Fallback: zh-CN exact match
+      // Broader fallback
       const zhCN = voices.find(v => v.lang === 'zh-CN');
       if (zhCN) { resolve(zhCN); return; }
 
-      // Last resort: any zh voice except Cantonese/Taiwanese
       const any = voices.find(v => {
         const l = v.lang.toLowerCase();
         return l.startsWith('zh') && !l.includes('hk') && !l.includes('tw');
