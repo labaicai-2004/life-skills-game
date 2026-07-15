@@ -1757,22 +1757,22 @@ function applyPromptLevel(level) {
     case PROMPT_LEVELS.VISUAL.level:
       // Level 1: Visual Prompt — 目标区域高亮
       if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1000); }
-      ResearchCollector.log('prompt_escalation', { promptLevel: 1, promptName: 'Visual', promptDescription:'视觉提示-目标高亮', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
+      UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 1, promptName: 'Visual', promptDescription:'视觉提示-目标高亮', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
       break;
     case PROMPT_LEVELS.GESTURAL.level:
       // Level 2: Gesture Prompt — 箭头指引增强
       showAllArrows();
-      ResearchCollector.log('prompt_escalation', { promptLevel: 2, promptName: 'Gestural', promptDescription:'手势提示-箭头指引', stepId: step.id, proceduralFidelity: true, escalationSequence: 2 });
+      UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 2, promptName: 'Gestural', promptDescription:'手势提示-箭头指引', stepId: step.id, proceduralFidelity: true, escalationSequence: 2 });
       break;
     case PROMPT_LEVELS.VERBAL.level:
       // 目标区域高亮 + 重复语音
       if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1500); }
       speak(step.voice);
-      ResearchCollector.log('prompt_escalation', { promptLevel: 3, promptName: 'Verbal', promptDescription:'语音提示-播放指令', stepId: step.id, proceduralFidelity: true, escalationSequence: 3 });
+      UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 3, promptName: 'Verbal', promptDescription:'语音提示-播放指令', stepId: step.id, proceduralFidelity: true, escalationSequence: 3 });
       break;
     case PROMPT_LEVELS.DEMONSTRATION.level:
       // 自动完成（记录为全辅助）
-      ResearchCollector.log('prompt_escalation', { promptLevel: 4, promptName: 'Demonstration', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
+      UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 4, promptName: 'Demonstration', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
       promptState.promptUsed = 4;
       handleStepSuccess(area);
       return;
@@ -1871,7 +1871,7 @@ function startPromptEscalation() {
   promptState.currentLevel = startLevel;
   // If starting above level 0, apply all lower levels instantly (they were already achieved)
   if (startLevel > 0) {
-    ResearchCollector.log('prompt_fading', {
+    UnifiedDataManager.logEvent('prompt_fading', {
       fadeStartLevel: startLevel,
       fadeReason: `基于历史数据，跳过Level 0-${startLevel-1}`,
       childId: ResearchMode.childId,
@@ -1900,12 +1900,8 @@ function scheduleNextPrompt() {
 }
 
 /* ================================================================
-   BEHAVIOR DATA COLLECTION MODULE
-   采集每次交互的行为数据，用于科研分析
-   ================================================================ */
-/* ================================================================
-   UNIFIED DATA MANAGER (Phase 1 — 合并 ResearchCollector + BehaviorTracker + SessionManager)
-   唯一 researchRecords 写入入口。保留 event log 能力。
+   UNIFIED DATA MANAGER — 唯一数据入口
+   所有行为数据统一写入 researchRecords。event log 保留在 session 内存。
    ================================================================ */
 const UnifiedDataManager = {
   // Session state
@@ -1913,7 +1909,7 @@ const UnifiedDataManager = {
   taskId: null,
   active: false,
   startTime: null,
-  participantId: null,
+  participantID: null,
 
   // Event log (from ResearchCollector)
   events: [],
@@ -1925,10 +1921,10 @@ const UnifiedDataManager = {
   _sessionRecords: [],
 
   /* ---- Session lifecycle ---- */
-  startSession(taskId, participantId) {
+  startSession(taskId, participantID) {
     this.active = true;
     this.startTime = Date.now();
-    this.participantId = participantId || null;
+    this.participantID = participantID || null;
     this.sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
     this.taskId = taskId;
     this.events = [];
@@ -1937,7 +1933,7 @@ const UnifiedDataManager = {
     this._trialNumber = 0;
     this._sessionRecords = [];
     this._logEvent('session_start', {
-      participantId: this.participantId,
+      participantID: this.participantID,
       taskName: TASK_ANALYSIS[taskId]?.taskName
     });
     console.log('[Session] 开始 ' + (TASK_ANALYSIS[taskId]?.taskName||taskId) + ', ID: ' + this.sessionId);
@@ -1952,7 +1948,7 @@ const UnifiedDataManager = {
     const summary = this.getSessionSummary();
     summary.durationMs = duration;
     summary.durationMin = (duration/60000).toFixed(1);
-    summary.participantId = this.participantId;
+    summary.participantID = this.participantID;
 
     // Save summary to session_summaries
     try {
@@ -1963,7 +1959,7 @@ const UnifiedDataManager = {
         time: new Date().toLocaleTimeString('zh-CN'), taskName: summary.taskName,
         durationMin: summary.durationMin, totalSteps: summary.totalSteps,
         totalErrors: summary.totalErrors, avgPromptLevel: summary.avgPromptLevel,
-        participantId: summary.participantId
+        participantID: summary.participantID
       });
       if (summaries.length > 50) summaries.splice(0, summaries.length - 50);
       localStorage.setItem(key, JSON.stringify(summaries));
@@ -2004,7 +2000,6 @@ const UnifiedDataManager = {
   onStepError() { this._stepErrors++; },
 
   onStepComplete(success) {
-    const rt = this._stepStartTime ? Math.round((Date.now() - this._stepStartTime) / 1000) : -1;
     const level = LEVELS[state.currentLevel];
     const step = level.steps[state.currentStep];
     const skillMap = { brush: 'tooth brushing', wash: 'face washing', dress: 'dressing' };
@@ -2019,7 +2014,7 @@ const UnifiedDataManager = {
       completionStatus: success,
       promptLevel: promptState.promptUsed,
       trainingMode: currentTrainingMode.id,
-      responseTime: rt,
+      responseTimeMs: this._stepStartTime ? Date.now() - this._stepStartTime : -1,
       errors: this._stepErrors,
       timestamp: new Date().toISOString()
     };
@@ -2173,8 +2168,8 @@ const SessionManager = {
   set active(v) { UnifiedDataManager.active = v; },
   get startTime() { return UnifiedDataManager.startTime; },
   set startTime(v) { UnifiedDataManager.startTime = v; },
-  get participantId() { return UnifiedDataManager.participantId; },
-  set participantId(v) { UnifiedDataManager.participantId = v; },
+  get participantID() { return UnifiedDataManager.participantID; },
+  set participantID(v) { UnifiedDataManager.participantID = v; },
   startSession(tid, pid) { UnifiedDataManager.startSession(tid, pid); },
   endSession() { return UnifiedDataManager.endSession(); },
   getHistory() { return UnifiedDataManager.getHistory(); }
@@ -2213,7 +2208,7 @@ const ResearchMode = {
     if (!childId) return;
     try {
       const all = JSON.parse(localStorage.getItem('session_summaries') || '[]');
-      const childSessions = all.filter(s => s.participantId === childId);
+      const childSessions = all.filter(s => s.participantID === childId);
       const nextNum = childSessions.length + 1;
       const numInput = document.getElementById('research-session-num');
       if (numInput && !numInput.dataset.manual) numInput.value = nextNum;
@@ -2253,7 +2248,7 @@ const ResearchMode = {
     const phaseLabels = { baseline: 'Baseline', intervention: 'Intervention', maintenance: 'Maintenance' };
     const phaseLabelsCN = { baseline: '基线期', intervention: '干预期', maintenance: '维持期' };
     const skillLabels = { brush: '刷牙', wash: '洗脸', dress: '穿衣' };
-    const participantId = `${this.childId}_${this.phase}_S${String(this.sessionNum).padStart(2,'0')}`;
+    const participantID = `${this.childId}_${this.phase}_S${String(this.sessionNum).padStart(2,'0')}`;
 
     // Update status bar
     const bar = document.getElementById('research-status-bar');
@@ -2392,8 +2387,8 @@ function showDashboard() {
   const avgPrompt = promptLevels.length > 0 ? (promptLevels.reduce((a,b) => a+b, 0) / promptLevels.length).toFixed(2) : '—';
 
   // Average response time
-  const responseTimes = completed.map(r => r.responseTime).filter(t => t > 0);
-  const avgRT = responseTimes.length > 0 ? Math.round(responseTimes.reduce((a,b) => a+b, 0) / responseTimes.length) + 's' : '—';
+  const responseTimes = completed.map(r => r.responseTimeMs).filter(t => t > 0);
+  const avgRT = responseTimes.length > 0 ? Math.round(responseTimes.reduce((a,b) => a+b, 0) / responseTimes.length / 1000) + 's' : '—';
 
   // Total errors
   const totalErrors = records.reduce((s, r) => s + (r.errors || 0), 0);
@@ -2419,7 +2414,7 @@ function showDashboard() {
         <td style="padding:3px;">${r.participantID||'-'}</td><td>${(r.skill||'').slice(0,10)}</td>
         <td>${(r.phase||'').slice(0,6)}</td><td>${r.sessionNumber||''}</td>
         <td>${r.stepNumber}</td><td>${r.completionStatus?'✅':'❌'}</td>
-        <td>L${r.promptLevel??'-'}</td><td>${r.responseTime}s</td><td>${r.errors}</td></tr>`;
+        <td>L${r.promptLevel??'-'}</td><td>${r.responseTimeMs ? (r.responseTimeMs/1000).toFixed(1)+'s' : '-'}</td><td>${r.errors}</td></tr>`;
     }
     html += `</table></div>`;
   } else {
@@ -2441,12 +2436,12 @@ function exportResearchCSV() {
   let records = [];
   try { records = JSON.parse(localStorage.getItem('researchRecords') || '[]'); } catch(e) {}
 
-  const rows = [['participantID','skill','phase','session','step','completion','promptLevel','responseTime','errors','timestamp']];
+  const rows = [['participantID','skill','phase','session','step','completion','promptLevel','responseTimeMs','errors','timestamp']];
   for (const r of records) {
     rows.push([
       r.participantID||'', r.skill||'', r.phase||'', r.sessionNumber||'',
       r.stepNumber||'', r.completionStatus?'true':'false', r.promptLevel??'',
-      r.responseTime||'', r.errors||0, r.timestamp||''
+      r.responseTimeMs||'', r.errors||0, r.timestamp||''
     ]);
   }
   const csv = rows.map(r => r.map(c => '\"' + String(c).replace(/\"/g,'\"\"') + '\"').join(',')).join('\n');
@@ -2475,8 +2470,8 @@ function updateObserver() {
   const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
   el('obs-step', step ? `Step ${step.id}/7 — ${step.instruction}` : '—');
   el('obs-prompt', `L${promptState.promptUsed} — ${PROMPT_LEVELS[Object.keys(PROMPT_LEVELS)[promptState.promptUsed]]?.name || 'N/A'}`);
-  el('obs-rt', BehaviorTracker._stepStartTime ? `${Math.round((Date.now()-BehaviorTracker._stepStartTime)/1000)}s` : '—');
-  el('obs-err', `${BehaviorTracker._stepErrors}`);
+  el('obs-rt', UnifiedDataManager._stepStartTime ? `${Math.round((Date.now()-UnifiedDataManager._stepStartTime)/1000)}s` : '—');
+  el('obs-err', `${UnifiedDataManager._stepErrors}`);
   el('obs-mode', currentTrainingMode.label);
 }
 // Update observer every second
@@ -2550,7 +2545,7 @@ const _originalStartLevel = startLevel;
 startLevel = function(idx) {
   initAudio();
   const taskId = LEVELS[idx].id;
-  SessionManager.startSession(taskId);
+  UnifiedDataManager.startSession(taskId);
   // 调用原始逻辑
   _originalStartLevel(idx);
 };
@@ -2558,13 +2553,12 @@ startLevel = function(idx) {
 // 包装原始 handleStepSuccess，注入精确数据记录
 const _originalHandleStepSuccess = handleStepSuccess;
 handleStepSuccess = function(area) {
-  // Use enhanced collector: records responseTime, errorCount, independentCompletion
-  const rt = ResearchCollector.onStepSuccess();
+  UnifiedDataManager.onStepComplete(true);
   // Log additional gesture info for fidelity
-  ResearchCollector.events[ResearchCollector.events.length - 1].gesture =
+  UnifiedDataManager.events[UnifiedDataManager.events.length - 1].gesture =
     LEVELS[state.currentLevel].steps[state.currentStep].gesture;
   // Procedural fidelity: was this success at the correct prompt level?
-  ResearchCollector.events[ResearchCollector.events.length - 1].proceduralFidelity =
+  UnifiedDataManager.events[UnifiedDataManager.events.length - 1].proceduralFidelity =
     promptState.promptUsed <= PROMPT_LEVELS.DEMONSTRATION.level;
   resetPromptState();
   _originalHandleStepSuccess(area);
@@ -2573,12 +2567,12 @@ handleStepSuccess = function(area) {
 // 包装原始 handleStepWrong，注入错误计数
 const _originalHandleStepWrong = handleStepWrong;
 handleStepWrong = function(area) {
-  ResearchCollector.onStepError();
-  ResearchCollector.log('step_error', {
+  UnifiedDataManager.onStepError();
+  UnifiedDataManager.logEvent('step_error', {
     gesture: LEVELS[state.currentLevel].steps[state.currentStep].gesture,
     promptLevelUsed: promptState.promptUsed,
-    errorNumber: ResearchCollector._stepErrors,
-    responseTimeMs: ResearchCollector._stepStartTime ? Date.now() - ResearchCollector._stepStartTime : -1
+    errorNumber: UnifiedDataManager._stepErrors,
+    responseTimeMs: UnifiedDataManager._stepStartTime ? Date.now() - UnifiedDataManager._stepStartTime : -1
   });
   _originalHandleStepWrong(area);
 };
@@ -2588,17 +2582,17 @@ const _originalLoadStep = loadStep;
 loadStep = function(idx) {
   _originalLoadStep(idx);
   // Start step timer
-  ResearchCollector.onStepStart();
+  UnifiedDataManager.onStepStart();
   // Log step start with task analysis data
   const ta = TASK_ANALYSIS[LEVELS[state.currentLevel]?.id];
-  ResearchCollector.log('step_start', {
+  UnifiedDataManager.logEvent('step_start', {
     stepBehavior: ta?.steps[idx]?.behavior,
     targetSD: ta?.steps[idx]?.targetSD,
     responseDef: ta?.steps[idx]?.responseDef,
     masteryCriterion: ta?.steps[idx]?.masteryCriterion
   });
   // Start LTM prompting chain with procedural fidelity marker
-  ResearchCollector.log('ltm_chain_start', {
+  UnifiedDataManager.logEvent('ltm_chain_start', {
     promptProtocol: 'Least-to-Most',
     startingLevel: promptState.currentLevel
   });
@@ -2611,24 +2605,19 @@ handleLevelComplete = function() {
   _originalHandleLevelComplete();
   // 延迟一下等庆祝弹窗显示后再结束 session
   setTimeout(() => {
-    SessionManager.endSession();
+    UnifiedDataManager.endSession();
   }, 1000);
 };
 
 // 包装原始 goHome，确保 session 正确结束
 const _originalGoHome = goHome;
 goHome = function() {
-  if (SessionManager.active) {
-    SessionManager.endSession();
+  if (UnifiedDataManager.active) {
+    UnifiedDataManager.endSession();
   }
   resetPromptState();
   _originalGoHome();
 };
-
-/* ================================================================
-   V2.2 BEHAVIOR TRACKING SYSTEM
-   每步骤完成时自动记录到 researchRecords (localStorage)
-   ================================================================ */
 
 // Init
 (function(){
