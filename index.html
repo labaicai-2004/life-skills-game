@@ -1634,8 +1634,8 @@ const TASK_ANALYSIS = {
    ================================================================ */
 const PROMPT_LEVELS = {
   INDEPENDENT:   { level: 0, name: 'Independent',   label: '独立',   delay: 3000, description: '不提供任何提示，等待儿童自发反应' },
-  VISUAL:        { level: 1, name: 'Visual Prompt',  label: '视觉提示', delay: 3000, description: '显示方向箭头指引（静态视觉线索）' },
-  GESTURAL:      { level: 2, name: 'Gesture Prompt', label: '手势提示', delay: 3000, description: '目标区域脉动闪烁（动态手势线索）' },
+  VISUAL:        { level: 1, name: 'Visual Prompt',  label: '视觉提示', delay: 3000, description: '目标区域高亮脉动（静态视觉线索）' },
+  GESTURAL:      { level: 2, name: 'Gesture Prompt', label: '手势提示', delay: 3000, description: '箭头指引增强（动态手势线索）' },
   VERBAL:        { level: 3, name: 'Verbal Prompt',  label: '语音提示', delay: 3000, description: '播放语音指令' },
   DEMONSTRATION: { level: 4, name: 'Demonstration',  label: '示范提示', delay: 5000, description: '目标高亮+语音重复组合示范' }
 };
@@ -1719,15 +1719,15 @@ function applyPromptLevel(level) {
       // 隐藏箭头指引，不播放语音，只展示场景
       hideAllArrows();
       break;
-    case PROMPT_LEVELS.GESTURAL.level:
-      // 显示箭头指引
-      showAllArrows();
-      ResearchCollector.log('prompt_escalation', { promptLevel: 1, promptName: 'Visual', promptDescription:'视觉提示-箭头指引', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
+    case PROMPT_LEVELS.VISUAL.level:
+      // Level 1: Visual Prompt — 目标区域高亮
+      if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1000); }
+      ResearchCollector.log('prompt_escalation', { promptLevel: 1, promptName: 'Visual', promptDescription:'视觉提示-目标高亮', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
       break;
     case PROMPT_LEVELS.GESTURAL.level:
-      // Level 2: 手势提示 — 目标区域脉动
-      if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 800); }
-      ResearchCollector.log('prompt_escalation', { promptLevel: 2, promptName: 'Gestural', promptDescription:'手势提示-目标脉动', stepId: step.id, proceduralFidelity: true, escalationSequence: 2 });
+      // Level 2: Gesture Prompt — 箭头指引增强
+      showAllArrows();
+      ResearchCollector.log('prompt_escalation', { promptLevel: 2, promptName: 'Gestural', promptDescription:'手势提示-箭头指引', stepId: step.id, proceduralFidelity: true, escalationSequence: 2 });
       break;
     case PROMPT_LEVELS.VERBAL.level:
       // 目标区域高亮 + 重复语音
@@ -2512,6 +2512,7 @@ const BehaviorTracker = {
       stepNumber: step.id,
       stepName: step.instruction,
       completionStatus: success,
+      promptLevel: promptState.promptUsed,
       responseTime: rt,
       errors: this._stepErrors,
       timestamp: new Date().toISOString()
