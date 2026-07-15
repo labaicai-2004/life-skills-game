@@ -383,6 +383,24 @@ html, body {
 }
 .records-btn.clear { background: #F5F0EB; color: var(--text-light); box-shadow:0 3px 0 rgba(0,0,0,0.06); }
 
+/* ===== SYSTEM VERSION ===== */
+.sys-version {
+  position: fixed; bottom: 8px; right: 16px; z-index: 5;
+  font-size: 10px; color: rgba(155,123,107,0.35); pointer-events: none;
+}
+
+/* ===== OBSERVER MODE PANEL ===== */
+.observer-panel {
+  display: none; position: fixed; bottom: 12px; left: 12px; z-index: 90;
+  background: rgba(255,255,255,0.95); border-radius: 16px; padding: 12px 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12); font-size: 12px;
+  max-width: 220px; pointer-events: none;
+}
+.observer-panel.show { display: block; }
+.observer-panel .obs-title { font-weight: 800; font-size: 13px; color: var(--pink); margin-bottom: 6px; }
+.observer-panel .obs-row { display: flex; justify-content: space-between; padding: 2px 0; color: var(--text); }
+.observer-panel .obs-val { font-weight: 700; }
+
 /* ===== RESEARCH MODE PANEL ===== */
 .research-overlay {
   position: fixed; inset: 0; z-index: 130;
@@ -510,6 +528,9 @@ html, body {
 </style>
 </head>
 <body>
+
+<!-- System version -->
+<div class="sys-version">Digital Serious Game Intervention System V2.0</div>
 
 <!-- Decorative elements -->
 <div class="deco-clouds">
@@ -664,6 +685,10 @@ html, body {
       </div>
     </div>
     <div class="research-field">
+      <label>📅 实验周次 (Week)</label>
+      <input type="number" id="research-week" min="1" max="52" value="1" autocomplete="off" style="width:100px;">
+    </div>
+    <div class="research-field">
       <label>🔢 训练次数 (Session Number)</label>
       <input type="number" id="research-session-num" min="1" max="999" value="1" autocomplete="off">
     </div>
@@ -675,6 +700,16 @@ html, body {
     <button class="records-btn clear" style="margin-top:12px;width:100%;" onclick="viewSessionRecords()">📋 查看当前Session记录</button>
     <button class="records-btn clear" style="margin-top:6px;width:100%;" onclick="showDashboard()">📊 查看全部研究数据</button>
   </div>
+</div>
+
+<!-- Observer Mode panel -->
+<div class="observer-panel" id="observer-panel">
+  <div class="obs-title">🔍 Observer Mode</div>
+  <div class="obs-row"><span>步骤</span><span class="obs-val" id="obs-step">—</span></div>
+  <div class="obs-row"><span>提示等级</span><span class="obs-val" id="obs-prompt">—</span></div>
+  <div class="obs-row"><span>响应时间</span><span class="obs-val" id="obs-rt">—</span></div>
+  <div class="obs-row"><span>错误次数</span><span class="obs-val" id="obs-err">—</span></div>
+  <div class="obs-row"><span>训练模式</span><span class="obs-val" id="obs-mode">—</span></div>
 </div>
 
 <!-- Research status bar (shown during game) -->
@@ -2386,8 +2421,11 @@ function showDashboard() {
     html += `<div class="record-empty">暂无研究数据<br>完成研究训练后自动出现</div>`;
   }
 
-  html += `<div class="records-btns">
-    <button class="records-btn clear" onclick="exportResearchCSV()">📥 导出CSV</button>
+  html += `<div class="records-btns" style="flex-wrap:wrap;">
+    <button class="records-btn clear" onclick="exportResearchCSV()">📥 CSV</button>
+    <button class="records-btn clear" onclick="backupData()">💾 备份</button>
+    <button class="records-btn clear" onclick="restoreData()">📂 恢复</button>
+    <button class="records-btn clear" onclick="toggleObserver()" id="obs-toggle-btn">🔍 Observer</button>
     <button class="records-btn close" onclick="hideRecords()">关闭</button></div>`;
 
   document.getElementById('records-list').innerHTML = html;
@@ -2413,6 +2451,83 @@ function exportResearchCSV() {
   a.download = `research_records_${new Date().toISOString().split('T')[0]}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
+
+/* ================================================================
+   V2.6 OBSERVER MODE + DATA BACKUP + PROTOCOL REMINDER
+   ================================================================ */
+
+// Observer Mode — 实时更新浮窗
+let observerEnabled = false;
+function toggleObserver() {
+  observerEnabled = !observerEnabled;
+  const panel = document.getElementById('observer-panel');
+  if (panel) panel.classList.toggle('show', observerEnabled);
+}
+function updateObserver() {
+  if (!observerEnabled) return;
+  const level = LEVELS[state.currentLevel];
+  const step = level?.steps[state.currentStep];
+  const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  el('obs-step', step ? `Step ${step.id}/7 — ${step.instruction}` : '—');
+  el('obs-prompt', `L${promptState.promptUsed} — ${PROMPT_LEVELS[Object.keys(PROMPT_LEVELS)[promptState.promptUsed]]?.name || 'N/A'}`);
+  el('obs-rt', BehaviorTracker._stepStartTime ? `${Math.round((Date.now()-BehaviorTracker._stepStartTime)/1000)}s` : '—');
+  el('obs-err', `${BehaviorTracker._stepErrors}`);
+  el('obs-mode', currentTrainingMode.label);
+}
+// Update observer every second
+setInterval(updateObserver, 1000);
+
+// Data Backup — JSON export
+function backupData() {
+  const data = {
+    researchRecords: JSON.parse(localStorage.getItem('researchRecords') || '[]'),
+    sessionSummaries: JSON.parse(localStorage.getItem('session_summaries') || '[]'),
+    lifeSkillsRecords: JSON.parse(localStorage.getItem('life-skills-records') || '{}'),
+    exportedAt: new Date().toISOString(),
+    systemVersion: 'Digital Serious Game Intervention System V2.0'
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// Data Backup — JSON restore
+function restoreData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.researchRecords) localStorage.setItem('researchRecords', JSON.stringify(data.researchRecords));
+        if (data.sessionSummaries) localStorage.setItem('session_summaries', JSON.stringify(data.sessionSummaries));
+        if (data.lifeSkillsRecords) localStorage.setItem('life-skills-records', JSON.stringify(data.lifeSkillsRecords));
+        alert('✅ 数据恢复成功！请刷新页面。');
+      } catch(err) { alert('❌ JSON格式错误，请检查文件。'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// Experiment Protocol Reminder — update research status bar with Week
+const _rmOrigStart = ResearchMode.start;
+ResearchMode.start = function() {
+  this.weekNum = document.getElementById('research-week')?.value || '1';
+  _rmOrigStart.call(this);
+  // Update status bar with week info
+  const bar = document.getElementById('research-status-bar');
+  if (bar) {
+    const phaseLabelsCN = { baseline: '基线期', intervention: '干预期', maintenance: '维持期' };
+    bar.textContent += ` | Week ${this.weekNum}`;
+  }
+};
 
 // Wrap goHome to clean up research state
 const __origGoHome2 = goHome;
