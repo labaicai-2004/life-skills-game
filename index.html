@@ -1657,22 +1657,22 @@ function applyPromptLevel(level) {
     case PROMPT_LEVELS.GESTURAL.level:
       // 显示箭头指引
       showAllArrows();
-      ResearchCollector.log('prompt_escalation', { promptLevel: 1, promptName: '手势提示', stepId: step.id });
+      ResearchCollector.log('prompt_escalation', { promptLevel: 1, promptName: 'Gestural', promptDescription:'手势提示-箭头指引', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
       break;
     case PROMPT_LEVELS.VERBAL.level:
       // 播放语音
       speak(step.voice);
-      ResearchCollector.log('prompt_escalation', { promptLevel: 2, promptName: '语音提示', stepId: step.id });
+      ResearchCollector.log('prompt_escalation', { promptLevel: 2, promptName: 'Verbal', promptDescription:'语音提示-播放指令', stepId: step.id, proceduralFidelity: true, escalationSequence: 2 });
       break;
     case PROMPT_LEVELS.MODEL.level:
       // 目标区域高亮 + 重复语音
       if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1500); }
       speak(step.voice);
-      ResearchCollector.log('prompt_escalation', { promptLevel: 3, promptName: '示范提示', stepId: step.id });
+      ResearchCollector.log('prompt_escalation', { promptLevel: 3, promptName: 'Model', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 3 });
       break;
     case PROMPT_LEVELS.PHYSICAL.level:
       // 自动完成（记录为全辅助）
-      ResearchCollector.log('prompt_escalation', { promptLevel: 4, promptName: '全辅助完成', stepId: step.id });
+      ResearchCollector.log('prompt_escalation', { promptLevel: 4, promptName: 'Physical', promptDescription:'全辅助-自动完成', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
       promptState.promptUsed = 4;
       handleStepSuccess(area);
       return;
@@ -1735,16 +1735,24 @@ const ResearchCollector = {
   sessionId: null,
   taskId: null,
   events: [],
+  _stepStartTime: 0,     // ms timestamp when current step loaded
+  _stepErrors: 0,         // error count for current step
+  _trialNumber: 0,        // sequential trial counter
 
   init(taskId) {
     this.sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
     this.taskId = taskId;
     this.events = [];
-    this._log('session_start', { taskId, timestamp: new Date().toISOString() });
+    this._stepStartTime = 0;
+    this._stepErrors = 0;
+    this._trialNumber = 0;
+    this._log('session_start', { taskId });
   },
 
   _log(eventType, data) {
+    this._trialNumber++;
     const entry = {
+      trial: this._trialNumber,
       event: eventType,
       sessionId: this.sessionId,
       taskId: this.taskId,
@@ -1757,70 +1765,127 @@ const ResearchCollector = {
     };
     this.events.push(entry);
 
-    // Async persist to localStorage (non-blocking)
     try {
       const key = 'research_' + this.sessionId;
       const stored = JSON.parse(localStorage.getItem(key) || '[]');
       stored.push(entry);
-      // Keep max 500 events per session
-      if (stored.length > 500) stored.shift();
+      if (stored.length > 1000) stored.shift();
       localStorage.setItem(key, JSON.stringify(stored));
-    } catch(e) { /* silent fail */ }
+    } catch(e) {}
   },
 
   log(eventType, data) { this._log(eventType, data); },
 
+  // Called when a new step loads
+  onStepStart() {
+    this._stepStartTime = Date.now();
+    this._stepErrors = 0;
+  },
+
+  // Called on each error (records count internally, plus the error event)
+  onStepError() { this._stepErrors++; },
+
+  // Called on step success — returns response time
+  onStepSuccess() {
+    const responseTimeMs = this._stepStartTime ? Date.now() - this._stepStartTime : -1;
+    const independent = promptState.promptUsed === 0;
+    this._log('step_success', {
+      responseTimeMs: responseTimeMs,
+      errorCount: this._stepErrors,
+      independentCompletion: independent,
+      promptLevelUsed: promptState.promptUsed
+    });
+    return responseTimeMs;
+  },
+
   getEvents() { return [...this.events]; },
 
   getSessionSummary() {
-    const attempts = this.events.filter(e => e.event === 'step_attempt');
     const successes = this.events.filter(e => e.event === 'step_success');
     const errors = this.events.filter(e => e.event === 'step_error');
     const promptEscalations = this.events.filter(e => e.event === 'prompt_escalation');
 
-    // Per-step analysis
+    // Per-step trial analysis
     const stepStats = {};
     for (const e of this.events) {
       if (!e.stepId) continue;
       const key = `${e.taskId}_step${e.stepId}`;
-      if (!stepStats[key]) stepStats[key] = { stepId: e.stepId, behavior: e.stepBehavior, attempts: 0, errors: 0, promptsUsed: [] };
-      if (e.event === 'step_attempt') stepStats[key].attempts++;
+      if (!stepStats[key]) {
+        stepStats[key] = {
+          stepId: e.stepId,
+          behavior: e.stepBehavior,
+          trials: 0, errors: 0,
+          promptLevelsUsed: [],
+          responseTimesMs: [],
+          independentCompletions: 0
+        };
+      }
       if (e.event === 'step_error') stepStats[key].errors++;
-      if (e.event === 'prompt_escalation') stepStats[key].promptsUsed.push(e.promptLevel);
+      if (e.event === 'step_success') {
+        stepStats[key].trials++;
+        if (e.responseTimeMs > 0) stepStats[key].responseTimesMs.push(e.responseTimeMs);
+        if (e.independentCompletion) stepStats[key].independentCompletions++;
+        if (e.promptLevelUsed != null) stepStats[key].promptLevelsUsed.push(e.promptLevelUsed);
+      }
+      if (e.event === 'prompt_escalation') stepStats[key].promptLevelsUsed.push(e.promptLevel);
     }
+
+    // Calculate aggregate metrics
+    const stepsArr = Object.values(stepStats);
+    const allRT = stepsArr.flatMap(s => s.responseTimesMs);
+    const avgRT = allRT.length > 0 ? Math.round(allRT.reduce((a,b) => a+b, 0) / allRT.length) : -1;
+    const totalIndep = stepsArr.reduce((s, st) => s + st.independentCompletions, 0);
+    const totalTrials = stepsArr.reduce((s, st) => s + st.trials, 0);
 
     return {
       sessionId: this.sessionId,
       taskId: this.taskId,
       taskName: TASK_ANALYSIS[this.taskId]?.taskName || '',
       totalSteps: successes.length,
-      totalAttempts: attempts.length,
+      totalTrials: totalTrials,
       totalErrors: errors.length,
       totalPromptEscalations: promptEscalations.length,
+      avgResponseTimeMs: avgRT,
+      independentCompletionRate: totalTrials > 0 ? (totalIndep / totalTrials * 100).toFixed(1) + '%' : 'N/A',
       avgPromptLevel: promptEscalations.length > 0
-        ? (promptEscalations.reduce((s,e) => s + (e.promptLevel || 0), 0) / promptEscalations.length).toFixed(1)
+        ? (promptEscalations.reduce((s,e) => s + (e.promptLevel || 0), 0) / promptEscalations.length).toFixed(2)
         : 0,
-      steps: Object.values(stepStats),
+      steps: stepsArr,
       events: this.events
     };
   },
 
-  exportJSON() {
-    return JSON.stringify(this.getSessionSummary(), null, 2);
+  exportJSON() { return JSON.stringify(this.getSessionSummary(), null, 2); },
+
+  // CSV export for Excel/SPSS/R analysis — one row per trial
+  exportCSV() {
+    const rows = [['trial','event','isoTime','stepId','stepBehavior','promptLevel','responseTimeMs','errorCount','independentCompletion','taskId','sessionId']];
+    for (const e of this.events) {
+      rows.push([
+        e.trial, e.event, e.isoTime, e.stepId, e.stepBehavior,
+        e.promptLevelUsed ?? '', e.responseTimeMs ?? '', e.errorCount ?? '',
+        e.independentCompletion ?? '', e.taskId, e.sessionId
+      ]);
+    }
+    return rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
   },
 
   downloadReport() {
-    const summary = this.getSessionSummary();
-    const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `session_${this.sessionId}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    return summary;
+    const json = this.exportJSON();
+    const csv = this.exportCSV();
+    // Download JSON
+    const blobJ = new Blob([json], { type: 'application/json' });
+    const aJ = document.createElement('a');
+    aJ.href = URL.createObjectURL(blobJ);
+    aJ.download = `session_${this.sessionId}.json`;
+    document.body.appendChild(aJ); aJ.click(); document.body.removeChild(aJ);
+    // Download CSV
+    const blobC = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }); // BOM for Excel
+    const aC = document.createElement('a');
+    aC.href = URL.createObjectURL(blobC);
+    aC.download = `session_${this.sessionId}.csv`;
+    document.body.appendChild(aC); aC.click(); document.body.removeChild(aC);
+    return { json, csv };
   }
 };
 
@@ -2123,40 +2188,53 @@ startLevel = function(idx) {
   _originalStartLevel(idx);
 };
 
-// 包装原始 handleStepSuccess，注入数据记录
+// 包装原始 handleStepSuccess，注入精确数据记录
 const _originalHandleStepSuccess = handleStepSuccess;
 handleStepSuccess = function(area) {
-  ResearchCollector.log('step_success', {
-    gesture: LEVELS[state.currentLevel].steps[state.currentStep].gesture,
-    promptLevelUsed: promptState.promptUsed,
-    attemptCount: ResearchCollector.events.filter(e =>
-      e.event === 'step_attempt' && e.stepId === LEVELS[state.currentLevel].steps[state.currentStep].id
-    ).length + 1
-  });
+  // Use enhanced collector: records responseTime, errorCount, independentCompletion
+  const rt = ResearchCollector.onStepSuccess();
+  // Log additional gesture info for fidelity
+  ResearchCollector.events[ResearchCollector.events.length - 1].gesture =
+    LEVELS[state.currentLevel].steps[state.currentStep].gesture;
+  // Procedural fidelity: was this success at the correct prompt level?
+  ResearchCollector.events[ResearchCollector.events.length - 1].proceduralFidelity =
+    promptState.promptUsed <= PROMPT_LEVELS.PHYSICAL.level;
   resetPromptState();
   _originalHandleStepSuccess(area);
 };
 
-// 包装原始 handleStepWrong，注入数据记录
+// 包装原始 handleStepWrong，注入错误计数
 const _originalHandleStepWrong = handleStepWrong;
 handleStepWrong = function(area) {
+  ResearchCollector.onStepError();
   ResearchCollector.log('step_error', {
     gesture: LEVELS[state.currentLevel].steps[state.currentStep].gesture,
-    promptLevelUsed: promptState.promptUsed
+    promptLevelUsed: promptState.promptUsed,
+    errorNumber: ResearchCollector._stepErrors,
+    responseTimeMs: ResearchCollector._stepStartTime ? Date.now() - ResearchCollector._stepStartTime : -1
   });
   _originalHandleStepWrong(area);
 };
 
-// 包装原始 loadStep，注入 LTM 提示系统和数据记录
+// 包装原始 loadStep，注入 LTM 提示系统和计时
 const _originalLoadStep = loadStep;
 loadStep = function(idx) {
   _originalLoadStep(idx);
-  // 记录步骤开始
+  // Start step timer
+  ResearchCollector.onStepStart();
+  // Log step start with task analysis data
+  const ta = TASK_ANALYSIS[LEVELS[state.currentLevel]?.id];
   ResearchCollector.log('step_start', {
-    stepBehavior: TASK_ANALYSIS[LEVELS[state.currentLevel]?.id]?.steps[idx]?.behavior,
-    masteryCriterion: TASK_ANALYSIS[LEVELS[state.currentLevel]?.id]?.steps[idx]?.masteryCriterion
+    stepBehavior: ta?.steps[idx]?.behavior,
+    targetSD: ta?.steps[idx]?.targetSD,
+    responseDef: ta?.steps[idx]?.responseDef,
+    masteryCriterion: ta?.steps[idx]?.masteryCriterion
   });
-  // 启动 LTM 提示链
+  // Start LTM prompting chain with procedural fidelity marker
+  ResearchCollector.log('ltm_chain_start', {
+    promptProtocol: 'Least-to-Most',
+    startingLevel: promptState.currentLevel
+  });
   setTimeout(() => startPromptEscalation(), 200);
 };
 
