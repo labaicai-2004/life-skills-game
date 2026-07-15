@@ -2513,6 +2513,7 @@ const BehaviorTracker = {
       stepName: step.instruction,
       completionStatus: success,
       promptLevel: promptState.promptUsed,
+      trainingMode: currentTrainingMode.id,
       responseTime: rt,
       errors: this._stepErrors,
       timestamp: new Date().toISOString()
