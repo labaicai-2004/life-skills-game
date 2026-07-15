@@ -1638,6 +1638,61 @@ let promptState = {
   escalationHistory: []     // 提示升级记录
 };
 
+/* ================================================================
+   PROMPT FADING — 跨Session提示淡出
+   根据历史Session表现，自动降低起始提示等级，促进独立性
+   ================================================================ */
+const PromptFading = {
+  enabled: true,  // 是否启用提示淡出
+
+  // 获取某步骤在所有已记录Session中的最低成功提示等级
+  getHistory(childId, taskId) {
+    try {
+      const summaries = JSON.parse(localStorage.getItem('session_summaries') || '[]');
+      return summaries.filter(s =>
+        s.researchMode && s.childId === childId &&
+        s.taskId === taskId && s.events
+      );
+    } catch(e) { return []; }
+  },
+
+  // 计算某步骤的淡出起始等级
+  // 规则：取最近3个成功Session中该步骤的最低提示等级，再降一级
+  getFadeStartLevel(childId, taskId, stepId) {
+    if (!this.enabled || !childId) return 0;
+    const history = this.getHistory(childId, taskId);
+    if (history.length === 0) return 0; // 无历史 → 从独立开始
+
+    // Gather per-step prompt levels from last 5 sessions
+    const recentPromptLevels = [];
+    const recentSessions = history.slice(-5);
+    for (const session of recentSessions) {
+      if (!session.events) continue;
+      for (const e of session.events) {
+        if (e.stepId === stepId && e.event === 'step_success' && e.promptLevelUsed != null) {
+          recentPromptLevels.push(e.promptLevelUsed);
+        }
+      }
+    }
+
+    if (recentPromptLevels.length === 0) return 0;
+
+    // Take the minimum prompt level that worked (best performance)
+    const minLevel = Math.min(...recentPromptLevels);
+    // Fade one level lower, but never below 0
+    const fadeLevel = Math.max(0, minLevel - 1);
+
+    console.log(`[Fading] ${childId}/${taskId}/Step${stepId}: minLevel=${minLevel} → fadeStart=${fadeLevel} (${recentPromptLevels.length}历史记录)`);
+    return fadeLevel;
+  },
+
+  // 记录本次Session的淡化结果，供下次使用
+  recordFadeResult() {
+    // 数据已通过 ResearchCollector 记录，无需额外操作
+    // getFadeStartLevel 下次会自动读取
+  }
+};
+
 function resetPromptState() {
   if (promptState.escalationTimer) clearTimeout(promptState.escalationTimer);
   promptState.currentLevel = 0;
@@ -1701,7 +1756,6 @@ function showAllArrows() {
 
 function startPromptEscalation() {
   if (!promptState.enabled) {
-    // LTM disabled: show everything immediately (original behavior)
     const step = LEVELS[state.currentLevel].steps[state.currentStep];
     showAllArrows();
     setTimeout(() => speak(step.voice), 350);
@@ -1709,9 +1763,31 @@ function startPromptEscalation() {
   }
 
   resetPromptState();
-  promptState.currentLevel = 0;
-  // 独立等待阶段：只展示场景，不显示箭头不播放语音
-  applyPromptLevel(PROMPT_LEVELS.INDEPENDENT.level);
+
+  // Calculate fade start level if in research mode
+  let startLevel = PROMPT_LEVELS.INDEPENDENT.level; // default: level 0
+  if (ResearchMode.active && ResearchMode.childId && PromptFading.enabled) {
+    const stepId = LEVELS[state.currentLevel].steps[state.currentStep].id;
+    const taskId = LEVELS[state.currentLevel].id;
+    startLevel = PromptFading.getFadeStartLevel(ResearchMode.childId, taskId, stepId);
+  }
+
+  promptState.currentLevel = startLevel;
+  // If starting above level 0, apply all lower levels instantly (they were already achieved)
+  if (startLevel > 0) {
+    ResearchCollector.log('prompt_fading', {
+      fadeStartLevel: startLevel,
+      fadeReason: `基于历史数据，跳过Level 0-${startLevel-1}`,
+      childId: ResearchMode.childId,
+      taskId: LEVELS[state.currentLevel].id
+    });
+    // Apply the fade start level directly
+    for (let l = 0; l < startLevel; l++) {
+      // Mark skipped levels as "faded out"
+      promptState.escalationHistory.push({ level: l, skipped: true, reason: 'faded' });
+    }
+  }
+  applyPromptLevel(startLevel);
   scheduleNextPrompt();
 }
 
@@ -2052,6 +2128,12 @@ const ResearchMode = {
         summary.skill = skillLabels[self.skillId];
         summary.sessionNumber = self.sessionNum;
         summary.date = self.date;
+        // Add fade report
+        summary.fadeReport = {
+          fadeEnabled: PromptFading.enabled,
+          fadeStartLevels: self._fadeInfo || {},
+          fadeDescription: '提示淡出：基于前5个Session的最低成功等级-1'
+        };
         // Update localStorage
         try {
           const key = 'session_summaries';
@@ -2077,6 +2159,15 @@ const ResearchMode = {
       }
       return summary;
     };
+
+    // Enable prompt fading for this session
+    PromptFading.enabled = true;
+    // Store fade metadata for session summary
+    this._fadeInfo = {};
+    const taskId = this.skillId;
+    for (const s of TASK_ANALYSIS[taskId].steps) {
+      this._fadeInfo[s.stepId] = PromptFading.getFadeStartLevel(this.childId, taskId, s.stepId);
+    }
 
     // Close setup panel, then start the research skill
     this.closeSetup();
