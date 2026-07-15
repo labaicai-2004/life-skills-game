@@ -2325,64 +2325,92 @@ function startResearchSession() { ResearchMode.start(); }
    RESEARCH DASHBOARD — 研究数据仪表盘
    ================================================================ */
 function showDashboard() {
-  const summaries = SessionManager.getHistory();
-  const researchSessions = summaries.filter(s => s.researchMode);
+  // Read from researchRecords (BehaviorTracker data)
+  let records = [];
+  try { records = JSON.parse(localStorage.getItem('researchRecords') || '[]'); } catch(e) {}
 
-  // Build stats
-  const totalSessions = researchSessions.length;
-  const avgSteps = totalSessions > 0 ? Math.round(researchSessions.reduce((s,r) => s + (r.totalSteps||0), 0) / totalSessions) : 0;
-  const avgPrompt = totalSessions > 0 ? (researchSessions.reduce((s,r) => s + (parseFloat(r.avgPromptLevel)||0), 0) / totalSessions).toFixed(2) : 0;
-  const avgDuration = totalSessions > 0 ? (researchSessions.reduce((s,r) => s + (parseFloat(r.durationMin)||0), 0) / totalSessions).toFixed(1) : 0;
+  // Extract unique participants
+  const participants = [...new Set(records.map(r => r.participantID).filter(Boolean))];
+  const pid = participants.length > 0 ? participants.join(', ') : '—';
+  const skills = [...new Set(records.map(r => r.skill).filter(Boolean))];
+  const skill = skills.length > 0 ? skills.join(', ') : '—';
 
-  let html = `<div class="records-title">📊 研究数据仪表盘</div>
-    <div class="records-hint">Research Dashboard — 单被试实验数据总览</div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-      <div style="flex:1;min-width:70px;background:#F0F6FF;border-radius:16px;padding:12px;"><div style="font-size:24px;font-weight:800;color:var(--blue);">${totalSessions}</div><div style="font-size:11px;color:var(--text-light);">总Session数</div></div>
-      <div style="flex:1;min-width:70px;background:#FFF9F3;border-radius:16px;padding:12px;"><div style="font-size:24px;font-weight:800;color:var(--yellow);">${avgSteps}</div><div style="font-size:11px;color:var(--text-light);">平均完成步数</div></div>
-      <div style="flex:1;min-width:70px;background:#FFF3F6;border-radius:16px;padding:12px;"><div style="font-size:24px;font-weight:800;color:var(--pink);">${avgPrompt}</div><div style="font-size:11px;color:var(--text-light);">平均提示等级</div></div>
-      <div style="flex:1;min-width:70px;background:#F0FFF4;border-radius:16px;padding:12px;"><div style="font-size:24px;font-weight:800;color:var(--green);">${avgDuration}min</div><div style="font-size:11px;color:var(--text-light);">平均时长</div></div>
-    </div>`;
+  // Session count: unique (participantID + phase + sessionNumber) combinations
+  const sessions = new Set(records.filter(r => r.participantID).map(r => `${r.participantID}_${r.phase}_${r.sessionNumber}`));
+  const totalSessions = sessions.size;
 
-  // Session history table
-  if (researchSessions.length > 0) {
-    html += `<div style="max-height:240px;overflow-y:auto;margin-bottom:12px;"><table style="width:100%;font-size:12px;border-collapse:collapse;">
-      <tr style="background:#FAF8F5;"><th style="padding:6px;text-align:left;">日期</th><th>被试</th><th>阶段</th><th>Skill</th><th style="text-align:right;">#</th><th style="text-align:right;">步骤</th><th style="text-align:right;">提示</th><th style="text-align:right;">时长</th></tr>`;
-    for (const s of researchSessions.slice(-20).reverse()) {
+  // Completed steps (completionStatus=true)
+  const completed = records.filter(r => r.completionStatus === true);
+  const totalCompleted = completed.length;
+
+  // Independent completion rate (promptLevel=0)
+  const independent = completed.filter(r => r.promptLevel === 0);
+  const indepRate = completed.length > 0 ? (independent.length / completed.length * 100).toFixed(1) + '%' : '0%';
+
+  // Average prompt level
+  const promptLevels = completed.map(r => r.promptLevel).filter(l => l != null);
+  const avgPrompt = promptLevels.length > 0 ? (promptLevels.reduce((a,b) => a+b, 0) / promptLevels.length).toFixed(2) : '—';
+
+  // Average response time
+  const responseTimes = completed.map(r => r.responseTime).filter(t => t > 0);
+  const avgRT = responseTimes.length > 0 ? Math.round(responseTimes.reduce((a,b) => a+b, 0) / responseTimes.length) + 's' : '—';
+
+  // Total errors
+  const totalErrors = records.reduce((s, r) => s + (r.errors || 0), 0);
+
+  let html = `<div class="records-title">📊 Research Dashboard</div>
+    <div class="records-hint">数据来源: researchRecords (localStorage) — 仅限研究者查看</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="flex:1;min-width:60px;background:#F0F6FF;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:var(--blue);">${totalSessions}</div><div style="font-size:10px;color:var(--text-light);">Session数</div></div>
+      <div style="flex:1;min-width:60px;background:#FFF9F3;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:var(--yellow);">${totalCompleted}</div><div style="font-size:10px;color:var(--text-light);">完成步骤</div></div>
+      <div style="flex:1;min-width:60px;background:#F0FFF4;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:var(--green);">${indepRate}</div><div style="font-size:10px;color:var(--text-light);">独立完成率</div></div>
+      <div style="flex:1;min-width:60px;background:#FFF3F6;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:var(--pink);">${avgPrompt}</div><div style="font-size:10px;color:var(--text-light);">平均提示等级</div></div>
+      <div style="flex:1;min-width:60px;background:#F5F0FF;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:#7C5CBF;">${avgRT}</div><div style="font-size:10px;color:var(--text-light);">平均完成时间</div></div>
+      <div style="flex:1;min-width:60px;background:#FFF0F0;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:#E05050;">${totalErrors}</div><div style="font-size:10px;color:var(--text-light);">错误次数</div></div>
+    </div>
+    <div style="margin-bottom:8px;font-size:12px;color:var(--text-light);">👤 被试: ${pid} | 🎯 ${skill}</div>`;
+
+  // Recent records table
+  if (records.length > 0) {
+    html += `<div style="max-height:200px;overflow-y:auto;margin-bottom:12px;"><table style="width:100%;font-size:11px;border-collapse:collapse;">
+      <tr style="background:#FAF8F5;"><th style="padding:3px;">PID</th><th>Skill</th><th>Phase</th><th>S#</th><th>Step</th><th>完成</th><th>PL</th><th>RT</th><th>Err</th></tr>`;
+    for (const r of records.slice(-30).reverse()) {
       html += `<tr style="border-bottom:1px solid #F0EDE8;">
-        <td style="padding:6px;">${s.date||'-'}</td>
-        <td>${s.participantID||s.childId||'-'}</td>
-        <td>${s.experimentalPhase||'-'}</td>
-        <td>${s.skill||'-'}</td>
-        <td style="text-align:right;">${s.sessionNumber||'-'}</td>
-        <td style="text-align:right;">${s.totalSteps||0}</td>
-        <td style="text-align:right;">${s.avgPromptLevel||0}</td>
-        <td style="text-align:right;">${s.durationMin||0}min</td></tr>`;
+        <td style="padding:3px;">${r.participantID||'-'}</td><td>${(r.skill||'').slice(0,10)}</td>
+        <td>${(r.phase||'').slice(0,6)}</td><td>${r.sessionNumber||''}</td>
+        <td>${r.stepNumber}</td><td>${r.completionStatus?'✅':'❌'}</td>
+        <td>L${r.promptLevel??'-'}</td><td>${r.responseTime}s</td><td>${r.errors}</td></tr>`;
     }
     html += `</table></div>`;
   } else {
-    html += `<div class="record-empty">暂无研究数据<br>完成一次研究训练后自动出现在这里</div>`;
+    html += `<div class="record-empty">暂无研究数据<br>完成研究训练后自动出现</div>`;
   }
 
   html += `<div class="records-btns">
-    <button class="records-btn clear" onclick="exportAllCSV()">📥 导出全部CSV</button>
+    <button class="records-btn clear" onclick="exportResearchCSV()">📥 导出CSV</button>
     <button class="records-btn close" onclick="hideRecords()">关闭</button></div>`;
 
   document.getElementById('records-list').innerHTML = html;
   document.getElementById('records-overlay').classList.add('active');
 }
 
-function exportAllCSV() {
-  const summaries = SessionManager.getHistory();
-  const researchSessions = summaries.filter(s => s.researchMode);
-  const rows = [['sessionId','date','childId','phase','skill','sessionNum','totalSteps','totalErrors','avgPromptLevel','durationMin','fadeEnabled']];
-  for (const s of researchSessions) {
-    rows.push([s.sessionId,s.date,s.participantID||s.childId,s.experimentalPhase,s.skill,s.sessionNumber,s.totalSteps,s.totalErrors,s.avgPromptLevel,s.durationMin,s.fadeReport?.fadeEnabled?'Y':'N']);
+function exportResearchCSV() {
+  let records = [];
+  try { records = JSON.parse(localStorage.getItem('researchRecords') || '[]'); } catch(e) {}
+
+  const rows = [['participantID','skill','phase','session','step','completion','promptLevel','responseTime','errors','timestamp']];
+  for (const r of records) {
+    rows.push([
+      r.participantID||'', r.skill||'', r.phase||'', r.sessionNumber||'',
+      r.stepNumber||'', r.completionStatus?'true':'false', r.promptLevel??'',
+      r.responseTime||'', r.errors||0, r.timestamp||''
+    ]);
   }
   const csv = rows.map(r => r.map(c => '\"' + String(c).replace(/\"/g,'\"\"') + '\"').join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `research_data_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `research_records_${new Date().toISOString().split('T')[0]}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
