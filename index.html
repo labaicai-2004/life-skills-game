@@ -672,7 +672,8 @@ html, body {
       <input type="date" id="research-date">
     </div>
     <button class="research-start-btn" id="research-start-btn" disabled onclick="startResearchSession()">开始研究训练</button>
-    <button class="records-btn clear" style="margin-top:12px;width:100%;" onclick="showDashboard()">📊 查看研究数据</button>
+    <button class="records-btn clear" style="margin-top:12px;width:100%;" onclick="viewSessionRecords()">📋 查看当前Session记录</button>
+    <button class="records-btn clear" style="margin-top:6px;width:100%;" onclick="showDashboard()">📊 查看全部研究数据</button>
   </div>
 </div>
 
@@ -2475,6 +2476,125 @@ goHome = function() {
   resetPromptState();
   _originalGoHome();
 };
+
+/* ================================================================
+   V2.2 BEHAVIOR TRACKING SYSTEM
+   每步骤完成时自动记录到 researchRecords (localStorage)
+   ================================================================ */
+const BehaviorTracker = {
+  _stepStartTime: 0,
+  _stepErrors: 0,
+  _sessionRecords: [],
+
+  // Called when a step loads
+  stepStart() {
+    this._stepStartTime = Date.now();
+    this._stepErrors = 0;
+  },
+
+  // Called on each error
+  stepError() {
+    this._stepErrors++;
+  },
+
+  // Called when step completes
+  stepComplete(success) {
+    const rt = this._stepStartTime ? Math.round((Date.now() - this._stepStartTime) / 1000) : -1;
+    const level = LEVELS[state.currentLevel];
+    const step = level.steps[state.currentStep];
+    const skillMap = { brush: 'tooth brushing', wash: 'face washing', dress: 'dressing' };
+
+    const record = {
+      participantID: ResearchMode.active ? ResearchMode.childId : '',
+      skill: skillMap[level.id] || level.id,
+      phase: ResearchMode.active ? ResearchMode.phase : '',
+      sessionNumber: ResearchMode.active ? ResearchMode.sessionNum : 0,
+      stepNumber: step.id,
+      stepName: step.instruction,
+      completionStatus: success,
+      responseTime: rt,
+      errors: this._stepErrors,
+      timestamp: new Date().toISOString()
+    };
+
+    this._sessionRecords.push(record);
+
+    // Persist to localStorage under researchRecords
+    try {
+      const stored = JSON.parse(localStorage.getItem('researchRecords') || '[]');
+      stored.push(record);
+      localStorage.setItem('researchRecords', JSON.stringify(stored));
+    } catch(e) {}
+
+    return record;
+  },
+
+  // Get all records for current session
+  getSessionRecords() {
+    return [...this._sessionRecords];
+  },
+
+  // Clear session records (new session)
+  clearSession() {
+    this._sessionRecords = [];
+    this._stepStartTime = 0;
+    this._stepErrors = 0;
+  }
+};
+
+// Hook BehaviorTracker into step lifecycle
+const _btOrigLoadStep = loadStep;
+loadStep = function(idx) {
+  _btOrigLoadStep(idx);
+  BehaviorTracker.stepStart();
+};
+
+const _btOrigHandleStepSuccess = handleStepSuccess;
+handleStepSuccess = function(area) {
+  BehaviorTracker.stepComplete(true);
+  _btOrigHandleStepSuccess(area);
+};
+
+const _btOrigHandleStepWrong = handleStepWrong;
+handleStepWrong = function(area) {
+  BehaviorTracker.stepError();
+  _btOrigHandleStepWrong(area);
+};
+
+// Clear tracker on new session
+const _btOrigStartLevel = startLevel;
+startLevel = function(idx) {
+  BehaviorTracker.clearSession();
+  _btOrigStartLevel(idx);
+};
+
+// Simple records viewer
+function viewSessionRecords() {
+  const records = BehaviorTracker.getSessionRecords();
+  let html = '<div class="records-title">📋 当前Session记录</div>';
+  html += '<div class="records-hint">Behavior Tracking — ' + records.length + ' 条步骤记录</div>';
+
+  if (records.length === 0) {
+    html += '<div class="record-empty">暂无记录<br>完成步骤后自动出现在这里</div>';
+  } else {
+    html += '<div style="max-height:300px;overflow-y:auto;margin-bottom:12px;"><table style="width:100%;font-size:11px;border-collapse:collapse;">';
+    html += '<tr style="background:#FAF8F5;"><th style="padding:4px;">步</th><th>步骤名</th><th style="text-align:center;">完成</th><th style="text-align:right;">耗时s</th><th style="text-align:right;">错误</th><th>时间</th></tr>';
+    for (const r of records) {
+      html += `<tr style="border-bottom:1px solid #F0EDE8;">
+        <td style="padding:4px;">${r.stepNumber}</td>
+        <td>${r.stepName}</td>
+        <td style="text-align:center;">${r.completionStatus ? '✅' : '❌'}</td>
+        <td style="text-align:right;">${r.responseTime}s</td>
+        <td style="text-align:right;">${r.errors}</td>
+        <td style="font-size:10px;">${r.timestamp.slice(11,19)}</td></tr>`;
+    }
+    html += '</table></div>';
+  }
+
+  html += '<div class="records-btns"><button class="records-btn clear" onclick="BehaviorTracker.clearSession();hideRecords();">清空</button><button class="records-btn close" onclick="hideRecords()">关闭</button></div>';
+  document.getElementById('records-list').innerHTML = html;
+  document.getElementById('records-overlay').classList.add('active');
+}
 
 // Init
 (function(){
