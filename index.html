@@ -1459,6 +1459,402 @@ function spawnCanvasConfetti() {
   requestAnimationFrame(animate);
 }
 
+/* ================================================================
+   TASK ANALYSIS DATA STRUCTURE
+   每项生活技能的任务分析，对应 ABA 教学的 Task Analysis
+   ================================================================ */
+const TASK_ANALYSIS = {
+  brush: {
+    taskId: 'brush',
+    taskName: '刷牙',
+    taskDomain: '个人卫生',
+    targetStimulus: '牙刷、牙膏、水杯、毛巾',
+    setting: '浴室',
+    steps: [
+      { stepId: 1, behavior: '找到牙刷', targetSD: '牙刷出现在画面中', responseDef: '用手指点击牙刷图片', masteryCriterion: '独立完成点击' },
+      { stepId: 2, behavior: '挤牙膏', targetSD: '牙膏在牙刷上方', responseDef: '由上向下滑动牙膏', masteryCriterion: '完成向下滑动手势' },
+      { stepId: 3, behavior: '拿起牙刷', targetSD: '牙刷在洗漱台旁', responseDef: '点击牙刷', masteryCriterion: '独立点击' },
+      { stepId: 4, behavior: '刷左边牙齿', targetSD: '牙刷在右下角，目标框在嘴部左侧', responseDef: '拖拽牙刷到左侧嘴部目标区', masteryCriterion: '重叠≥35%' },
+      { stepId: 5, behavior: '刷右边牙齿', targetSD: '牙刷在左下角，目标框在嘴部右侧', responseDef: '拖拽牙刷到右侧嘴部目标区', masteryCriterion: '重叠≥35%' },
+      { stepId: 6, behavior: '漱口', targetSD: '水杯在画面中', responseDef: '点击水杯', masteryCriterion: '独立点击' },
+      { stepId: 7, behavior: '擦嘴巴', targetSD: '毛巾在右下角', responseDef: '拖拽毛巾到嘴部', masteryCriterion: '重叠≥35%' }
+    ]
+  },
+  wash: {
+    taskId: 'wash',
+    taskName: '洗脸',
+    taskDomain: '个人卫生',
+    targetStimulus: '水龙头、毛巾',
+    setting: '浴室',
+    steps: [
+      { stepId: 1, behavior: '打开水龙头', targetSD: '水龙头标记区域', responseDef: '拖拽小手到水龙头向上推', masteryCriterion: '重叠≥35%' },
+      { stepId: 2, behavior: '接水', targetSD: '出水区域', responseDef: '点击出水处', masteryCriterion: '独立点击' },
+      { stepId: 3, behavior: '打湿毛巾', targetSD: '毛巾在画面中', responseDef: '上下搓动毛巾', masteryCriterion: '完成上下滑动手势' },
+      { stepId: 4, behavior: '拧干毛巾', targetSD: '毛巾在画面中', responseDef: '上下搓动毛巾', masteryCriterion: '完成上下滑动手势' },
+      { stepId: 5, behavior: '擦脸', targetSD: '人物脸部区域', responseDef: '拖拽小手到脸上', masteryCriterion: '重叠≥35%' },
+      { stepId: 6, behavior: '冲洗毛巾', targetSD: '出水区域', responseDef: '点击出水处', masteryCriterion: '独立点击' },
+      { stepId: 7, behavior: '关水龙头', targetSD: '水龙头标记区域', responseDef: '拖拽小手到水龙头向下推', masteryCriterion: '重叠≥35%' }
+    ]
+  },
+  dress: {
+    taskId: 'dress',
+    taskName: '穿衣',
+    taskDomain: '个人卫生',
+    targetStimulus: '外套',
+    setting: '卧室',
+    steps: [
+      { stepId: 1, behavior: '找到衣服', targetSD: '外套在画面中心', responseDef: '点击外套', masteryCriterion: '独立点击' },
+      { stepId: 2, behavior: '分清正反面', targetSD: '外套正面展示', responseDef: '点击外套正面', masteryCriterion: '独立点击' },
+      { stepId: 3, behavior: '伸左手进袖子', targetSD: '左边袖口标记', responseDef: '拖拽小手到左袖口', masteryCriterion: '重叠≥35%' },
+      { stepId: 4, behavior: '伸右手进袖子', targetSD: '右边袖口标记', responseDef: '拖拽小手到右袖口', masteryCriterion: '重叠≥35%' },
+      { stepId: 5, behavior: '拉好衣服', targetSD: '衣服中间标记', responseDef: '向下拖拽', masteryCriterion: '重叠≥35%' },
+      { stepId: 6, behavior: '拉上拉链', targetSD: '拉链区域', responseDef: '向上拖拽', masteryCriterion: '重叠≥35%' },
+      { stepId: 7, behavior: '整理衣领', targetSD: '领口标记', responseDef: '左右拖拽手到领口', masteryCriterion: '重叠≥35%' }
+    ]
+  }
+};
+
+/* ================================================================
+   LEAST-TO-MOST PROMPTING SYSTEM
+   逐级升级提示：等待(3s) → 手势提示 → 语音提示 → 示范 → 引导
+   基于 ABA 教学中的 Response Prompting 策略
+   ================================================================ */
+const PROMPT_LEVELS = {
+  INDEPENDENT:  { level: 0, name: '独立等待', delay: 3000, description: '不提供任何提示，等待儿童自发反应' },
+  GESTURAL:     { level: 1, name: '手势提示', delay: 4000, description: '显示方向箭头指引' },
+  VERBAL:       { level: 2, name: '语音提示', delay: 5000, description: '播放语音指令' },
+  MODEL:        { level: 3, name: '示范提示', delay: 6000, description: '目标区域高亮闪烁 + 语音重复' },
+  PHYSICAL:     { level: 4, name: '手把手引导', delay: 999999, description: '自动完成步骤（本次记录为全辅助）' }
+};
+
+let promptState = {
+  enabled: true,            // LTM 提示是否启用
+  currentLevel: 0,          // 当前提示等级
+  escalationTimer: null,    // 升级计时器
+  promptUsed: 0,            // 最终使用的提示等级
+  escalationHistory: []     // 提示升级记录
+};
+
+function resetPromptState() {
+  if (promptState.escalationTimer) clearTimeout(promptState.escalationTimer);
+  promptState.currentLevel = 0;
+  promptState.promptUsed = 0;
+  promptState.escalationTimer = null;
+}
+
+function applyPromptLevel(level) {
+  const step = LEVELS[state.currentLevel].steps[state.currentStep];
+  const area = document.getElementById('interaction-area');
+
+  switch(level) {
+    case PROMPT_LEVELS.INDEPENDENT.level:
+      // 隐藏箭头指引，不播放语音，只展示场景
+      hideAllArrows();
+      break;
+    case PROMPT_LEVELS.GESTURAL.level:
+      // 显示箭头指引
+      showAllArrows();
+      ResearchCollector.log('prompt_escalation', { promptLevel: 1, promptName: '手势提示', stepId: step.id });
+      break;
+    case PROMPT_LEVELS.VERBAL.level:
+      // 播放语音
+      speak(step.voice);
+      ResearchCollector.log('prompt_escalation', { promptLevel: 2, promptName: '语音提示', stepId: step.id });
+      break;
+    case PROMPT_LEVELS.MODEL.level:
+      // 目标区域高亮 + 重复语音
+      if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1500); }
+      speak(step.voice);
+      ResearchCollector.log('prompt_escalation', { promptLevel: 3, promptName: '示范提示', stepId: step.id });
+      break;
+    case PROMPT_LEVELS.PHYSICAL.level:
+      // 自动完成（记录为全辅助）
+      ResearchCollector.log('prompt_escalation', { promptLevel: 4, promptName: '全辅助完成', stepId: step.id });
+      promptState.promptUsed = 4;
+      handleStepSuccess(area);
+      return;
+  }
+  promptState.promptUsed = level;
+}
+
+function hideAllArrows() {
+  const scene = document.getElementById('scene');
+  if (!scene) return;
+  const arrows = scene.querySelectorAll('.arrow-badge, .tap-ring, [class*="anim-"]');
+  arrows.forEach(a => { a.style.opacity = '0'; a.style.transition = 'opacity 0.3s'; });
+  // Also hide labels
+  const labels = scene.querySelectorAll('.arrow-label');
+  labels.forEach(l => { l.style.opacity = '0'; l.style.transition = 'opacity 0.3s'; });
+}
+
+function showAllArrows() {
+  const scene = document.getElementById('scene');
+  if (!scene) return;
+  const arrows = scene.querySelectorAll('.arrow-badge, .tap-ring, [class*="anim-"]');
+  arrows.forEach(a => { a.style.opacity = ''; });
+  const labels = scene.querySelectorAll('.arrow-label');
+  labels.forEach(l => { l.style.opacity = ''; });
+}
+
+function startPromptEscalation() {
+  if (!promptState.enabled) {
+    // LTM disabled: show everything immediately (original behavior)
+    const step = LEVELS[state.currentLevel].steps[state.currentStep];
+    showAllArrows();
+    setTimeout(() => speak(step.voice), 350);
+    return;
+  }
+
+  resetPromptState();
+  promptState.currentLevel = 0;
+  // 独立等待阶段：只展示场景，不显示箭头不播放语音
+  applyPromptLevel(PROMPT_LEVELS.INDEPENDENT.level);
+  scheduleNextPrompt();
+}
+
+function scheduleNextPrompt() {
+  const nextLevel = promptState.currentLevel + 1;
+  if (nextLevel > 4) return; // 已到最高级
+
+  const delay = Object.values(PROMPT_LEVELS)[nextLevel].delay;
+  promptState.escalationTimer = setTimeout(() => {
+    promptState.currentLevel = nextLevel;
+    applyPromptLevel(nextLevel);
+    scheduleNextPrompt();
+  }, delay);
+}
+
+/* ================================================================
+   BEHAVIOR DATA COLLECTION MODULE
+   采集每次交互的行为数据，用于科研分析
+   ================================================================ */
+const ResearchCollector = {
+  sessionId: null,
+  taskId: null,
+  events: [],
+
+  init(taskId) {
+    this.sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+    this.taskId = taskId;
+    this.events = [];
+    this._log('session_start', { taskId, timestamp: new Date().toISOString() });
+  },
+
+  _log(eventType, data) {
+    const entry = {
+      event: eventType,
+      sessionId: this.sessionId,
+      taskId: this.taskId,
+      timestamp: Date.now(),
+      isoTime: new Date().toISOString(),
+      stepId: state.currentStep >= 0 ? LEVELS[state.currentLevel]?.steps[state.currentStep]?.id : null,
+      stepBehavior: state.currentStep >= 0 ? TASK_ANALYSIS[LEVELS[state.currentLevel]?.id]?.steps[state.currentStep]?.behavior : null,
+      promptLevelUsed: promptState.promptUsed,
+      ...data
+    };
+    this.events.push(entry);
+
+    // Async persist to localStorage (non-blocking)
+    try {
+      const key = 'research_' + this.sessionId;
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      stored.push(entry);
+      // Keep max 500 events per session
+      if (stored.length > 500) stored.shift();
+      localStorage.setItem(key, JSON.stringify(stored));
+    } catch(e) { /* silent fail */ }
+  },
+
+  log(eventType, data) { this._log(eventType, data); },
+
+  getEvents() { return [...this.events]; },
+
+  getSessionSummary() {
+    const attempts = this.events.filter(e => e.event === 'step_attempt');
+    const successes = this.events.filter(e => e.event === 'step_success');
+    const errors = this.events.filter(e => e.event === 'step_error');
+    const promptEscalations = this.events.filter(e => e.event === 'prompt_escalation');
+
+    // Per-step analysis
+    const stepStats = {};
+    for (const e of this.events) {
+      if (!e.stepId) continue;
+      const key = `${e.taskId}_step${e.stepId}`;
+      if (!stepStats[key]) stepStats[key] = { stepId: e.stepId, behavior: e.stepBehavior, attempts: 0, errors: 0, promptsUsed: [] };
+      if (e.event === 'step_attempt') stepStats[key].attempts++;
+      if (e.event === 'step_error') stepStats[key].errors++;
+      if (e.event === 'prompt_escalation') stepStats[key].promptsUsed.push(e.promptLevel);
+    }
+
+    return {
+      sessionId: this.sessionId,
+      taskId: this.taskId,
+      taskName: TASK_ANALYSIS[this.taskId]?.taskName || '',
+      totalSteps: successes.length,
+      totalAttempts: attempts.length,
+      totalErrors: errors.length,
+      totalPromptEscalations: promptEscalations.length,
+      avgPromptLevel: promptEscalations.length > 0
+        ? (promptEscalations.reduce((s,e) => s + (e.promptLevel || 0), 0) / promptEscalations.length).toFixed(1)
+        : 0,
+      steps: Object.values(stepStats),
+      events: this.events
+    };
+  },
+
+  exportJSON() {
+    return JSON.stringify(this.getSessionSummary(), null, 2);
+  },
+
+  downloadReport() {
+    const summary = this.getSessionSummary();
+    const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `session_${this.sessionId}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return summary;
+  }
+};
+
+/* ================================================================
+   SESSION MANAGEMENT
+   训练会话的开始、进行中、结束
+   ================================================================ */
+const SessionManager = {
+  active: false,
+  startTime: null,
+  participantId: null,
+
+  startSession(taskId, participantId) {
+    this.active = true;
+    this.startTime = Date.now();
+    this.participantId = participantId || null;
+    ResearchCollector.init(taskId);
+    ResearchCollector.log('session_start', {
+      participantId: this.participantId,
+      taskName: TASK_ANALYSIS[taskId]?.taskName
+    });
+    console.log(`[Session] 开始 ${TASK_ANALYSIS[taskId]?.taskName} 训练, 会话ID: ${ResearchCollector.sessionId}`);
+  },
+
+  endSession() {
+    if (!this.active) return null;
+    this.active = false;
+    const duration = Date.now() - this.startTime;
+    ResearchCollector.log('session_end', { durationMs: duration, durationMin: (duration/60000).toFixed(1) });
+    const summary = ResearchCollector.getSessionSummary();
+    summary.durationMs = duration;
+    summary.durationMin = (duration/60000).toFixed(1);
+    summary.participantId = this.participantId;
+
+    // Save session summary
+    try {
+      const key = 'session_summaries';
+      const summaries = JSON.parse(localStorage.getItem(key) || '[]');
+      summaries.push({
+        sessionId: summary.sessionId,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('zh-CN'),
+        taskName: summary.taskName,
+        durationMin: summary.durationMin,
+        totalSteps: summary.totalSteps,
+        totalAttempts: summary.totalAttempts,
+        avgPromptLevel: summary.avgPromptLevel,
+        participantId: summary.participantId
+      });
+      // Keep last 50 sessions
+      if (summaries.length > 50) summaries.splice(0, summaries.length - 50);
+      localStorage.setItem(key, JSON.stringify(summaries));
+    } catch(e) {}
+
+    console.log(`[Session] 结束。时长: ${summary.durationMin}分钟, 步骤: ${summary.totalSteps}, 平均提示等级: ${summary.avgPromptLevel}`);
+    ResearchCollector.downloadReport(); // Auto-download report
+    return summary;
+  },
+
+  getHistory() {
+    try {
+      return JSON.parse(localStorage.getItem('session_summaries') || '[]');
+    } catch(e) { return []; }
+  }
+};
+
+/* ================================================================
+   HOOK: 将数据采集集成到现有流程（不改变 UI）
+   ================================================================ */
+
+// 包装原始 startLevel，注入 Session 和 LTM
+const _originalStartLevel = startLevel;
+startLevel = function(idx) {
+  initAudio();
+  const taskId = LEVELS[idx].id;
+  SessionManager.startSession(taskId);
+  // 调用原始逻辑
+  _originalStartLevel(idx);
+};
+
+// 包装原始 handleStepSuccess，注入数据记录
+const _originalHandleStepSuccess = handleStepSuccess;
+handleStepSuccess = function(area) {
+  ResearchCollector.log('step_success', {
+    gesture: LEVELS[state.currentLevel].steps[state.currentStep].gesture,
+    promptLevelUsed: promptState.promptUsed,
+    attemptCount: ResearchCollector.events.filter(e =>
+      e.event === 'step_attempt' && e.stepId === LEVELS[state.currentLevel].steps[state.currentStep].id
+    ).length + 1
+  });
+  resetPromptState();
+  _originalHandleStepSuccess(area);
+};
+
+// 包装原始 handleStepWrong，注入数据记录
+const _originalHandleStepWrong = handleStepWrong;
+handleStepWrong = function(area) {
+  ResearchCollector.log('step_error', {
+    gesture: LEVELS[state.currentLevel].steps[state.currentStep].gesture,
+    promptLevelUsed: promptState.promptUsed
+  });
+  _originalHandleStepWrong(area);
+};
+
+// 包装原始 loadStep，注入 LTM 提示系统和数据记录
+const _originalLoadStep = loadStep;
+loadStep = function(idx) {
+  _originalLoadStep(idx);
+  // 记录步骤开始
+  ResearchCollector.log('step_start', {
+    stepBehavior: TASK_ANALYSIS[LEVELS[state.currentLevel]?.id]?.steps[idx]?.behavior,
+    masteryCriterion: TASK_ANALYSIS[LEVELS[state.currentLevel]?.id]?.steps[idx]?.masteryCriterion
+  });
+  // 启动 LTM 提示链
+  setTimeout(() => startPromptEscalation(), 200);
+};
+
+// 包装原始 handleLevelComplete，注入 Session 结束
+const _originalHandleLevelComplete = handleLevelComplete;
+handleLevelComplete = function() {
+  _originalHandleLevelComplete();
+  // 延迟一下等庆祝弹窗显示后再结束 session
+  setTimeout(() => {
+    SessionManager.endSession();
+  }, 1000);
+};
+
+// 包装原始 goHome，确保 session 正确结束
+const _originalGoHome = goHome;
+goHome = function() {
+  if (SessionManager.active) {
+    SessionManager.endSession();
+  }
+  resetPromptState();
+  _originalGoHome();
+};
+
 // Init
 (function(){
   window.addEventListener('load', ()=>{
