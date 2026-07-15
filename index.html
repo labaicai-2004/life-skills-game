@@ -656,6 +656,14 @@ html, body {
       </div>
     </div>
     <div class="research-field">
+      <label>⚙️ 训练模式 (Training Mode)</label>
+      <div class="phase-btns" id="training-mode-btns">
+        <div class="phase-btn selected" data-mode="teaching" style="flex:1.5">Teaching<br><span style="font-size:11px">教学模式</span></div>
+        <div class="phase-btn" data-mode="practice" style="flex:1.5">Practice<br><span style="font-size:11px">练习模式</span></div>
+        <div class="phase-btn" data-mode="assessment" style="flex:1.5">Assessment<br><span style="font-size:11px">评估模式</span></div>
+      </div>
+    </div>
+    <div class="research-field">
       <label>🔢 训练次数 (Session Number)</label>
       <input type="number" id="research-session-num" min="1" max="999" value="1" autocomplete="off">
     </div>
@@ -664,6 +672,7 @@ html, body {
       <input type="date" id="research-date">
     </div>
     <button class="research-start-btn" id="research-start-btn" disabled onclick="startResearchSession()">开始研究训练</button>
+    <button class="records-btn clear" style="margin-top:12px;width:100%;" onclick="showDashboard()">📊 查看研究数据</button>
   </div>
 </div>
 
@@ -1623,11 +1632,11 @@ const TASK_ANALYSIS = {
    基于 ABA 教学中的 Response Prompting 策略
    ================================================================ */
 const PROMPT_LEVELS = {
-  INDEPENDENT:  { level: 0, name: '独立等待', delay: 3000, description: '不提供任何提示，等待儿童自发反应' },
-  GESTURAL:     { level: 1, name: '手势提示', delay: 4000, description: '显示方向箭头指引' },
-  VERBAL:       { level: 2, name: '语音提示', delay: 5000, description: '播放语音指令' },
-  MODEL:        { level: 3, name: '示范提示', delay: 6000, description: '目标区域高亮闪烁 + 语音重复' },
-  PHYSICAL:     { level: 4, name: '手把手引导', delay: 999999, description: '自动完成步骤（本次记录为全辅助）' }
+  INDEPENDENT:   { level: 0, name: 'Independent',   label: '独立',   delay: 3000, description: '不提供任何提示，等待儿童自发反应' },
+  VISUAL:        { level: 1, name: 'Visual Prompt',  label: '视觉提示', delay: 3000, description: '显示方向箭头指引（静态视觉线索）' },
+  GESTURAL:      { level: 2, name: 'Gesture Prompt', label: '手势提示', delay: 3000, description: '目标区域脉动闪烁（动态手势线索）' },
+  VERBAL:        { level: 3, name: 'Verbal Prompt',  label: '语音提示', delay: 3000, description: '播放语音指令' },
+  DEMONSTRATION: { level: 4, name: 'Demonstration',  label: '示范提示', delay: 5000, description: '目标高亮+语音重复组合示范' }
 };
 
 let promptState = {
@@ -1712,22 +1721,22 @@ function applyPromptLevel(level) {
     case PROMPT_LEVELS.GESTURAL.level:
       // 显示箭头指引
       showAllArrows();
-      ResearchCollector.log('prompt_escalation', { promptLevel: 1, promptName: 'Gestural', promptDescription:'手势提示-箭头指引', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
+      ResearchCollector.log('prompt_escalation', { promptLevel: 1, promptName: 'Visual', promptDescription:'视觉提示-箭头指引', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
+      break;
+    case PROMPT_LEVELS.GESTURAL.level:
+      // Level 2: 手势提示 — 目标区域脉动
+      if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 800); }
+      ResearchCollector.log('prompt_escalation', { promptLevel: 2, promptName: 'Gestural', promptDescription:'手势提示-目标脉动', stepId: step.id, proceduralFidelity: true, escalationSequence: 2 });
       break;
     case PROMPT_LEVELS.VERBAL.level:
-      // 播放语音
-      speak(step.voice);
-      ResearchCollector.log('prompt_escalation', { promptLevel: 2, promptName: 'Verbal', promptDescription:'语音提示-播放指令', stepId: step.id, proceduralFidelity: true, escalationSequence: 2 });
-      break;
-    case PROMPT_LEVELS.MODEL.level:
       // 目标区域高亮 + 重复语音
       if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1500); }
       speak(step.voice);
-      ResearchCollector.log('prompt_escalation', { promptLevel: 3, promptName: 'Model', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 3 });
+      ResearchCollector.log('prompt_escalation', { promptLevel: 3, promptName: 'Verbal', promptDescription:'语音提示-播放指令', stepId: step.id, proceduralFidelity: true, escalationSequence: 3 });
       break;
-    case PROMPT_LEVELS.PHYSICAL.level:
+    case PROMPT_LEVELS.DEMONSTRATION.level:
       // 自动完成（记录为全辅助）
-      ResearchCollector.log('prompt_escalation', { promptLevel: 4, promptName: 'Physical', promptDescription:'全辅助-自动完成', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
+      ResearchCollector.log('prompt_escalation', { promptLevel: 4, promptName: 'Demonstration', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
       promptState.promptUsed = 4;
       handleStepSuccess(area);
       return;
@@ -1754,6 +1763,54 @@ function showAllArrows() {
   labels.forEach(l => { l.style.opacity = ''; });
 }
 
+/* ================================================================
+   TRAINING MODES — 三种训练模式
+   Teaching: 完整LTM+标准延迟+淡化
+   Practice: 跳过独立等待+短延迟+淡化
+   Assessment: 仅独立等待+长延迟+不升级（纯评估）
+   ================================================================ */
+const TrainingModes = {
+  TEACHING: {
+    id: 'teaching', name: 'Teaching Mode', label: '教学模式',
+    startLevel: 0,      // 从Independent开始
+    delays: [3000, 3000, 3000, 3000, 5000],  // 各等级等待时间ms
+    maxLevel: 4,        // 最高到Demonstration
+    fadeEnabled: true,  // 启用淡化
+    autoComplete: false // 不自动完成
+  },
+  PRACTICE: {
+    id: 'practice', name: 'Practice Mode', label: '练习模式',
+    startLevel: 1,      // 跳过Independent，直接Visual
+    delays: [0, 2000, 2000, 2000, 3000],
+    maxLevel: 4,
+    fadeEnabled: true,
+    autoComplete: false
+  },
+  ASSESSMENT: {
+    id: 'assessment', name: 'Assessment Mode', label: '评估模式',
+    startLevel: 0,      // 从Independent开始
+    delays: [5000, 0, 0, 0, 0],  // 仅等5s，不升级
+    maxLevel: 0,        // 不升级！纯评估
+    fadeEnabled: false,
+    autoComplete: false
+  }
+};
+
+let currentTrainingMode = TrainingModes.TEACHING; // 默认教学模式
+
+function applyTrainingMode(mode) {
+  currentTrainingMode = mode;
+  // Update prompt delays based on mode
+  PROMPT_LEVELS.INDEPENDENT.delay = mode.delays[0];
+  PROMPT_LEVELS.VISUAL.delay = mode.delays[1];
+  PROMPT_LEVELS.GESTURAL.delay = mode.delays[2];
+  PROMPT_LEVELS.VERBAL.delay = mode.delays[3];
+  PROMPT_LEVELS.DEMONSTRATION.delay = mode.delays[4];
+  // Enable/disable fading
+  PromptFading.enabled = mode.fadeEnabled;
+  console.log('[Training] Mode:', mode.label, '| StartLevel:', mode.startLevel, '| Fade:', mode.fadeEnabled);
+}
+
 function startPromptEscalation() {
   if (!promptState.enabled) {
     const step = LEVELS[state.currentLevel].steps[state.currentStep];
@@ -1764,12 +1821,15 @@ function startPromptEscalation() {
 
   resetPromptState();
 
-  // Calculate fade start level if in research mode
-  let startLevel = PROMPT_LEVELS.INDEPENDENT.level; // default: level 0
-  if (ResearchMode.active && ResearchMode.childId && PromptFading.enabled) {
+  // Use training mode's base start level
+  let startLevel = currentTrainingMode.startLevel;
+  // Apply prompt fading on top (if enabled for this mode)
+  if (ResearchMode.active && ResearchMode.childId && currentTrainingMode.fadeEnabled) {
     const stepId = LEVELS[state.currentLevel].steps[state.currentStep].id;
     const taskId = LEVELS[state.currentLevel].id;
-    startLevel = PromptFading.getFadeStartLevel(ResearchMode.childId, taskId, stepId);
+    const fadeLevel = PromptFading.getFadeStartLevel(ResearchMode.childId, taskId, stepId);
+    // Take the higher of mode base level and fade level
+    startLevel = Math.max(startLevel, fadeLevel);
   }
 
   promptState.currentLevel = startLevel;
@@ -1793,7 +1853,7 @@ function startPromptEscalation() {
 
 function scheduleNextPrompt() {
   const nextLevel = promptState.currentLevel + 1;
-  if (nextLevel > 4) return; // 已到最高级
+  if (nextLevel > currentTrainingMode.maxLevel) return; // 已达训练模式上限
 
   const delay = Object.values(PROMPT_LEVELS)[nextLevel].delay;
   promptState.escalationTimer = setTimeout(() => {
@@ -2224,21 +2284,23 @@ const ResearchMode = {
 
 // Research setup form interactions
 (function setupResearchForm() {
-  // Phase buttons
-  document.querySelectorAll('.phase-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      ResearchMode._updateStartBtn();
+  // Generic button group handler
+  function setupBtnGroup(containerId, onSelect) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.querySelectorAll('.phase-btn,.skill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.phase-btn,.skill-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        if (onSelect) onSelect(btn);
+      });
     });
-  });
-  // Skill buttons
-  document.querySelectorAll('.skill-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.skill-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      ResearchMode._updateStartBtn();
-    });
+  }
+  setupBtnGroup('phase-btns', () => ResearchMode._updateStartBtn());
+  setupBtnGroup('research-skill-btns', () => ResearchMode._updateStartBtn());
+  setupBtnGroup('training-mode-btns', (btn) => {
+    const modeMap = { teaching: TrainingModes.TEACHING, practice: TrainingModes.PRACTICE, assessment: TrainingModes.ASSESSMENT };
+    applyTrainingMode(modeMap[btn.dataset.mode] || TrainingModes.TEACHING);
   });
   // Child ID input
   const childIdInput = document.getElementById('research-child-id');
@@ -2257,6 +2319,71 @@ const ResearchMode = {
 
 function hideResearchSetup() { ResearchMode.closeSetup(); }
 function startResearchSession() { ResearchMode.start(); }
+
+/* ================================================================
+   RESEARCH DASHBOARD — 研究数据仪表盘
+   ================================================================ */
+function showDashboard() {
+  const summaries = SessionManager.getHistory();
+  const researchSessions = summaries.filter(s => s.researchMode);
+
+  // Build stats
+  const totalSessions = researchSessions.length;
+  const avgSteps = totalSessions > 0 ? Math.round(researchSessions.reduce((s,r) => s + (r.totalSteps||0), 0) / totalSessions) : 0;
+  const avgPrompt = totalSessions > 0 ? (researchSessions.reduce((s,r) => s + (parseFloat(r.avgPromptLevel)||0), 0) / totalSessions).toFixed(2) : 0;
+  const avgDuration = totalSessions > 0 ? (researchSessions.reduce((s,r) => s + (parseFloat(r.durationMin)||0), 0) / totalSessions).toFixed(1) : 0;
+
+  let html = `<div class="records-title">📊 研究数据仪表盘</div>
+    <div class="records-hint">Research Dashboard — 单被试实验数据总览</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="flex:1;min-width:70px;background:#F0F6FF;border-radius:16px;padding:12px;"><div style="font-size:24px;font-weight:800;color:var(--blue);">${totalSessions}</div><div style="font-size:11px;color:var(--text-light);">总Session数</div></div>
+      <div style="flex:1;min-width:70px;background:#FFF9F3;border-radius:16px;padding:12px;"><div style="font-size:24px;font-weight:800;color:var(--yellow);">${avgSteps}</div><div style="font-size:11px;color:var(--text-light);">平均完成步数</div></div>
+      <div style="flex:1;min-width:70px;background:#FFF3F6;border-radius:16px;padding:12px;"><div style="font-size:24px;font-weight:800;color:var(--pink);">${avgPrompt}</div><div style="font-size:11px;color:var(--text-light);">平均提示等级</div></div>
+      <div style="flex:1;min-width:70px;background:#F0FFF4;border-radius:16px;padding:12px;"><div style="font-size:24px;font-weight:800;color:var(--green);">${avgDuration}min</div><div style="font-size:11px;color:var(--text-light);">平均时长</div></div>
+    </div>`;
+
+  // Session history table
+  if (researchSessions.length > 0) {
+    html += `<div style="max-height:240px;overflow-y:auto;margin-bottom:12px;"><table style="width:100%;font-size:12px;border-collapse:collapse;">
+      <tr style="background:#FAF8F5;"><th style="padding:6px;text-align:left;">日期</th><th>被试</th><th>阶段</th><th>Skill</th><th style="text-align:right;">#</th><th style="text-align:right;">步骤</th><th style="text-align:right;">提示</th><th style="text-align:right;">时长</th></tr>`;
+    for (const s of researchSessions.slice(-20).reverse()) {
+      html += `<tr style="border-bottom:1px solid #F0EDE8;">
+        <td style="padding:6px;">${s.date||'-'}</td>
+        <td>${s.childId||'-'}</td>
+        <td>${s.experimentalPhase||'-'}</td>
+        <td>${s.skill||'-'}</td>
+        <td style="text-align:right;">${s.sessionNumber||'-'}</td>
+        <td style="text-align:right;">${s.totalSteps||0}</td>
+        <td style="text-align:right;">${s.avgPromptLevel||0}</td>
+        <td style="text-align:right;">${s.durationMin||0}min</td></tr>`;
+    }
+    html += `</table></div>`;
+  } else {
+    html += `<div class="record-empty">暂无研究数据<br>完成一次研究训练后自动出现在这里</div>`;
+  }
+
+  html += `<div class="records-btns">
+    <button class="records-btn clear" onclick="exportAllCSV()">📥 导出全部CSV</button>
+    <button class="records-btn close" onclick="hideRecords()">关闭</button></div>`;
+
+  document.getElementById('records-list').innerHTML = html;
+  document.getElementById('records-overlay').classList.add('active');
+}
+
+function exportAllCSV() {
+  const summaries = SessionManager.getHistory();
+  const researchSessions = summaries.filter(s => s.researchMode);
+  const rows = [['sessionId','date','childId','phase','skill','sessionNum','totalSteps','totalErrors','avgPromptLevel','durationMin','fadeEnabled']];
+  for (const s of researchSessions) {
+    rows.push([s.sessionId,s.date,s.childId,s.experimentalPhase,s.skill,s.sessionNumber,s.totalSteps,s.totalErrors,s.avgPromptLevel,s.durationMin,s.fadeReport?.fadeEnabled?'Y':'N']);
+  }
+  const csv = rows.map(r => r.map(c => '\"' + String(c).replace(/\"/g,'\"\"') + '\"').join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `research_data_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
 
 // Wrap goHome to clean up research state
 const __origGoHome2 = goHome;
@@ -2289,7 +2416,7 @@ handleStepSuccess = function(area) {
     LEVELS[state.currentLevel].steps[state.currentStep].gesture;
   // Procedural fidelity: was this success at the correct prompt level?
   ResearchCollector.events[ResearchCollector.events.length - 1].proceduralFidelity =
-    promptState.promptUsed <= PROMPT_LEVELS.PHYSICAL.level;
+    promptState.promptUsed <= PROMPT_LEVELS.DEMONSTRATION.level;
   resetPromptState();
   _originalHandleStepSuccess(area);
 };
