@@ -383,6 +383,69 @@ html, body {
 }
 .records-btn.clear { background: #F5F0EB; color: var(--text-light); box-shadow:0 3px 0 rgba(0,0,0,0.06); }
 
+/* ===== RESEARCH MODE PANEL ===== */
+.research-overlay {
+  position: fixed; inset: 0; z-index: 130;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity 0.35s;
+}
+.research-overlay.active { opacity: 1; pointer-events: auto; }
+.research-panel {
+  background: #FFFFFF; border-radius: 28px; padding: 36px 30px 28px;
+  box-shadow: var(--shadow-lg); animation: slideInUp 0.45s ease;
+  max-width: 440px; width: 92%; max-height: 85vh; overflow-y: auto;
+}
+.research-panel h2 { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.research-panel .rp-subtitle { font-size: 13px; color: var(--text-light); margin-bottom: 20px; }
+.research-field { margin-bottom: 16px; }
+.research-field label {
+  display: block; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px;
+}
+.research-field input {
+  width: 100%; padding: 12px 16px; border: 2px solid #E8E0D5; border-radius: 16px;
+  font-size: 16px; font-family: inherit; outline: none; transition: border-color 0.2s;
+}
+.research-field input:focus { border-color: var(--blue); }
+.phase-btns, .skill-btns {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.phase-btn, .skill-btn {
+  flex: 1; min-width: 80px; padding: 10px 8px; border: 2px solid #E8E0D5;
+  border-radius: 16px; background: white; font-size: 14px; font-weight: 700;
+  cursor: pointer; text-align: center; transition: all 0.2s;
+}
+.phase-btn:hover, .skill-btn:hover { border-color: var(--blue); }
+.phase-btn.selected, .skill-btn.selected {
+  background: var(--blue); color: white; border-color: var(--blue);
+}
+.research-start-btn {
+  width: 100%; margin-top: 8px; padding: 14px;
+  background: linear-gradient(180deg,var(--blue),#3A7FD4);
+  color: white; border: none; border-radius: 50px;
+  font-size: 17px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 6px 0 #2E6AB8, 0 8px 20px rgba(77,150,255,0.4);
+  transition: transform 0.15s cubic-bezier(0.68,-0.55,0.265,1.55);
+}
+.research-start-btn:active { transform: scale(1.05) translateY(2px); box-shadow: 0 3px 0 #2E6AB8, 0 4px 12px rgba(77,150,255,0.3); }
+.research-start-btn:disabled { opacity: 0.5; pointer-events: none; }
+
+/* Research status bar during game */
+.research-status-bar {
+  display: none; position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+  background: rgba(77,150,255,0.12); border: 1px solid rgba(77,150,255,0.3);
+  border-radius: 20px; padding: 4px 16px; font-size: 12px; font-weight: 700;
+  color: var(--blue); z-index: 30; white-space: nowrap;
+}
+.research-status-bar.show { display: block; }
+
+/* Long-press hint */
+.title-area { position: relative; }
+.title-area .research-hint {
+  position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: var(--text-light); opacity: 0;
+  transition: opacity 0.5s;
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes floatUp {
   0% { transform:translateY(0) scale(1); opacity:1; }
@@ -566,6 +629,46 @@ html, body {
     </div>
   </div>
 </div>
+
+<!-- ===== RESEARCH MODE SETUP PANEL ===== -->
+<div class="research-overlay" id="research-overlay" onclick="if(event.target===this)hideResearchSetup()">
+  <div class="research-panel" onclick="event.stopPropagation()">
+    <h2>🧪 研究模式设置</h2>
+    <div class="rp-subtitle">单被试实验设计 · Single Subject Design</div>
+    <div class="research-field">
+      <label>👤 被试编号 (Child ID)</label>
+      <input type="text" id="research-child-id" placeholder="例如：P001" autocomplete="off">
+    </div>
+    <div class="research-field">
+      <label>📊 实验阶段 (Experimental Phase)</label>
+      <div class="phase-btns" id="phase-btns">
+        <div class="phase-btn" data-phase="baseline">Baseline<br>基线期</div>
+        <div class="phase-btn" data-phase="intervention">Intervention<br>干预期</div>
+        <div class="phase-btn" data-phase="maintenance">Maintenance<br>维持期</div>
+      </div>
+    </div>
+    <div class="research-field">
+      <label>🎯 训练技能 (Skill)</label>
+      <div class="skill-btns" id="research-skill-btns">
+        <div class="skill-btn" data-skill="brush">🪥 刷牙</div>
+        <div class="skill-btn" data-skill="wash">💧 洗脸</div>
+        <div class="skill-btn" data-skill="dress">👕 穿衣</div>
+      </div>
+    </div>
+    <div class="research-field">
+      <label>🔢 训练次数 (Session Number)</label>
+      <input type="number" id="research-session-num" min="1" max="999" value="1" autocomplete="off">
+    </div>
+    <div class="research-field">
+      <label>📅 日期 (Date)</label>
+      <input type="date" id="research-date">
+    </div>
+    <button class="research-start-btn" id="research-start-btn" disabled onclick="startResearchSession()">开始研究训练</button>
+  </div>
+</div>
+
+<!-- Research status bar (shown during game) -->
+<div class="research-status-bar" id="research-status-bar"></div>
 
 <!-- ===== CELEBRATION ===== -->
 <div class="celebration-overlay" id="celebration">
@@ -1782,6 +1885,228 @@ const SessionManager = {
       return JSON.parse(localStorage.getItem('session_summaries') || '[]');
     } catch(e) { return []; }
   }
+};
+
+/* ================================================================
+   RESEARCH MODE — 单被试实验设计支持
+   ================================================================ */
+const ResearchMode = {
+  active: false,
+  childId: null,
+  phase: null,       // 'baseline' | 'intervention' | 'maintenance'
+  skillId: null,     // 'brush' | 'wash' | 'dress'
+  sessionNum: 1,
+  date: null,
+
+  // Open setup panel (hidden entry via long-press on title)
+  openSetup() {
+    const overlay = document.getElementById('research-overlay');
+    if (overlay) overlay.classList.add('active');
+    const dateInput = document.getElementById('research-date');
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    // Auto-suggest session number
+    this._suggestSessionNum();
+    this._updateStartBtn();
+  },
+
+  closeSetup() {
+    const overlay = document.getElementById('research-overlay');
+    if (overlay) overlay.classList.remove('active');
+  },
+
+  // Auto-suggest next session number based on history
+  _suggestSessionNum() {
+    const childId = document.getElementById('research-child-id')?.value?.trim();
+    if (!childId) return;
+    try {
+      const all = JSON.parse(localStorage.getItem('session_summaries') || '[]');
+      const childSessions = all.filter(s => s.participantId === childId);
+      const nextNum = childSessions.length + 1;
+      const numInput = document.getElementById('research-session-num');
+      if (numInput && !numInput.dataset.manual) numInput.value = nextNum;
+    } catch(e) {}
+  },
+
+  // Update start button state
+  _updateStartBtn() {
+    const btn = document.getElementById('research-start-btn');
+    if (!btn) return;
+    const childId = document.getElementById('research-child-id')?.value?.trim();
+    const phase = document.querySelector('.phase-btn.selected')?.dataset?.phase;
+    const skill = document.querySelector('.skill-btn.selected')?.dataset?.skill;
+    btn.disabled = !(childId && phase && skill);
+  },
+
+  // Start research session
+  start() {
+    this.active = true;
+    this.childId = document.getElementById('research-child-id').value.trim();
+    this.phase = document.querySelector('.phase-btn.selected').dataset.phase;
+    this.skillId = document.querySelector('.skill-btn.selected').dataset.skill;
+    this.sessionNum = parseInt(document.getElementById('research-session-num').value) || 1;
+    this.date = document.getElementById('research-date').value || new Date().toISOString().split('T')[0];
+
+    const phaseLabels = { baseline: 'Baseline', intervention: 'Intervention', maintenance: 'Maintenance' };
+    const phaseLabelsCN = { baseline: '基线期', intervention: '干预期', maintenance: '维持期' };
+    const skillLabels = { brush: '刷牙', wash: '洗脸', dress: '穿衣' };
+    const participantId = `${this.childId}_${this.phase}_S${String(this.sessionNum).padStart(2,'0')}`;
+
+    // Update status bar
+    const bar = document.getElementById('research-status-bar');
+    if (bar) {
+      bar.textContent = `🧪 ${this.childId} | ${phaseLabelsCN[this.phase]} | ${skillLabels[this.skillId]} | 第${this.sessionNum}次 | ${this.date}`;
+      bar.classList.add('show');
+    }
+
+    // Save reference to original SessionManager methods before overriding
+    if (!this._savedSM) {
+      this._savedSM = {
+        startSession: SessionManager.startSession,
+        endSession: SessionManager.endSession
+      };
+    }
+
+    const self = this;
+    // Override SessionManager to inject research metadata
+    SessionManager.startSession = function(tid, pid) {
+      self._savedSM.startSession.call(this, tid, participantId);
+      ResearchCollector.events[0].researchMode = true;
+      ResearchCollector.events[0].childId = self.childId;
+      ResearchCollector.events[0].experimentalPhase = self.phase;
+      ResearchCollector.events[0].sessionNumber = self.sessionNum;
+      ResearchCollector.events[0].date = self.date;
+    };
+
+    SessionManager.endSession = function() {
+      const summary = self._savedSM.endSession.call(this);
+      if (summary) {
+        summary.researchMode = true;
+        summary.childId = self.childId;
+        summary.experimentalPhase = self.phase;
+        summary.phaseLabel = phaseLabels[self.phase];
+        summary.skill = skillLabels[self.skillId];
+        summary.sessionNumber = self.sessionNum;
+        summary.date = self.date;
+        // Update localStorage
+        try {
+          const key = 'session_summaries';
+          const summaries = JSON.parse(localStorage.getItem(key) || '[]');
+          if (summaries.length > 0) {
+            const last = summaries[summaries.length - 1];
+            Object.assign(last, {
+              researchMode: true, childId: self.childId,
+              experimentalPhase: self.phase, sessionNumber: self.sessionNum,
+              date: self.date, skill: skillLabels[self.skillId]
+            });
+            localStorage.setItem(key, JSON.stringify(summaries));
+          }
+        } catch(e) {}
+        // Download research report
+        const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${self.childId}_${self.phase}_${self.skillId}_S${String(self.sessionNum).padStart(2,'0')}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      return summary;
+    };
+
+    // Close setup panel, then start the research skill
+    this.closeSetup();
+    const skillIdx = { brush: 0, wash: 1, dress: 2 }[this.skillId];
+    _originalStartLevel(skillIdx);
+  },
+
+  // Reset to normal mode
+  end() {
+    this.active = false;
+    // Restore original SessionManager methods
+    if (this._savedSM) {
+      SessionManager.startSession = this._savedSM.startSession;
+      SessionManager.endSession = this._savedSM.endSession;
+      this._savedSM = null;
+    }
+    const bar = document.getElementById('research-status-bar');
+    if (bar) bar.classList.remove('show');
+  }
+};
+
+// Long-press detection on title icon for research entry
+(function setupResearchEntry() {
+  const icon = document.querySelector('.title-icon');
+  if (!icon) return;
+  let pressTimer = null;
+  let hintTimer = null;
+
+  icon.addEventListener('pointerdown', (e) => {
+    pressTimer = setTimeout(() => {
+      // Show brief hint, then open after another second
+      hintTimer = setTimeout(() => {
+        ResearchMode.openSetup();
+        pressTimer = null;
+        hintTimer = null;
+      }, 1200);
+    }, 800);
+  });
+
+  icon.addEventListener('pointerup', () => {
+    if (pressTimer) clearTimeout(pressTimer);
+    if (hintTimer) clearTimeout(hintTimer);
+    pressTimer = null;
+    hintTimer = null;
+  });
+
+  icon.addEventListener('pointerleave', () => {
+    if (pressTimer) clearTimeout(pressTimer);
+    if (hintTimer) clearTimeout(hintTimer);
+    pressTimer = null;
+    hintTimer = null;
+  });
+})();
+
+// Research setup form interactions
+(function setupResearchForm() {
+  // Phase buttons
+  document.querySelectorAll('.phase-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      ResearchMode._updateStartBtn();
+    });
+  });
+  // Skill buttons
+  document.querySelectorAll('.skill-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.skill-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      ResearchMode._updateStartBtn();
+    });
+  });
+  // Child ID input
+  const childIdInput = document.getElementById('research-child-id');
+  if (childIdInput) {
+    childIdInput.addEventListener('input', () => {
+      ResearchMode._suggestSessionNum();
+      ResearchMode._updateStartBtn();
+    });
+  }
+  // Session number manual edit flag
+  const sessionNumInput = document.getElementById('research-session-num');
+  if (sessionNumInput) {
+    sessionNumInput.addEventListener('input', () => { sessionNumInput.dataset.manual = '1'; });
+  }
+})();
+
+function hideResearchSetup() { ResearchMode.closeSetup(); }
+function startResearchSession() { ResearchMode.start(); }
+
+// Wrap goHome to clean up research state
+const __origGoHome2 = goHome;
+goHome = function() {
+  if (ResearchMode.active) ResearchMode.end();
+  __origGoHome2();
 };
 
 /* ================================================================
