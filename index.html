@@ -2147,6 +2147,17 @@ const ResearchMode = {
     this.sessionNum = parseInt(document.getElementById('research-session-num').value) || 1;
     this.date = document.getElementById('research-date').value || new Date().toISOString().split('T')[0];
 
+    // Save researchSession to localStorage (V2.1 spec)
+    const researchSession = {
+      participantID: this.childId,
+      skill: this.skillId,
+      phase: this.phase,
+      sessionNumber: this.sessionNum,
+      startTime: new Date().toISOString()
+    };
+    try { localStorage.setItem('researchSession', JSON.stringify(researchSession)); } catch(e) {}
+    console.log('[Research] Session saved:', researchSession);
+
     const phaseLabels = { baseline: 'Baseline', intervention: 'Intervention', maintenance: 'Maintenance' };
     const phaseLabelsCN = { baseline: '基线期', intervention: '干预期', maintenance: '维持期' };
     const skillLabels = { brush: '刷牙', wash: '洗脸', dress: '穿衣' };
@@ -2183,6 +2194,7 @@ const ResearchMode = {
       if (summary) {
         summary.researchMode = true;
         summary.childId = self.childId;
+        summary.participantID = self.childId; // V2.1 spec
         summary.experimentalPhase = self.phase;
         summary.phaseLabel = phaseLabels[self.phase];
         summary.skill = skillLabels[self.skillId];
@@ -2201,7 +2213,7 @@ const ResearchMode = {
           if (summaries.length > 0) {
             const last = summaries[summaries.length - 1];
             Object.assign(last, {
-              researchMode: true, childId: self.childId,
+              researchMode: true, childId: self.childId, participantID: self.childId,
               experimentalPhase: self.phase, sessionNumber: self.sessionNum,
               date: self.date, skill: skillLabels[self.skillId]
             });
@@ -2249,36 +2261,24 @@ const ResearchMode = {
   }
 };
 
-// Long-press detection on title icon for research entry
+// 5-tap detection on title icon for hidden research entry
 (function setupResearchEntry() {
   const icon = document.querySelector('.title-icon');
   if (!icon) return;
-  let pressTimer = null;
-  let hintTimer = null;
+  let tapCount = 0;
+  let tapTimer = null;
 
-  icon.addEventListener('pointerdown', (e) => {
-    pressTimer = setTimeout(() => {
-      // Show brief hint, then open after another second
-      hintTimer = setTimeout(() => {
-        ResearchMode.openSetup();
-        pressTimer = null;
-        hintTimer = null;
-      }, 1200);
-    }, 800);
-  });
-
-  icon.addEventListener('pointerup', () => {
-    if (pressTimer) clearTimeout(pressTimer);
-    if (hintTimer) clearTimeout(hintTimer);
-    pressTimer = null;
-    hintTimer = null;
-  });
-
-  icon.addEventListener('pointerleave', () => {
-    if (pressTimer) clearTimeout(pressTimer);
-    if (hintTimer) clearTimeout(hintTimer);
-    pressTimer = null;
-    hintTimer = null;
+  icon.addEventListener('click', (e) => {
+    e.stopPropagation(); // Don't trigger initAudio or other handlers
+    tapCount++;
+    if (tapCount === 1) {
+      tapTimer = setTimeout(() => { tapCount = 0; }, 2000); // Reset after 2s
+    }
+    if (tapCount >= 5) {
+      clearTimeout(tapTimer);
+      tapCount = 0;
+      ResearchMode.openSetup();
+    }
   });
 })();
 
@@ -2349,7 +2349,7 @@ function showDashboard() {
     for (const s of researchSessions.slice(-20).reverse()) {
       html += `<tr style="border-bottom:1px solid #F0EDE8;">
         <td style="padding:6px;">${s.date||'-'}</td>
-        <td>${s.childId||'-'}</td>
+        <td>${s.participantID||s.childId||'-'}</td>
         <td>${s.experimentalPhase||'-'}</td>
         <td>${s.skill||'-'}</td>
         <td style="text-align:right;">${s.sessionNumber||'-'}</td>
@@ -2375,7 +2375,7 @@ function exportAllCSV() {
   const researchSessions = summaries.filter(s => s.researchMode);
   const rows = [['sessionId','date','childId','phase','skill','sessionNum','totalSteps','totalErrors','avgPromptLevel','durationMin','fadeEnabled']];
   for (const s of researchSessions) {
-    rows.push([s.sessionId,s.date,s.childId,s.experimentalPhase,s.skill,s.sessionNumber,s.totalSteps,s.totalErrors,s.avgPromptLevel,s.durationMin,s.fadeReport?.fadeEnabled?'Y':'N']);
+    rows.push([s.sessionId,s.date,s.participantID||s.childId,s.experimentalPhase,s.skill,s.sessionNumber,s.totalSteps,s.totalErrors,s.avgPromptLevel,s.durationMin,s.fadeReport?.fadeEnabled?'Y':'N']);
   }
   const csv = rows.map(r => r.map(c => '\"' + String(c).replace(/\"/g,'\"\"') + '\"').join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
