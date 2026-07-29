@@ -906,6 +906,34 @@ let state = {
   stepAbortController:null
 };
 
+const STEP_STATE_KEYS = {
+  brush: ['toothbrushFound','toothpasteApplied','toothbrushPickedUp','leftBrushed','rightBrushed','rinsed','mouthWiped'],
+  wash: ['faucetOn','waterCollected','towelWet','towelWrung','faceWashed','towelRinsed','faucetOff'],
+  dress: ['jacketFound','frontIdentified','leftSleeveOn','rightSleeveOn','jacketPulledDown','zipperClosed','collarAdjusted']
+};
+
+const SkillSceneState = {
+  values: {},
+
+  reset() {
+    this.values = {
+      brush: Object.fromEntries(STEP_STATE_KEYS.brush.map(k => [k, false])),
+      wash: Object.fromEntries(STEP_STATE_KEYS.wash.map(k => [k, false])),
+      dress: Object.fromEntries(STEP_STATE_KEYS.dress.map(k => [k, false]))
+    };
+  },
+
+  complete(levelId, stepId) {
+    const key = STEP_STATE_KEYS[levelId]?.[stepId - 1];
+    if (key) this.values[levelId][key] = true;
+  },
+
+  has(levelId, key) {
+    return this.values[levelId]?.[key] === true;
+  }
+};
+SkillSceneState.reset();
+
 const AnimationPolicy = {
   isEnabled() {
     if (!ResearchMode.active) return true;
@@ -1066,12 +1094,14 @@ function goHome() {
   AnimationController.clear();
   if(currentAudio) { currentAudio.pause(); currentAudio = null; }
   state.currentLevel=-1; state.currentStep=0; state.stepCompleted=new Set();
+  SkillSceneState.reset();
   showScreen('start-screen');
 }
 function startLevel(idx) {
   AnimationController.clear();
   initAudio();
   state.currentLevel=idx; state.currentStep=0; state.stepCompleted=new Set();
+  SkillSceneState.reset();
   showScreen('game-screen'); renderProgressDots(); loadStep(0);
 }
 function renderProgressDots() {
@@ -1203,8 +1233,32 @@ function arrLeftRight(){
 /* ================================================================
    SCENE BUILDERS — compose SVG objects + arrow guidance
    ================================================================ */
-function stepStageHTML(objects, guide) {
-  return `<div class="step-stage">${objects}${guide}</div>`;
+function buildPersistentStateHTML(levelId, stepId) {
+  const stateHTML = cls => `<div class="persistent-state ${cls}" aria-hidden="true"></div>`;
+  const prior = (key, completedStep) => stepId > completedStep && SkillSceneState.has(levelId, key);
+  let html = '';
+
+  if (levelId === 'brush') {
+    if (prior('toothpasteApplied', 2)) html += stateHTML('state-paste-on-brush');
+    if (prior('rightBrushed', 5)) html += stateHTML('state-clean-both');
+    else if (prior('leftBrushed', 4)) html += stateHTML('state-clean-left');
+  } else if (levelId === 'wash') {
+    if (prior('faucetOn', 1) && !SkillSceneState.has(levelId, 'faucetOff')) html += stateHTML('state-water-stream');
+    if (prior('towelWet', 3)) html += stateHTML('state-wet-towel');
+    if (prior('faceWashed', 5)) html += stateHTML('state-clean-face');
+  } else if (levelId === 'dress') {
+    if (prior('frontIdentified', 2)) html += stateHTML('state-jacket-front');
+    if (prior('rightSleeveOn', 4)) html += stateHTML('state-both-sleeves');
+    else if (prior('leftSleeveOn', 3)) html += stateHTML('state-left-sleeve');
+    if (prior('jacketPulledDown', 5)) html += stateHTML('state-jacket-flat');
+    if (prior('zipperClosed', 6)) html += stateHTML('state-zipper-closed');
+  }
+  return html;
+}
+
+function stepStageHTML(objects, guide, levelId, stepId) {
+  const persistent = buildPersistentStateHTML(levelId, stepId);
+  return `<div class="step-stage" data-level="${levelId}" data-step="${stepId}">${persistent}${objects}${guide}</div>`;
 }
 
 function buildScene(levelId, step) {
@@ -1247,7 +1301,7 @@ function buildScene(levelId, step) {
       <div style="position:absolute;bottom:8%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="towel">${svgTowel(180,130)}</div>`;
       guide = arrowHTML('leftright', '36%', '20%', '拖拽毛巾到嘴巴上擦一擦');
     }
-    return stepStageHTML(objects, guide);
+    return stepStageHTML(objects, guide, levelId, sid);
   }
 
   if (levelId==='wash') {
@@ -1275,7 +1329,7 @@ function buildScene(levelId, step) {
       <div style="position:absolute;top:5%;left:38%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
       guide = arrowHTML('down', '22%', '45%', '拖拽小手向下推水龙头');
     }
-    return stepStageHTML(objects, guide);
+    return stepStageHTML(objects, guide, levelId, sid);
   }
 
   if (levelId==='dress') {
@@ -1311,7 +1365,7 @@ function buildScene(levelId, step) {
       <div style="position:absolute;top:14%;right:8%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
       guide = arrowHTML('leftright', '16%', '28%', '拖拽小手到领口整理');
     }
-    return stepStageHTML(objects, guide);
+    return stepStageHTML(objects, guide, levelId, sid);
   }
   return '';
 }
@@ -1538,6 +1592,7 @@ function checkMatch(det, exp) {
 function handleStepSuccess(area) {
   const level=LEVELS[state.currentLevel];
   state.stepCompleted.add(state.currentStep);
+  SkillSceneState.complete(level.id, level.steps[state.currentStep].id);
   area.classList.add('success'); playSuccessSound();
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
   speak(p[Math.floor(Math.random()*p.length)]);

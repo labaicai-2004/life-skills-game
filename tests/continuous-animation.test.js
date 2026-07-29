@@ -15,7 +15,7 @@ function createElement() {
   const listeners = new Map();
   return {
     classList: new ClassList(),
-    style: {},
+    style: { setProperty() {} },
     dataset: {},
     isConnected: true,
     addEventListener(type, handler) { listeners.set(type, handler); },
@@ -24,6 +24,8 @@ function createElement() {
     querySelector() { return null; },
     querySelectorAll() { return []; },
     appendChild(child) { this.lastChild = child; },
+    removeChild() {},
+    click() {},
     remove() { this.isConnected = false; },
     getBoundingClientRect() { return { left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 }; }
   };
@@ -49,6 +51,7 @@ function loadAnimationRuntime() {
     querySelector() { return null; },
     querySelectorAll() { return []; },
     getElementById(id) { return elements[id] || createElement(); },
+    body: createElement(),
     createElement() {
       const wrapper = createElement();
       Object.defineProperty(wrapper, 'innerHTML', {
@@ -59,6 +62,11 @@ function loadAnimationRuntime() {
   };
   const context = {
     AbortController,
+    Audio: class {
+      play() { return { catch() {} }; }
+      pause() {}
+    },
+    Blob: class {},
     Date,
     JSON,
     Math,
@@ -73,7 +81,8 @@ function loadAnimationRuntime() {
     window: {
       addEventListener() {},
       matchMedia() { return { matches: false }; }
-    }
+    },
+    URL: { createObjectURL() { return 'blob:test'; } }
   };
   context.globalThis = context;
   const expose = `
@@ -81,7 +90,9 @@ function loadAnimationRuntime() {
       AnimationPolicy, AnimationController, ResearchMode, TrainingModes,
       get currentTrainingMode() { return currentTrainingMode; },
       setTrainingMode(mode) { currentTrainingMode = mode; },
-      get state() { return state; }, loadStep, goHome, attachGestureListeners
+      get state() { return state; }, loadStep, goHome, startLevel,
+      handleStepSuccess, attachGestureListeners, STEP_STATE_KEYS,
+      SkillSceneState, buildPersistentStateHTML, stepStageHTML
     };
   `;
   try {
@@ -150,4 +161,75 @@ test('step lifecycle schedules on entry, pauses on first touch, and clears on re
   api.goHome();
   assert.equal(api.AnimationController.currentStage, null);
   assert.equal(stage.classList.contains('demo-paused'), false);
+});
+
+test('STEP_STATE_KEYS maps all three skills to their seven persistent-state keys', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  assert.equal(JSON.stringify(runtime.api.STEP_STATE_KEYS), JSON.stringify({
+    brush: ['toothbrushFound', 'toothpasteApplied', 'toothbrushPickedUp', 'leftBrushed', 'rightBrushed', 'rinsed', 'mouthWiped'],
+    wash: ['faucetOn', 'waterCollected', 'towelWet', 'towelWrung', 'faceWashed', 'towelRinsed', 'faucetOff'],
+    dress: ['jacketFound', 'frontIdentified', 'leftSleeveOn', 'rightSleeveOn', 'jacketPulledDown', 'zipperClosed', 'collarAdjusted']
+  }));
+});
+
+test('SkillSceneState resets, completes mapped steps, and reports only completed keys', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { SkillSceneState } = runtime.api;
+  SkillSceneState.reset();
+  assert.equal(SkillSceneState.has('brush', 'toothpasteApplied'), false);
+  SkillSceneState.complete('brush', 2);
+  SkillSceneState.complete('wash', 5);
+  assert.equal(SkillSceneState.has('brush', 'toothpasteApplied'), true);
+  assert.equal(SkillSceneState.has('wash', 'faceWashed'), true);
+  assert.equal(SkillSceneState.has('dress', 'zipperClosed'), false);
+  SkillSceneState.reset();
+  assert.equal(SkillSceneState.has('brush', 'toothpasteApplied'), false);
+  assert.equal(SkillSceneState.has('wash', 'faceWashed'), false);
+});
+
+test('starting a level and returning home reset persistent skill state', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+  api.SkillSceneState.complete('brush', 2);
+  api.startLevel(1);
+  assert.equal(api.SkillSceneState.has('brush', 'toothpasteApplied'), false);
+  api.SkillSceneState.complete('wash', 1);
+  api.goHome();
+  assert.equal(api.SkillSceneState.has('wash', 'faucetOn'), false);
+});
+
+test('handleStepSuccess stores the current level step in persistent state', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+  api.SkillSceneState.reset();
+  api.state.currentLevel = 2;
+  api.state.currentStep = 5;
+  api.handleStepSuccess(createElement());
+  assert.equal(api.SkillSceneState.has('dress', 'zipperClosed'), true);
+});
+
+test('persistent state markup includes only prior indicators and stage markup receives level and step', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+  api.SkillSceneState.reset();
+  api.SkillSceneState.complete('brush', 2);
+  api.SkillSceneState.complete('brush', 4);
+  api.SkillSceneState.complete('brush', 5);
+  const priorState = api.buildPersistentStateHTML('brush', 6);
+  assert.match(priorState, /state-paste-on-brush/);
+  assert.match(priorState, /state-clean-both/);
+  assert.doesNotMatch(api.buildPersistentStateHTML('brush', 2), /state-paste-on-brush/);
+  assert.match(priorState, /persistent-state/);
+  assert.match(priorState, /aria-hidden="true"/);
+  const stage = api.stepStageHTML('<div class="objects"></div>', '<div class="guide"></div>', 'brush', 6);
+  assert.match(stage, /data-level="brush"/);
+  assert.match(stage, /data-step="6"/);
+  assert.match(stage, /state-paste-on-brush/);
+  assert.match(stage, /objects/);
+  assert.match(stage, /guide/);
 });
