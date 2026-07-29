@@ -224,6 +224,19 @@ html, body {
 .scene { position:relative; width:100%; height:100%; }
 .scene-bg { position:absolute; inset:0; z-index:0; width:100%; height:100%; }
 .step-stage { position:absolute; inset:0; z-index:1; }
+.demo-element, .persistent-state {
+  pointer-events:none;
+}
+.step-stage.demo-paused .demo-element,
+.step-stage.demo-paused .demo-element::before,
+.step-stage.demo-paused .demo-element::after {
+  animation-play-state:paused !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-element, .demo-element::before, .demo-element::after {
+    animation:none !important;
+  }
+}
 .step-stage.enter { animation:stageIn 0.45s ease-out both; }
 .step-stage.exit { animation:stageOut 0.25s ease-in both; }
 @keyframes stageIn {
@@ -893,6 +906,50 @@ let state = {
   stepAbortController:null
 };
 
+const AnimationPolicy = {
+  isEnabled() {
+    if (!ResearchMode.active) return true;
+    return ResearchMode.phase === 'intervention' &&
+      currentTrainingMode.id === 'teaching';
+  }
+};
+
+const AnimationController = {
+  timer: null,
+  currentStage: null,
+
+  schedule(stage) {
+    this.clear();
+    this.currentStage = stage;
+    if (!stage || !AnimationPolicy.isEnabled() ||
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    this.timer = setTimeout(() => {
+      if (this.currentStage === stage && stage.isConnected) {
+        stage.classList.add('demo-running');
+      }
+      this.timer = null;
+    }, 2000);
+  },
+
+  pause(stage) {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    const target = stage || this.currentStage;
+    if (target) target.classList.add('demo-paused');
+  },
+
+  clear() {
+    if (this.timer) clearTimeout(this.timer);
+    if (this.currentStage) {
+      this.currentStage.classList.remove('demo-running', 'demo-paused');
+    }
+    this.timer = null;
+    this.currentStage = null;
+  }
+};
+
 /* ================================================================
    AUDIO
    ================================================================ */
@@ -1006,11 +1063,13 @@ function showScreen(id) {
   const el=document.getElementById(id); if(el) el.classList.add('active');
 }
 function goHome() {
+  AnimationController.clear();
   if(currentAudio) { currentAudio.pause(); currentAudio = null; }
   state.currentLevel=-1; state.currentStep=0; state.stepCompleted=new Set();
   showScreen('start-screen');
 }
 function startLevel(idx) {
+  AnimationController.clear();
   initAudio();
   state.currentLevel=idx; state.currentStep=0; state.stepCompleted=new Set();
   showScreen('game-screen'); renderProgressDots(); loadStep(0);
@@ -1043,6 +1102,7 @@ function loadStep(idx) {
   renderProgressDots();
   const scene=document.getElementById('scene'), area=document.getElementById('interaction-area');
   area.classList.remove('success','wrong');
+  AnimationController.clear();
 
   // Persistent background — set once per level
   if (!scene.dataset.levelId || scene.dataset.levelId !== level.id) {
@@ -1071,6 +1131,7 @@ function loadStep(idx) {
     });
     state.gesturePoints=[]; state.isGestureActive=false;
     attachGestureListeners(step, area);
+    AnimationController.schedule(newStage);
   }
 
   if (oldStage) {
@@ -1290,6 +1351,7 @@ function attachGestureListeners(step, area) {
 
   area.addEventListener('touchstart', e => {
     initAudio();
+    AnimationController.pause(area.querySelector('.step-stage'));
     const t = e.touches[0];
 
     if (expected === 'drag') {
@@ -1384,6 +1446,7 @@ function attachGestureListeners(step, area) {
   // Mouse fallback
   area.addEventListener('mousedown', e => {
     initAudio();
+    AnimationController.pause(area.querySelector('.step-stage'));
     if (expected === 'drag') {
       const item = area.querySelector('.draggable-item');
       if (item) {
