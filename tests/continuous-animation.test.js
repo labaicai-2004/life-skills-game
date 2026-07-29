@@ -92,7 +92,7 @@ function loadAnimationRuntime() {
       setTrainingMode(mode) { currentTrainingMode = mode; },
       get state() { return state; }, loadStep, goHome, startLevel,
       handleStepSuccess, attachGestureListeners, STEP_STATE_KEYS,
-      SkillSceneState, buildPersistentStateHTML, stepStageHTML
+      SkillSceneState, buildPersistentStateHTML, stepStageHTML, buildScene, LEVELS
     };
   `;
   try {
@@ -221,7 +221,8 @@ test('persistent state markup includes only prior indicators and stage markup re
   api.SkillSceneState.complete('brush', 4);
   api.SkillSceneState.complete('brush', 5);
   const priorState = api.buildPersistentStateHTML('brush', 6);
-  assert.match(priorState, /state-paste-on-brush/);
+  assert.match(api.buildPersistentStateHTML('brush', 3), /state-paste-on-brush/);
+  assert.doesNotMatch(priorState, /state-paste-on-brush/);
   assert.match(priorState, /state-clean-both/);
   assert.doesNotMatch(api.buildPersistentStateHTML('brush', 2), /state-paste-on-brush/);
   assert.match(priorState, /persistent-state/);
@@ -229,7 +230,65 @@ test('persistent state markup includes only prior indicators and stage markup re
   const stage = api.stepStageHTML('<div class="objects"></div>', '<div class="guide"></div>', 'brush', 6);
   assert.match(stage, /data-level="brush"/);
   assert.match(stage, /data-step="6"/);
-  assert.match(stage, /state-paste-on-brush/);
+  assert.doesNotMatch(stage, /state-paste-on-brush/);
   assert.match(stage, /objects/);
   assert.match(stage, /guide/);
+});
+
+test('brushing scenes provide seven delayed, non-interactive demonstration markers', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+  for (let stepId = 1; stepId <= 7; stepId++) {
+    const scene = api.buildScene('brush', api.LEVELS[0].steps[stepId - 1]);
+    assert.match(scene, new RegExp(`demo-element demo-brush-${stepId}`));
+    assert.match(scene, /aria-hidden="true"/);
+    assert.match(source, new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-brush-${stepId}\\s*\\{`));
+  }
+
+  assert.match(source, /\.demo-element, \.persistent-state\s*\{\s*pointer-events:none;/);
+  for (const keyframe of [
+    'demoFindPulse', 'demoPasteSqueeze', 'demoPasteDrop', 'demoPickUp',
+    'demoBrushVertical', 'demoCupTilt', 'demoWipeHorizontal', 'cleanSparkle'
+  ]) {
+    assert.match(source, new RegExp(`@keyframes ${keyframe}`));
+  }
+});
+
+test('brushing drag demonstrations animate a separate ghost and leave the real draggable item still', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+
+  for (const stepId of [4, 5, 7]) {
+    const scene = api.buildScene('brush', api.LEVELS[0].steps[stepId - 1]);
+    assert.match(scene, new RegExp(`demo-element demo-brush-${stepId} demo-ghost`));
+    assert.doesNotMatch(scene, /class="[^"]*draggable-item[^"]*demo-element/);
+  }
+});
+
+test('brushing continuity indicators appear only after their required completed steps', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { SkillSceneState, buildPersistentStateHTML } = runtime.api;
+  SkillSceneState.reset();
+
+  assert.doesNotMatch(buildPersistentStateHTML('brush', 3), /state-paste-on-brush/);
+  SkillSceneState.complete('brush', 2);
+  assert.match(buildPersistentStateHTML('brush', 3), /state-paste-on-brush/);
+  assert.doesNotMatch(buildPersistentStateHTML('brush', 6), /state-paste-on-brush/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('brush', 5), /state-clean-left/);
+  SkillSceneState.complete('brush', 4);
+  assert.match(buildPersistentStateHTML('brush', 5), /state-clean-left/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('brush', 6), /state-clean-both/);
+  SkillSceneState.complete('brush', 5);
+  assert.match(buildPersistentStateHTML('brush', 6), /state-clean-both/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('brush', 6), /state-final-clean-mouth/);
+  assert.match(buildPersistentStateHTML('brush', 7), /state-final-clean-mouth/);
+  assert.match(buildPersistentStateHTML('brush', 7), /aria-hidden="true"/);
 });

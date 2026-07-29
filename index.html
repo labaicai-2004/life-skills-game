@@ -227,6 +227,70 @@ html, body {
 .demo-element, .persistent-state {
   pointer-events:none;
 }
+.demo-element { position:absolute; z-index:6; }
+.demo-ghost { opacity:0; }
+
+@keyframes demoFindPulse {
+  0%,45%,100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
+  55%,75% { transform:translate(-50%,-50%) scale(1.08); opacity:0.9; }
+}
+@keyframes demoPasteSqueeze {
+  0%,40%,100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
+  52%,72% { transform:translate(-50%,-50%) scale(0.94,1.06); opacity:0.9; }
+}
+@keyframes demoPasteDrop {
+  0%,50%,100% { transform:translate(-50%,-16px) scale(0.6); opacity:0; }
+  66%,78% { transform:translate(-50%,18px) scale(1); opacity:0.95; }
+}
+@keyframes demoPickUp {
+  0%,35%,100% { transform:translateX(-50%) translateY(0) scale(1); opacity:0; }
+  52%,76% { transform:translateX(-50%) translateY(-115px) scale(1.04); opacity:0.9; }
+}
+@keyframes demoBrushVertical {
+  0%,30%,100% { transform:translateY(0) scale(1); opacity:0; }
+  45%,60% { transform:translateY(-92px) scale(1.03); opacity:0.9; }
+  75% { transform:translateY(-54px) scale(1.03); opacity:0.9; }
+}
+@keyframes demoCupTilt {
+  0%,40%,100% { transform:translate(-50%,-50%) rotate(0deg); opacity:0; }
+  55%,72% { transform:translate(-50%,-50%) rotate(-18deg); opacity:0.9; }
+}
+@keyframes demoWipeHorizontal {
+  0%,30%,100% { transform:translateX(0) scale(1); opacity:0; }
+  48%,72% { transform:translateX(-150px) scale(1.03); opacity:0.9; }
+}
+@keyframes cleanSparkle {
+  0%,100% { transform:scale(0.82) rotate(0deg); opacity:0.45; }
+  50% { transform:scale(1.16) rotate(12deg); opacity:1; }
+}
+
+.step-stage.demo-running .demo-brush-1 { animation:demoFindPulse 1.8s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-2 { animation:demoPasteSqueeze 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-2 .demo-paste-drop { animation:demoPasteDrop 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-3 { animation:demoPickUp 2.1s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-4 { animation:demoBrushVertical 2.3s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-5 { animation:demoBrushVertical 2.3s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-6 { animation:demoCupTilt 1.9s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-7 { animation:demoWipeHorizontal 2.0s ease-in-out infinite; }
+
+.state-paste-on-brush {
+  position:absolute; bottom:18%; width:28px; height:16px; border-radius:50%; z-index:15;
+  background:linear-gradient(135deg,#F8F8FF,#A9D9FF); box-shadow:0 2px 5px rgba(91,160,213,0.35);
+}
+[data-step="3"] .state-paste-on-brush { left:48%; }
+[data-step="4"] .state-paste-on-brush { right:13%; }
+[data-step="5"] .state-paste-on-brush { left:13%; }
+.state-clean-left, .state-clean-both, .state-final-clean-mouth {
+  position:absolute; z-index:16; color:#FFD93D; font-size:34px; line-height:1; text-shadow:0 2px 8px rgba(255,217,61,0.5);
+}
+.state-clean-left::before { content:'✦'; }
+.state-clean-both::before { content:'✦  ✦'; }
+.state-clean-left, .state-clean-both { top:31%; left:50%; transform:translateX(-50%); }
+.state-final-clean-mouth { top:43%; left:50%; transform:translate(-50%,-50%) scale(0.82); opacity:0; transition:transform 0.35s ease-out, opacity 0.35s ease-out; }
+.state-final-clean-mouth::before { content:'✦'; }
+#interaction-area.success .state-final-clean-mouth { transform:translate(-50%,-50%) scale(1.16); opacity:1; }
+.step-stage.demo-running .state-clean-left,
+.step-stage.demo-running .state-clean-both { animation:cleanSparkle 1.8s ease-in-out infinite; }
 .step-stage.demo-paused .demo-element,
 .step-stage.demo-paused .demo-element::before,
 .step-stage.demo-paused .demo-element::after {
@@ -1239,9 +1303,10 @@ function buildPersistentStateHTML(levelId, stepId) {
   let html = '';
 
   if (levelId === 'brush') {
-    if (prior('toothpasteApplied', 2)) html += stateHTML('state-paste-on-brush');
+    if (stepId >= 3 && stepId <= 5 && prior('toothpasteApplied', 2)) html += stateHTML('state-paste-on-brush');
     if (prior('rightBrushed', 5)) html += stateHTML('state-clean-both');
     else if (prior('leftBrushed', 4)) html += stateHTML('state-clean-left');
+    if (stepId === 7) html += stateHTML('state-final-clean-mouth');
   } else if (levelId === 'wash') {
     if (prior('faucetOn', 1) && !SkillSceneState.has(levelId, 'faucetOff')) html += stateHTML('state-water-stream');
     if (prior('towelWet', 3)) html += stateHTML('state-wet-towel');
@@ -1268,14 +1333,17 @@ function buildScene(levelId, step) {
   if (levelId==='brush') {
     if (sid===1) {
       objects = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;">${svgToothbrush()}</div>`;
+      objects += `<div class="demo-element demo-brush-1" aria-hidden="true" style="top:50%;left:50%;">${svgToothbrush()}</div>`;
       guide = arrowHTML(arrow, '46%', '48%', '点击牙刷');
     } else if (sid===3) {
       objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;">${sinkFaucetImg()}</div>`;
+      objects += `<div class="demo-element demo-brush-3 demo-ghost" aria-hidden="true" style="bottom:7%;left:50%;">${svgToothbrush(220,165)}</div>`;
       guide = arrowHTML(arrow, '50%', '35%', '点击牙刷');
     } else if (sid===2) {
       objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;">
       <div style="width:480px;height:160px;transform:rotate(-90deg);filter:drop-shadow(0 12px 36px rgba(0,0,0,0.4));margin-bottom:-45px;margin-top:60px;"><img src="toothpaste.png?v=5" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;-webkit-touch-callout:none;" alt="牙膏"></div>
       <div style="width:380px;height:250px;transform:rotate(-90deg);filter:drop-shadow(0 12px 36px rgba(0,0,0,0.4));"><img src="toothbrush.png?v=4" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;-webkit-touch-callout:none;" alt="牙刷"></div></div>`;
+      objects += `<div class="demo-element demo-brush-2" aria-hidden="true" style="top:48%;left:50%;width:160px;height:70px;"><img src="toothpaste.png?v=5" draggable="false" style="width:100%;height:100%;object-fit:contain;transform:rotate(-90deg);" alt=""><span class="demo-paste-drop" style="position:absolute;left:50%;bottom:-8px;width:20px;height:14px;border-radius:50%;background:#A9D9FF;"></span></div>`;
       guide = arrowHTML(arrow, '12%', '20%', '向下滑动挤牙膏');
     } else if (sid===4) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
@@ -1284,6 +1352,7 @@ function buildScene(levelId, step) {
         <div class="drop-zone-label" style="left:28%;">👈 刷左边</div>
       </div>
       <div style="position:absolute;bottom:5%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(260,190)}</div>`;
+      objects += `<div class="demo-element demo-brush-4 demo-ghost" aria-hidden="true" style="bottom:5%;right:5%;">${svgToothbrush(260,190)}</div>`;
       guide = arrowHTML('updown', '44%', '22%', '拖拽牙刷到左边上下刷');
     } else if (sid===5) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
@@ -1292,13 +1361,16 @@ function buildScene(levelId, step) {
         <div class="drop-zone-label" style="left:72%;">👉 刷右边</div>
       </div>
       <div style="position:absolute;bottom:5%;left:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(260,190)}</div>`;
+      objects += `<div class="demo-element demo-brush-5 demo-ghost" aria-hidden="true" style="bottom:5%;left:5%;">${svgToothbrush(260,190)}</div>`;
       guide = arrowHTML('updown', '44%', '58%', '拖拽牙刷到右边上下刷');
     } else if (sid===6) {
       objects = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;">${svgCup()}</div>`;
+      objects += `<div class="demo-element demo-brush-6" aria-hidden="true" style="top:50%;left:50%;">${svgCup()}</div>`;
       guide = arrowHTML(arrow, '50%', '40%', '点击水杯');
     } else if (sid===7) {
       objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="mouth">${svgFace(260,290)}</div>
       <div style="position:absolute;bottom:8%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="towel">${svgTowel(180,130)}</div>`;
+      objects += `<div class="demo-element demo-brush-7 demo-ghost" aria-hidden="true" style="bottom:8%;right:5%;">${svgTowel(180,130)}</div>`;
       guide = arrowHTML('leftright', '36%', '20%', '拖拽毛巾到嘴巴上擦一擦');
     }
     return stepStageHTML(objects, guide, levelId, sid);
