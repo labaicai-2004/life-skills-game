@@ -273,6 +273,60 @@ html, body {
 .step-stage.demo-running .demo-brush-6 { animation:demoCupTilt 1.9s ease-in-out infinite; }
 .step-stage.demo-running .demo-brush-7 { animation:demoWipeHorizontal 2.0s ease-in-out infinite; }
 
+@keyframes demoHandPushUp {
+  0%,30%,100% { transform:translateY(0) scale(1); opacity:0; }
+  48%,72% { transform:translateY(-115px) scale(1.04); opacity:0.9; }
+}
+@keyframes demoCollectWater {
+  0%,32%,100% { transform:translate(-50%,0) scale(1); opacity:0; }
+  50%,74% { transform:translate(-50%,28px) scale(1.04); opacity:0.9; }
+}
+@keyframes demoTowelRub {
+  0%,28%,100% { transform:translateY(0) rotate(0deg); opacity:0; }
+  45% { transform:translateY(78px) rotate(-8deg); opacity:0.88; }
+  65% { transform:translateY(30px) rotate(8deg); opacity:0.88; }
+}
+@keyframes demoTowelWring {
+  0%,28%,100% { transform:translateY(0) rotate(0deg) scale(1); opacity:0; }
+  48%,70% { transform:translateY(76px) rotate(14deg) scale(0.9,1.08); opacity:0.9; }
+}
+@keyframes demoFaceWipe {
+  0%,28%,100% { transform:translate(-50%,0) rotate(0deg); opacity:0; }
+  46% { transform:translate(-50%,70px) rotate(-8deg); opacity:0.9; }
+  68% { transform:translate(-50%,30px) rotate(8deg); opacity:0.9; }
+}
+@keyframes demoTowelRinse {
+  0%,30%,100% { transform:translate(-50%,0) rotate(0deg); opacity:0; }
+  48%,72% { transform:translate(-50%,-72px) rotate(-10deg); opacity:0.9; }
+}
+@keyframes demoHandPushDown {
+  0%,30%,100% { transform:translateY(0) scale(1); opacity:0; }
+  48%,72% { transform:translateY(112px) scale(1.04); opacity:0.9; }
+}
+@keyframes waterFlow {
+  0%,100% { transform:scaleY(0.35); opacity:0.2; }
+  50% { transform:scaleY(1); opacity:0.86; }
+}
+@keyframes waterFadeOut {
+  0%,42% { transform:scaleY(1); opacity:0.76; }
+  74%,100% { transform:scaleY(0.2); opacity:0; }
+}
+
+.step-stage.demo-running .demo-wash-1 { animation:demoHandPushUp 2.0s ease-in-out infinite; }
+.step-stage.demo-running .demo-wash-2 { animation:demoCollectWater 2.1s ease-in-out infinite; }
+.step-stage.demo-running .demo-wash-3 { animation:demoTowelRub 2.3s ease-in-out infinite; }
+.step-stage.demo-running .demo-wash-4 { animation:demoTowelWring 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-wash-5 { animation:demoFaceWipe 2.3s ease-in-out infinite; }
+.step-stage.demo-running .demo-wash-6 { animation:demoTowelRinse 2.1s ease-in-out infinite; }
+.step-stage.demo-running .demo-wash-7 { animation:demoHandPushDown 2.0s ease-in-out infinite; }
+.demo-water-flow, .demo-water-fade {
+  width:22px; height:118px; border-radius:0 0 16px 16px;
+  transform-origin:top center;
+  background:linear-gradient(90deg,rgba(218,247,255,0.2),rgba(106,202,255,0.9),rgba(218,247,255,0.2));
+}
+.step-stage.demo-running .demo-water-flow { animation:waterFlow 1.6s ease-in-out infinite; }
+.step-stage.demo-running .demo-water-fade { animation:waterFadeOut 2.0s ease-in-out infinite; }
+
 .state-paste-on-brush {
   position:absolute; bottom:18%; width:28px; height:16px; border-radius:50%; z-index:15;
   background:linear-gradient(135deg,#F8F8FF,#A9D9FF); box-shadow:0 2px 5px rgba(91,160,213,0.35);
@@ -291,6 +345,30 @@ html, body {
 .step-stage.brush-final-clean .state-final-clean-mouth { transform:translate(-50%,-50%) scale(1.16); opacity:1; }
 .step-stage.demo-running .state-clean-left,
 .step-stage.demo-running .state-clean-both { animation:cleanSparkle 1.8s ease-in-out infinite; }
+.state-water-stream {
+  position:absolute; top:28%; left:50%; z-index:4; width:22px; height:118px;
+  transform:translateX(-50%); border-radius:0 0 16px 16px;
+  background:linear-gradient(90deg,rgba(218,247,255,0.2),rgba(106,202,255,0.75),rgba(218,247,255,0.2));
+}
+.state-hand-droplets, .state-reduced-droplets {
+  position:absolute; z-index:14; color:#62CAFF; font-size:24px; line-height:1;
+  text-shadow:0 2px 6px rgba(98,202,255,0.38);
+}
+.state-hand-droplets { top:20%; right:17%; }
+.state-hand-droplets::before { content:'💧  💧'; }
+.state-reduced-droplets { top:24%; right:22%; opacity:0.68; }
+.state-reduced-droplets::before { content:'💧'; }
+.state-wet-towel, .state-clean-wet-towel {
+  position:absolute; z-index:4; filter:brightness(0.76) saturate(1.25);
+}
+.state-wet-towel { top:35%; left:50%; transform:translateX(-50%); }
+.state-clean-wet-towel { top:48%; right:8%; filter:brightness(1.06) saturate(1.1); }
+.state-clean-face {
+  position:absolute; top:31%; left:50%; z-index:16; transform:translateX(-50%);
+  color:#FFD93D; font-size:36px; line-height:1; text-shadow:0 2px 8px rgba(255,217,61,0.5);
+}
+.state-clean-face::before { content:'✦  ✦'; }
+.step-stage.demo-running .state-clean-face { animation:cleanSparkle 1.8s ease-in-out infinite; }
 .step-stage.demo-paused .demo-element,
 .step-stage.demo-paused .demo-element::before,
 .step-stage.demo-paused .demo-element::after {
@@ -1298,7 +1376,7 @@ function arrLeftRight(){
    SCENE BUILDERS — compose SVG objects + arrow guidance
    ================================================================ */
 function buildPersistentStateHTML(levelId, stepId) {
-  const stateHTML = cls => `<div class="persistent-state ${cls}" aria-hidden="true"></div>`;
+  const stateHTML = (cls, content='') => `<div class="persistent-state ${cls}" aria-hidden="true">${content}</div>`;
   const prior = (key, completedStep) => stepId > completedStep && SkillSceneState.has(levelId, key);
   let html = '';
 
@@ -1308,9 +1386,12 @@ function buildPersistentStateHTML(levelId, stepId) {
     else if (prior('leftBrushed', 4)) html += stateHTML('state-clean-left');
     if (stepId === 7) html += stateHTML('state-final-clean-mouth');
   } else if (levelId === 'wash') {
-    if (prior('faucetOn', 1) && !SkillSceneState.has(levelId, 'faucetOff')) html += stateHTML('state-water-stream');
-    if (prior('towelWet', 3)) html += stateHTML('state-wet-towel');
-    if (prior('faceWashed', 5)) html += stateHTML('state-clean-face');
+    if (stepId >= 2 && stepId <= 6 && prior('faucetOn', 1)) html += stateHTML('state-water-stream');
+    if (stepId === 3 && prior('waterCollected', 2)) html += stateHTML('state-hand-droplets');
+    if (stepId === 4 && prior('towelWet', 3)) html += stateHTML('state-wet-towel', svgTowel(220,155));
+    if (stepId === 5 && prior('towelWrung', 4)) html += stateHTML('state-reduced-droplets');
+    if (stepId === 6 && prior('faceWashed', 5)) html += stateHTML('state-clean-face');
+    if (stepId === 7 && prior('towelRinsed', 6)) html += stateHTML('state-clean-wet-towel', svgTowel(160,115));
   } else if (levelId === 'dress') {
     if (prior('frontIdentified', 2)) html += stateHTML('state-jacket-front');
     if (prior('rightSleeveOn', 4)) html += stateHTML('state-both-sleeves');
@@ -1382,23 +1463,35 @@ function buildScene(levelId, step) {
       objects = `<div style="position:absolute;top:28%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target invisible-target" data-target="faucet"
         onselectstart="return false"><div style="width:100px;height:80px;border-radius:16px;"></div></div>
       <div style="position:absolute;bottom:15%;left:40%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-wash-1 demo-ghost" aria-hidden="true" style="bottom:15%;left:40%;">${svgHand(72,72)}</div>`;
       guide = arrowHTML('up', '22%', '45%', '拖拽小手向上推水龙头');
     } else if (sid===2||sid===6) {
       objects = `<div style="position:absolute;top:34%;left:50%;transform:translateX(-50%);z-index:5;">
         <div style="width:80px;height:80px;border-radius:50%;background:rgba(255,140,66,0.0);"></div></div>`;
+      if (sid===2) {
+        objects += `<div class="demo-element demo-wash-2 demo-ghost" aria-hidden="true" style="top:25%;left:50%;">${svgHand(72,72)}</div>
+        <div class="demo-element demo-water-flow" aria-hidden="true" style="top:31%;left:50%;"></div>`;
+      } else {
+        objects += `<div class="demo-element demo-wash-6 demo-ghost" aria-hidden="true" style="top:50%;left:50%;">${svgTowel(160,115)}</div>
+        <div class="demo-element demo-water-flow" aria-hidden="true" style="top:31%;left:50%;"></div>`;
+      }
       guide = arrowHTML(arrow, '30%', '46%', sid===2?'点击水龙头接水':'点击水龙头冲洗');
     } else if (sid===3||sid===4) {
       objects = `<div style="position:absolute;top:35%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="towel">${svgTowel(220,155)}</div>
       <div style="position:absolute;top:8%;right:8%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-wash-${sid} demo-ghost" aria-hidden="true" style="top:8%;right:8%;">${svgHand(72,72)}</div>`;
       guide = arrowHTML('updown', '28%', '32%', '拖拽小手到毛巾上搓一搓');
     } else if (sid===5) {
       objects = `<div style="position:absolute;top:15%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="face">${svgFace(220,240)}</div>
       <div style="position:absolute;top:12%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-wash-5 demo-ghost" aria-hidden="true" style="top:20%;left:50%;">${svgTowel(160,115)}</div>`;
       guide = arrowHTML('updown', '42%', '22%', '拖拽小手到脸上擦一擦');
     } else if (sid===7) {
       objects = `<div style="position:absolute;top:28%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target invisible-target" data-target="faucet">
         <div style="width:100px;height:80px;border-radius:16px;"></div></div>
       <div style="position:absolute;top:5%;left:38%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-wash-7 demo-ghost" aria-hidden="true" style="top:5%;left:38%;">${svgHand(72,72)}</div>
+      <div class="demo-element demo-water-fade" aria-hidden="true" style="top:31%;left:50%;"></div>`;
       guide = arrowHTML('down', '22%', '45%', '拖拽小手向下推水龙头');
     }
     return stepStageHTML(objects, guide, levelId, sid);

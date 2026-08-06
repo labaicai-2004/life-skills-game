@@ -304,6 +304,62 @@ test('brushing continuity indicators appear only after their required completed 
   assert.match(buildPersistentStateHTML('brush', 7), /aria-hidden="true"/);
 });
 
+test('washing scenes provide seven delayed, non-interactive demonstration markers', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+  for (let stepId = 1; stepId <= 7; stepId++) {
+    const scene = api.buildScene('wash', api.LEVELS[1].steps[stepId - 1]);
+    assert.match(scene, new RegExp(`demo-element demo-wash-${stepId}`));
+    assert.match(scene, /aria-hidden="true"/);
+    assert.match(source, new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-wash-${stepId}\\s*\\{`));
+    assert.doesNotMatch(scene, /class="[^"]*draggable-item[^"]*demo-element/);
+  }
+
+  for (const keyframe of [
+    'demoHandPushUp', 'demoCollectWater', 'demoTowelRub', 'demoTowelWring',
+    'demoFaceWipe', 'demoTowelRinse', 'demoHandPushDown', 'waterFlow', 'waterFadeOut'
+  ]) {
+    assert.match(source, new RegExp(`@keyframes ${keyframe}`));
+  }
+});
+
+test('washing continuity indicators appear only after their required completed steps', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { SkillSceneState, buildPersistentStateHTML } = runtime.api;
+  SkillSceneState.reset();
+
+  assert.doesNotMatch(buildPersistentStateHTML('wash', 2), /state-water-stream/);
+  SkillSceneState.complete('wash', 1);
+  assert.match(buildPersistentStateHTML('wash', 2), /state-water-stream/);
+  assert.match(buildPersistentStateHTML('wash', 6), /state-water-stream/);
+  assert.doesNotMatch(buildPersistentStateHTML('wash', 7), /state-water-stream/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('wash', 3), /state-hand-droplets/);
+  SkillSceneState.complete('wash', 2);
+  assert.match(buildPersistentStateHTML('wash', 3), /state-hand-droplets/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('wash', 4), /state-wet-towel/);
+  SkillSceneState.complete('wash', 3);
+  assert.match(buildPersistentStateHTML('wash', 4), /state-wet-towel/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('wash', 5), /state-reduced-droplets/);
+  SkillSceneState.complete('wash', 4);
+  assert.match(buildPersistentStateHTML('wash', 5), /state-reduced-droplets/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('wash', 6), /state-clean-face/);
+  SkillSceneState.complete('wash', 5);
+  assert.match(buildPersistentStateHTML('wash', 6), /state-clean-face/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('wash', 7), /state-clean-wet-towel/);
+  SkillSceneState.complete('wash', 6);
+  assert.match(buildPersistentStateHTML('wash', 7), /state-clean-wet-towel/);
+  assert.match(buildPersistentStateHTML('wash', 7), /aria-hidden="true"/);
+});
+
 test('prompt highlighting cannot reveal the final mouth sparkle before real brushing completion', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
