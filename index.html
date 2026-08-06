@@ -2389,6 +2389,7 @@ const UnifiedDataManager = {
       sessionNumber: ResearchMode.active ? ResearchMode.sessionNum : 0,
       stepNumber: step.id,
       stepName: step.instruction,
+      taskId: level.id,
       completionStatus: success,
       promptLevel: promptState.promptUsed,
       trainingMode: currentTrainingMode.id,

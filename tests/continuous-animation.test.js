@@ -35,6 +35,18 @@ function loadAnimationRuntime() {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   const timers = [];
+  const storage = new Map();
+  let now = 1_750_000_000_000;
+  class ControlledDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [now])); }
+    static now() { return now; }
+  }
+  const localStorage = {
+    getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+    setItem(key, value) { storage.set(key, String(value)); },
+    removeItem(key) { storage.delete(key); },
+    clear() { storage.clear(); }
+  };
   const elements = {
     'next-step-btn': createElement(),
     'step-number-label': createElement(),
@@ -67,12 +79,12 @@ function loadAnimationRuntime() {
       pause() {}
     },
     Blob: class {},
-    Date,
+    Date: ControlledDate,
     JSON,
     Math,
     console,
     document,
-    localStorage: { getItem() { return null; }, setItem() {} },
+    localStorage,
     requestAnimationFrame(callback) { callback(); },
     setInterval() { return 1; },
     clearInterval() {},
@@ -88,6 +100,7 @@ function loadAnimationRuntime() {
   const expose = `
     globalThis.__animationApi = {
       AnimationPolicy, AnimationController, ResearchMode, TrainingModes,
+      UnifiedDataManager,
       get currentTrainingMode() { return currentTrainingMode; },
       setTrainingMode(mode) { currentTrainingMode = mode; },
       get state() { return state; }, loadStep, goHome, startLevel,
@@ -105,6 +118,8 @@ function loadAnimationRuntime() {
     api: context.__animationApi,
     elements,
     timers,
+    localStorage,
+    advanceClock(milliseconds) { now += milliseconds; },
     runTimer(index) {
       const timer = timers[index];
       if (!timer.cleared) timer.callback();
@@ -112,20 +127,30 @@ function loadAnimationRuntime() {
   };
 }
 
-test('AnimationPolicy enables demonstrations only for teaching intervention sessions', () => {
+test('AnimationPolicy follows the full inactive, intervention, baseline, and maintenance matrix', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api } = runtime;
-  api.ResearchMode.active = false;
-  assert.equal(api.AnimationPolicy.isEnabled(), true);
-  api.ResearchMode.active = true;
-  api.ResearchMode.phase = 'baseline';
-  assert.equal(api.AnimationPolicy.isEnabled(), false);
-  api.ResearchMode.phase = 'intervention';
-  api.setTrainingMode(api.TrainingModes.TEACHING);
-  assert.equal(api.AnimationPolicy.isEnabled(), true);
-  api.setTrainingMode(api.TrainingModes.ASSESSMENT);
-  assert.equal(api.AnimationPolicy.isEnabled(), false);
+  const modes = [api.TrainingModes.TEACHING, api.TrainingModes.PRACTICE, api.TrainingModes.ASSESSMENT];
+
+  for (const mode of modes) {
+    api.ResearchMode.active = false;
+    api.setTrainingMode(mode);
+    assert.equal(api.AnimationPolicy.isEnabled(), true, `inactive ${mode.id}`);
+  }
+
+  for (const phase of ['intervention', 'baseline', 'maintenance']) {
+    for (const mode of modes) {
+      api.ResearchMode.active = true;
+      api.ResearchMode.phase = phase;
+      api.setTrainingMode(mode);
+      assert.equal(
+        api.AnimationPolicy.isEnabled(),
+        phase === 'intervention' && mode.id === 'teaching',
+        `${phase} ${mode.id}`
+      );
+    }
+  }
 });
 
 test('AnimationController delays the demonstration, pauses it, and clears its stage state', () => {
@@ -162,6 +187,98 @@ test('step lifecycle schedules on entry, pauses on first touch, and clears on re
   api.goHome();
   assert.equal(api.AnimationController.currentStage, null);
   assert.equal(stage.classList.contains('demo-paused'), false);
+});
+
+test('mouse down pauses the active demonstration before desktop gesture handling', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements } = runtime;
+  api.state.currentLevel = 0;
+  api.loadStep(0);
+  const stage = elements.scene.lastChild;
+
+  elements['interaction-area'].dispatch('mousedown', { clientX: 20, clientY: 20 });
+
+  assert.equal(stage.classList.contains('demo-paused'), true);
+  assert.equal(api.AnimationController.timer, null);
+});
+
+test('starting another level clears the stale demonstration before scheduling the new stage', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements } = runtime;
+  api.startLevel(0);
+  const oldStage = elements.scene.lastChild;
+  api.AnimationController.pause(oldStage);
+
+  api.startLevel(1);
+
+  assert.equal(oldStage.classList.contains('demo-running'), false);
+  assert.equal(oldStage.classList.contains('demo-paused'), false);
+  assert.notEqual(api.AnimationController.currentStage, oldStage);
+});
+
+test('two passive demonstration cycles do not write events or research records', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, localStorage } = runtime;
+  api.ResearchMode.active = false;
+  api.state.currentLevel = 0;
+  api.state.currentStep = 0;
+  api.UnifiedDataManager.startSession('brush');
+  api.UnifiedDataManager.onStepStart();
+  const beforeEvents = api.UnifiedDataManager.events.length;
+  const beforeRecords = JSON.parse(localStorage.getItem('researchRecords') || '[]').length;
+
+  const firstStage = createElement();
+  api.AnimationController.schedule(firstStage);
+  const firstTimer = runtime.timers.findIndex(timer => timer.delay === 2000 && !timer.cleared);
+  runtime.runTimer(firstTimer);
+  assert.equal(firstStage.classList.contains('demo-running'), true);
+
+  const secondStage = createElement();
+  api.AnimationController.schedule(secondStage);
+  const secondTimer = runtime.timers.findIndex((timer, index) => index > firstTimer && timer.delay === 2000 && !timer.cleared);
+  runtime.runTimer(secondTimer);
+  assert.equal(secondStage.classList.contains('demo-running'), true);
+
+  assert.equal(api.UnifiedDataManager.events.length, beforeEvents);
+  assert.equal(JSON.parse(localStorage.getItem('researchRecords') || '[]').length, beforeRecords);
+});
+
+test('one genuine completion adds exactly one step-success event and the contracted research record', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, localStorage } = runtime;
+  localStorage.setItem('researchRecords', JSON.stringify([{ existing: true }]));
+  api.ResearchMode.active = true;
+  api.ResearchMode.childId = 'child-42';
+  api.ResearchMode.phase = 'intervention';
+  api.ResearchMode.sessionNum = 3;
+  api.setTrainingMode(api.TrainingModes.TEACHING);
+  api.state.currentLevel = 0;
+  api.state.currentStep = 0;
+  api.UnifiedDataManager.startSession('brush');
+  api.UnifiedDataManager.onStepStart();
+  const beforeEvents = api.UnifiedDataManager.events.length;
+  const beforeRecords = JSON.parse(localStorage.getItem('researchRecords')).length;
+
+  runtime.advanceClock(1650);
+  api.handleStepSuccess(createElement());
+
+  const newEvents = api.UnifiedDataManager.events.slice(beforeEvents);
+  const records = JSON.parse(localStorage.getItem('researchRecords'));
+  const record = records.at(-1);
+  assert.deepEqual(Array.from(newEvents, event => event.event), ['step_success']);
+  assert.equal(records.length, beforeRecords + 1);
+  assert.equal(record.responseTimeMs, 1650);
+  assert.equal(newEvents[0].responseTimeMs, 1650);
+  assert.deepEqual(Object.keys(record).sort(), [
+    'participantID', 'skill', 'phase', 'sessionNumber', 'stepNumber', 'stepName',
+    'taskId', 'completionStatus', 'promptLevel', 'trainingMode',
+    'responseTimeMs', 'errors', 'timestamp'
+  ].sort());
+  assert.equal(record.taskId, 'brush');
 });
 
 test('STEP_STATE_KEYS maps all three skills to their seven persistent-state keys', () => {
