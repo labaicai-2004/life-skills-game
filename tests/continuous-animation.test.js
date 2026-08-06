@@ -13,9 +13,13 @@ class ClassList {
 
 function createElement() {
   const listeners = new Map();
+  const styleValues = new Map();
   return {
     classList: new ClassList(),
-    style: { setProperty() {} },
+    style: {
+      setProperty(name, value) { styleValues.set(name, String(value)); },
+      getPropertyValue(name) { return styleValues.get(name) || ''; }
+    },
     dataset: {},
     isConnected: true,
     addEventListener(type, handler, options = {}) {
@@ -40,6 +44,55 @@ function createElement() {
     remove() { this.isConnected = false; },
     getBoundingClientRect() { return { left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 }; }
   };
+}
+
+function getKeyframeBody(source, name) {
+  const marker = `@keyframes ${name}`;
+  const markerIndex = source.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `${name} keyframes missing`);
+  const openIndex = source.indexOf('{', markerIndex + marker.length);
+  let depth = 1;
+  for (let index = openIndex + 1; index < source.length; index++) {
+    if (source[index] === '{') depth++;
+    if (source[index] === '}') depth--;
+    if (depth === 0) return source.slice(openIndex + 1, index);
+  }
+  assert.fail(`${name} keyframes are not closed`);
+}
+
+function parsePixelKeyframeBody(body, variables = {}) {
+  const resolvedBody = body.replace(/var\(\s*(--[A-Za-z0-9_-]+)(?:\s*,[^)]*)?\)/g, (match, name) => variables[name] || '0px');
+  return [...resolvedBody.matchAll(/((?:\d+%\s*,?\s*)+)\{([^}]*)\}/g)]
+    .flatMap(([, percentages, declarations]) => {
+      const pair = declarations.match(/translate\(\s*(-?[\d.]+)(?:px)?\s*,\s*(-?[\d.]+)(?:px)?\s*\)/);
+      const translateX = pair ? Number(pair[1]) : Number(declarations.match(/translateX\(\s*(-?[\d.]+)(?:px)?\s*\)/)?.[1] || 0);
+      const translateY = pair ? Number(pair[2]) : Number(declarations.match(/translateY\(\s*(-?[\d.]+)(?:px)?\s*\)/)?.[1] || 0);
+      const opacity = Number(declarations.match(/opacity\s*:\s*([\d.]+)/)?.[1] || 1);
+      return (percentages.match(/\d+/g) || []).map(percentage => ({
+        percentage: Number(percentage), translateX, translateY, opacity
+      }));
+    })
+    .sort((a, b) => a.percentage - b.percentage);
+}
+
+function parsePixelKeyframePath(source, name, variables = {}) {
+  return parsePixelKeyframeBody(getKeyframeBody(source, name), variables);
+}
+
+function stagePathVariables(api, width, height) {
+  const stage = createElement();
+  stage.getBoundingClientRect = () => ({ left: 0, top: 0, right: width, bottom: height, width, height });
+  api.AnimationController.schedule(stage);
+  const names = [
+    '--demo-brush-left-x', '--demo-brush-right-x', '--demo-brush-arrive-y',
+    '--demo-brush-up-y', '--demo-brush-down-y', '--demo-wash-center-x',
+    '--demo-left-sleeve-arrive-x', '--demo-left-sleeve-action-x', '--demo-sleeve-arrive-y',
+    '--demo-right-sleeve-arrive-x', '--demo-right-sleeve-action-x',
+    '--demo-pull-arrive-x', '--demo-pull-arrive-y', '--demo-pull-action-y',
+    '--demo-zip-arrive-x', '--demo-zip-arrive-y', '--demo-zip-action-y',
+    '--demo-collar-arrive-x', '--demo-collar-left-x', '--demo-collar-right-x', '--demo-collar-arrive-y'
+  ];
+  return Object.fromEntries(names.map(name => [name, stage.style.getPropertyValue(name)]));
 }
 
 function loadAnimationRuntime(sourceMutation = source => source) {
@@ -67,13 +120,30 @@ function loadAnimationRuntime(sourceMutation = source => source) {
     'interaction-area': createElement(),
     'start-screen': createElement(),
     'game-screen': createElement(),
-    'volume-btn': createElement()
+    'volume-btn': createElement(),
+    'research-child-id': createElement(),
+    'research-session-num': createElement(),
+    'research-date': createElement(),
+    'research-week': createElement(),
+    'research-status-bar': createElement(),
+    'research-overlay': createElement(),
+    'selected-phase': createElement(),
+    'selected-skill': createElement()
   };
+  elements['selected-phase'].dataset.phase = 'intervention';
+  elements['selected-skill'].dataset.skill = 'brush';
   const document = {
     addEventListener() {},
-    querySelector() { return null; },
+    querySelector(selector) {
+      if (selector === '.phase-btn.selected') return elements['selected-phase'];
+      if (selector === '.skill-btn.selected') return elements['selected-skill'];
+      return null;
+    },
     querySelectorAll() { return []; },
-    getElementById(id) { return elements[id] || createElement(); },
+    getElementById(id) {
+      if (!elements[id]) elements[id] = createElement();
+      return elements[id];
+    },
     body: createElement(),
     createElement() {
       const wrapper = createElement();
@@ -200,6 +270,51 @@ test('AnimationController delays the demonstration, pauses it, and clears its st
   assert.equal(api.AnimationController.currentStage, null);
 });
 
+test('AnimationController derives transform-only path offsets from each installed stage size', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+  const cases = [
+    {
+      width: 750, height: 380,
+      expected: {
+        '--demo-brush-left-x': -260, '--demo-brush-right-x': 260,
+        '--demo-brush-arrive-y': 30, '--demo-brush-up-y': 16, '--demo-brush-down-y': 44,
+        '--demo-wash-center-x': -315,
+        '--demo-left-sleeve-arrive-x': -540, '--demo-left-sleeve-action-x': -585,
+        '--demo-sleeve-arrive-y': -99,
+        '--demo-right-sleeve-arrive-x': 533, '--demo-right-sleeve-action-x': 578,
+        '--demo-pull-arrive-x': 90, '--demo-pull-arrive-y': 152, '--demo-pull-action-y': 190,
+        '--demo-zip-arrive-x': 55, '--demo-zip-arrive-y': -160, '--demo-zip-action-y': -209,
+        '--demo-collar-arrive-x': -240, '--demo-collar-left-x': -293,
+        '--demo-collar-right-x': -188, '--demo-collar-arrive-y': -34
+      }
+    },
+    {
+      width: 600, height: 700,
+      expected: {
+        '--demo-brush-left-x': -193, '--demo-brush-right-x': 193,
+        '--demo-brush-arrive-y': -258, '--demo-brush-up-y': -272, '--demo-brush-down-y': -244,
+        '--demo-wash-center-x': -252,
+        '--demo-left-sleeve-arrive-x': -432, '--demo-left-sleeve-action-x': -468,
+        '--demo-sleeve-arrive-y': -182,
+        '--demo-right-sleeve-arrive-x': 426, '--demo-right-sleeve-action-x': 462,
+        '--demo-pull-arrive-x': 72, '--demo-pull-arrive-y': 280, '--demo-pull-action-y': 350,
+        '--demo-zip-arrive-x': 40, '--demo-zip-arrive-y': -294, '--demo-zip-action-y': -385,
+        '--demo-collar-arrive-x': -192, '--demo-collar-left-x': -234,
+        '--demo-collar-right-x': -150, '--demo-collar-arrive-y': -63
+      }
+    }
+  ];
+
+  for (const current of cases) {
+    const variables = stagePathVariables(api, current.width, current.height);
+    for (const [name, expected] of Object.entries(current.expected)) {
+      assert.equal(Number(variables[name].replace('px', '')), expected, `${name} at ${current.width}x${current.height}`);
+    }
+  }
+});
+
 test('step lifecycle schedules on entry, pauses on first touch, and clears on return home', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
@@ -233,6 +348,44 @@ test('mouse down pauses the active demonstration before desktop gesture handling
 
   assert.equal(stage.classList.contains('demo-paused'), true);
   assert.equal(api.AnimationController.timer, null);
+});
+
+test('paused stage freezes demonstration descendants, pseudo-elements, and persistent-state animations', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const pausedSelectors = new Set(
+    [...source.matchAll(/([^{}]+)\{([^{}]*animation-play-state\s*:\s*paused\s*!important;?[^{}]*)\}/g)]
+      .flatMap(([, selectors]) => selectors.split(',').map(selector => selector.trim()))
+  );
+  const animatedLayers = ['.demo-element', '.persistent-state'];
+
+  for (const layer of animatedLayers) {
+    for (const suffix of ['', ' *', '::before', '::after', ' *::before', ' *::after']) {
+      const selector = `.step-stage.demo-paused ${layer}${suffix}`;
+      assert.ok(pausedSelectors.has(selector), `${selector} must receive animation-play-state:paused`);
+    }
+  }
+});
+
+test('continuous demonstration keyframes animate only transform, opacity, or filter', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const animationNames = new Set(
+    [...source.matchAll(/\.step-stage\.demo-running[^{}]*\{[^{}]*animation\s*:\s*([A-Za-z0-9_-]+)/g)]
+      .map(([, name]) => name)
+  );
+  assert.ok(animationNames.size > 0, 'demonstration animation names must be discoverable');
+
+  for (const name of animationNames) {
+    const body = getKeyframeBody(source, name);
+    for (const [, declarations] of body.matchAll(/\{([^{}]*)\}/g)) {
+      const properties = [...declarations.matchAll(/(?:^|;)\s*([A-Za-z-]+)\s*:/g)].map(([, property]) => property);
+      for (const property of properties) {
+        assert.ok(
+          ['transform', 'opacity', 'filter'].includes(property),
+          `${name} must not animate layout property ${property}`
+        );
+      }
+    }
+  }
 });
 
 test('starting another level clears before installing and scheduling the new stage', () => {
@@ -286,6 +439,31 @@ test('the original startLevel clears before state assignment and loadStep', () =
     () => assertEarlyClear(withoutFirstClear),
     /original startLevel must clear the previous demonstration/
   );
+});
+
+test('real ResearchMode.start initializes one unified session with the selected task on every initial event', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements } = runtime;
+  elements['research-child-id'].value = 'child-research-7';
+  elements['research-session-num'].value = '4';
+  elements['research-date'].value = '2026-08-06';
+  elements['research-week'].value = '2';
+  elements['selected-phase'].dataset.phase = 'intervention';
+  elements['selected-skill'].dataset.skill = 'wash';
+  api.promptState.enabled = false;
+
+  api.ResearchMode.start();
+
+  assert.equal(api.ResearchMode.active, true);
+  assert.equal(api.state.currentLevel, 1);
+  assert.equal(api.UnifiedDataManager.active, true);
+  assert.equal(api.UnifiedDataManager.taskId, 'wash');
+  assert.deepEqual(Array.from(api.UnifiedDataManager.events, event => event.event), [
+    'session_start', 'step_start', 'ltm_chain_start'
+  ]);
+  assert.equal(api.UnifiedDataManager.events.filter(event => event.event === 'session_start').length, 1);
+  assert.ok(api.UnifiedDataManager.events.every(event => event.taskId === 'wash'));
 });
 
 test('two passive demonstrations after real step initialization do not write events or research records', () => {
@@ -380,6 +558,57 @@ test('real mouse completion after demonstration pause adds one step-success even
   assert.equal(record.taskId, 'brush');
 });
 
+test('Level 4 prompt auto-completion pauses the running demonstration before success feedback', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements } = runtime;
+  const area = elements['interaction-area'];
+  api.promptState.enabled = false;
+  area.querySelector = selector => selector === '.step-stage' ? elements.scene.lastChild : null;
+  api.startLevel(0);
+  const stage = elements.scene.lastChild;
+  runtime.runTimer(0);
+  assert.equal(stage.classList.contains('demo-running'), true);
+  assert.equal(stage.classList.contains('demo-paused'), false);
+
+  let pausedWhenFeedbackStarted = false;
+  const addClass = area.classList.add.bind(area.classList);
+  area.classList.add = (...names) => {
+    if (names.includes('success')) {
+      pausedWhenFeedbackStarted = stage.classList.contains('demo-paused');
+    }
+    addClass(...names);
+  };
+
+  api.applyPromptLevel(api.PROMPT_LEVELS.DEMONSTRATION.level);
+
+  assert.equal(pausedWhenFeedbackStarted, true);
+  assert.equal(stage.classList.contains('demo-paused'), true);
+});
+
+test('repeated valid mouse input cannot write a second success event or research record for a completed step', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements, localStorage } = runtime;
+  const area = elements['interaction-area'];
+  api.promptState.enabled = false;
+  area.querySelector = selector => selector === '.step-stage' ? elements.scene.lastChild : null;
+  api.startLevel(0);
+  const beforeEvents = api.UnifiedDataManager.events.length;
+  const beforeRecords = JSON.parse(localStorage.getItem('researchRecords') || '[]').length;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    area.dispatch('mousedown', { clientX: 20, clientY: 20 });
+    area.dispatch('mouseup', { clientX: 20, clientY: 20 });
+  }
+
+  const newEvents = api.UnifiedDataManager.events.slice(beforeEvents);
+  const records = JSON.parse(localStorage.getItem('researchRecords') || '[]');
+  assert.equal(newEvents.filter(event => event.event === 'step_success').length, 1);
+  assert.equal(records.length, beforeRecords + 1);
+  assert.equal(api.state.stepCompleted.has(0), true);
+});
+
 test('STEP_STATE_KEYS maps all three skills to their seven persistent-state keys', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
@@ -452,6 +681,51 @@ test('persistent state markup includes only prior indicators and stage markup re
   assert.match(stage, /guide/);
 });
 
+test('found, picked-up, rinsed, and jacket-found states render only in their intended later steps', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { SkillSceneState, buildPersistentStateHTML } = runtime.api;
+  const cases = [
+    {
+      levelId: 'brush', stepId: 1, className: 'state-toothbrush-found',
+      visibleSteps: [2, 3], hiddenSteps: [1, 4]
+    },
+    {
+      levelId: 'brush', stepId: 3, className: 'state-toothbrush-ready',
+      visibleSteps: [4, 5], hiddenSteps: [3, 6]
+    },
+    {
+      levelId: 'brush', stepId: 6, className: 'state-mouth-rinsed',
+      visibleSteps: [7], hiddenSteps: [6]
+    },
+    {
+      levelId: 'dress', stepId: 1, className: 'state-jacket-found',
+      visibleSteps: [2, 7], hiddenSteps: [1]
+    }
+  ];
+
+  for (const current of cases) {
+    SkillSceneState.reset();
+    for (const visibleStep of current.visibleSteps) {
+      assert.doesNotMatch(
+        buildPersistentStateHTML(current.levelId, visibleStep),
+        new RegExp(current.className),
+        `${current.className} must not appear before its real completion`
+      );
+    }
+    SkillSceneState.complete(current.levelId, current.stepId);
+    for (const visibleStep of current.visibleSteps) {
+      const markup = buildPersistentStateHTML(current.levelId, visibleStep);
+      assert.match(markup, new RegExp(current.className));
+      assert.match(markup, /persistent-state/);
+      assert.match(markup, /aria-hidden="true"/);
+    }
+    for (const hiddenStep of current.hiddenSteps) {
+      assert.doesNotMatch(buildPersistentStateHTML(current.levelId, hiddenStep), new RegExp(current.className));
+    }
+  }
+});
+
 test('brushing scenes provide seven delayed, non-interactive demonstration markers', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
@@ -468,7 +742,7 @@ test('brushing scenes provide seven delayed, non-interactive demonstration marke
   assert.match(source, /\.demo-element, \.persistent-state\s*\{\s*pointer-events:none;/);
   for (const keyframe of [
     'demoFindPulse', 'demoPasteSqueeze', 'demoPasteDrop', 'demoPickUp',
-    'demoBrushVertical', 'demoCupTilt', 'demoWipeHorizontal', 'cleanSparkle'
+    'demoBrushLeft', 'demoBrushRight', 'demoCupTilt', 'demoWipeHorizontal', 'cleanSparkle'
   ]) {
     assert.match(source, new RegExp(`@keyframes ${keyframe}`));
   }
@@ -494,6 +768,77 @@ test('brushing drag demonstrations animate a separate ghost and leave the real d
     assert.match(scene, new RegExp(`demo-element demo-brush-${stepId} demo-ghost`));
     assert.doesNotMatch(scene, /class="[^"]*draggable-item[^"]*demo-element/);
   }
+});
+
+test('brushing step 4 and 5 ghosts reach their separate mouth zones before vertical brushing', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const sceneWidth = 750;
+  const sceneHeight = 380;
+  const variables = stagePathVariables(runtime.api, sceneWidth, sceneHeight);
+  const face = {
+    left: sceneWidth * 0.5 - 120,
+    top: sceneHeight * 0.05,
+    width: 240,
+    height: 280
+  };
+  const ghost = { width: 260, height: 190 };
+  const brushHead = { left: 95, top: 0, width: 70, height: 70 };
+  const animationName = stepId => {
+    const match = source.match(new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-brush-${stepId}\\s*\\{\\s*animation:([A-Za-z0-9_-]+)`));
+    assert.notEqual(match, null, `demo-brush-${stepId} animation missing`);
+    return match[1];
+  };
+  const overlapRatio = (a, b) => {
+    const overlapWidth = Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left));
+    const overlapHeight = Math.max(0, Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top));
+    return (overlapWidth * overlapHeight) / (a.width * a.height);
+  };
+  const cases = [
+    { stepId: 4, side: 'right:5%', zonePercent: 28, zoneFraction: 0.28, originX: sceneWidth * 0.95 - ghost.width },
+    { stepId: 5, side: 'left:5%', zonePercent: 72, zoneFraction: 0.72, originX: sceneWidth * 0.05 }
+  ];
+
+  const names = [];
+  for (const current of cases) {
+    const scene = api.buildScene('brush', api.LEVELS[0].steps[current.stepId - 1]);
+    assert.match(scene, new RegExp(`bottom:5%;${current.side};z-index:10;" class="draggable-item`));
+    assert.match(scene, /top:5%;left:50%;transform:translateX\(-50%\);z-index:2;" class="drag-target" data-target="mouth"/);
+    assert.match(scene, new RegExp(`drop-zone" style="left:${current.zonePercent}%;bottom:10%;width:70px;height:70px`));
+
+    const zone = {
+      left: face.left + face.width * current.zoneFraction - 35,
+      top: face.top + face.height * 0.9 - 70,
+      width: 70,
+      height: 70
+    };
+    const originY = sceneHeight * 0.95 - ghost.height;
+    const name = animationName(current.stepId);
+    names.push(name);
+    const path = parsePixelKeyframePath(source, name, variables);
+    const headAt = point => ({
+      left: current.originX + brushHead.left + point.translateX,
+      top: originY + brushHead.top + point.translateY,
+      width: brushHead.width,
+      height: brushHead.height
+    });
+    const arrivalIndex = path.findIndex(point => point.opacity > 0 && overlapRatio(headAt(point), zone) >= 0.35);
+    assert.notEqual(arrivalIndex, -1, `brush step ${current.stepId} must reach its ${current.zoneFraction === 0.28 ? 'left' : 'right'} mouth zone`);
+    const arrival = path[arrivalIndex];
+    const verticalActions = path.slice(arrivalIndex + 1).filter(point =>
+      point.opacity > 0 &&
+      point.translateX === arrival.translateX &&
+      point.translateY !== arrival.translateY &&
+      overlapRatio(headAt(point), zone) >= 0.35
+    );
+    assert.ok(verticalActions.length >= 2, `brush step ${current.stepId} needs two in-zone vertical motions after arrival`);
+    assert.ok(new Set(verticalActions.map(point => point.translateY)).size >= 2, `brush step ${current.stepId} vertical positions must differ`);
+  }
+
+  assert.notEqual(names[0], names[1], 'left and right brushing ghosts need distinct paths');
+  assert.equal((source.match(/>\s*0\.35/g) || []).length, 2, 'real touch and mouse drag thresholds must remain 35%');
 });
 
 test('brushing continuity indicators appear only after their required completed steps', () => {
@@ -543,24 +888,15 @@ test('washing scenes provide seven delayed, non-interactive demonstration marker
 });
 
 test('washing towel demonstrations stage arrival before two distinct rubbing motions and reset', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const keyframeBody = name => {
-    const match = source.match(new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)(?=\\n@keyframes|\\n\\.step-stage)`));
-    assert.notEqual(match, null, `${name} keyframes missing`);
-    return match[1];
-  };
-  const stages = body => [...body.matchAll(/(\d+)%\s*\{([^}]*)\}/g)].map(([, percentage, declarations]) => ({
-    percentage: Number(percentage),
-    right: Number(declarations.match(/right:(\d+)%/)?.[1]),
-    translateY: Number(declarations.match(/translateY\((-?\d+)(?:px)?\)/)?.[1]),
-    opacity: Number(declarations.match(/opacity:([\d.]+)/)?.[1])
-  }));
-
+  const variables = stagePathVariables(runtime.api, 750, 380);
   const assertStagedPath = (keyframe, path) => {
-    const startIndex = path.findIndex(stage => stage.right === 8 && stage.translateY === 0 && stage.opacity > 0);
-    assert.notEqual(startIndex, -1, `${keyframe} needs a visible right-side start at translateY(0)`);
+    const startIndex = path.findIndex(stage => stage.translateX === 0 && stage.translateY === 0 && stage.opacity > 0);
+    assert.notEqual(startIndex, -1, `${keyframe} needs a visible static-position start`);
 
-    const arrivalIndex = path.findIndex((stage, index) => index > startIndex && stage.right === 50 && stage.translateY === 0);
+    const arrivalIndex = path.findIndex((stage, index) => index > startIndex && stage.translateX === -315 && stage.translateY === 0);
     assert.notEqual(arrivalIndex, -1, `${keyframe} needs a horizontal-only arrival at the centered towel`);
 
     const actionIndexes = path
@@ -571,29 +907,29 @@ test('washing towel demonstrations stage arrival before two distinct rubbing mot
 
     const lastActionIndex = actionIndexes.at(-1).index;
     assert.ok(
-      path.slice(arrivalIndex, lastActionIndex + 1).every(stage => stage.right === 50),
+      path.slice(arrivalIndex, lastActionIndex + 1).every(stage => stage.translateX === -315),
       `${keyframe} must stay centered from arrival through the last action`
     );
 
-    const resetIndex = path.findIndex((stage, index) => index > lastActionIndex && stage.right === 8 && stage.translateY === 0);
+    const resetIndex = path.findIndex((stage, index) => index > lastActionIndex && stage.translateX === 0 && stage.translateY === 0);
     assert.notEqual(resetIndex, -1, `${keyframe} needs to reset to the right-side start after rubbing`);
   };
 
   for (const keyframe of ['demoTowelRub', 'demoTowelWring']) {
-    assertStagedPath(keyframe, stages(keyframeBody(keyframe)));
+    assertStagedPath(keyframe, parsePixelKeyframePath(source, keyframe, variables));
   }
 
-  const allPostArrivalVerticalsZero = keyframeBody('demoTowelRub')
-    .replace(/right:50%; transform:translateY\(-?\d+px\)/g, 'right:50%; transform:translateY(0px)');
+  const allPostArrivalVerticalsZero = getKeyframeBody(source, 'demoTowelRub')
+    .replace(/translate\((?:-315px|var\(--demo-wash-center-x\)),(?:78|30)px\)/g, 'translate(-315px,0)');
   assert.throws(
-    () => assertStagedPath('demoTowelRub mutation', stages(allPostArrivalVerticalsZero)),
+    () => assertStagedPath('demoTowelRub mutation', parsePixelKeyframeBody(allPostArrivalVerticalsZero, variables)),
     /post-arrival vertical motions/
   );
 
-  const rightDrift = keyframeBody('demoTowelRub')
-    .replace('70% { right:50%;', '70% { right:20%;');
+  const rightDrift = getKeyframeBody(source, 'demoTowelRub')
+    .replace(/70% \{ transform:translate\((?:-315px|var\(--demo-wash-center-x\)),30px\)/, '70% { transform:translate(-250px,30px)');
   assert.throws(
-    () => assertStagedPath('demoTowelRub drift mutation', stages(rightDrift)),
+    () => assertStagedPath('demoTowelRub drift mutation', parsePixelKeyframeBody(rightDrift, variables)),
     /stay centered/
   );
 });
@@ -679,38 +1015,28 @@ test('dressing scenes provide seven delayed, non-interactive demonstration marke
 });
 
 test('dressing ghost hands reach their target before the directional demonstration', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const keyframeBody = name => {
-    const match = source.match(new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)(?=\\n@keyframes|\\n\\.step-stage)`));
-    assert.notEqual(match, null, `${name} keyframes missing`);
-    return match[1];
-  };
-  const stages = body => [...body.matchAll(/(\d+)%\s*\{([^}]*)\}/g)].map(([, percentage, declarations]) => ({
-    percentage: Number(percentage),
-    left: Number(declarations.match(/left:(\d+)%/)?.[1]),
-    top: Number(declarations.match(/top:(\d+)%/)?.[1]),
-    opacity: Number(declarations.match(/opacity:([\d.]+)/)?.[1])
-  }));
-  const assertArrivalThenAction = (keyframe, target, action, body = keyframeBody(keyframe)) => {
-    const path = stages(body);
+  const variables = stagePathVariables(runtime.api, 750, 380);
+  const assertArrivalThenAction = (keyframe, target, action) => {
+    const path = parsePixelKeyframePath(source, keyframe, variables);
     const arrivalIndex = path.findIndex(stage =>
-      stage.left === target.left && stage.top === target.top && stage.opacity > 0
+      stage.translateX === target.translateX && stage.translateY === target.translateY && stage.opacity > 0
     );
     assert.notEqual(arrivalIndex, -1, `${keyframe} must visibly arrive at its target`);
     const actionIndex = path.findIndex((stage, index) => index > arrivalIndex &&
-      (stage.left === action.left || stage.top === action.top)
+      stage.translateX === action.translateX && stage.translateY === action.translateY && stage.opacity > 0
     );
     assert.notEqual(actionIndex, -1, `${keyframe} needs its directional action after arriving`);
     assert.ok(actionIndex > arrivalIndex, `${keyframe} must not act before reaching its target`);
   };
 
-  assertArrivalThenAction('demoLeftSleeve', { left: 14, top: 22 }, { left: 8, top: 22 });
-  assertArrivalThenAction('demoRightSleeve', { left: 75, top: 22 }, { left: 81, top: 22 });
-  assertArrivalThenAction('demoPullDown', { left: 50, top: 40 }, { left: 50, top: 50 });
-  assertArrivalThenAction('demoCollarAdjust', { left: 50, top: 5 }, { left: 43, top: 5 });
-  const zipperPath = keyframeBody('demoZipUp');
-  assert.match(zipperPath, /45%\s*\{\s*left:calc\(50% - 20px\);\s*top:38%;/);
-  assert.match(zipperPath, /62%\s*\{\s*left:calc\(50% - 20px\);\s*top:25%;/);
+  assertArrivalThenAction('demoLeftSleeve', { translateX: -540, translateY: -99 }, { translateX: -585, translateY: -99 });
+  assertArrivalThenAction('demoRightSleeve', { translateX: 533, translateY: -99 }, { translateX: 578, translateY: -99 });
+  assertArrivalThenAction('demoPullDown', { translateX: 90, translateY: 152 }, { translateX: 90, translateY: 190 });
+  assertArrivalThenAction('demoZipUp', { translateX: 55, translateY: -160 }, { translateX: 55, translateY: -209 });
+  assertArrivalThenAction('demoCollarAdjust', { translateX: -240, translateY: -34 }, { translateX: -293, translateY: -34 });
 });
 
 test('dressing continuity indicators follow completed steps and reveal the final collar only on real completion', () => {
@@ -776,9 +1102,15 @@ test('dressing final collar sparkle stays hidden during demonstration and generi
 });
 
 test('zipper ghost reaches the unchanged zipper target with at least 35 percent overlap before moving up', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const sceneWidth = 800;
-  const sceneHeight = 400;
+  const scene = runtime.api.buildScene('dress', runtime.api.LEVELS[2].steps[5]);
+  assert.match(scene, /top:38%;left:50%;transform:translateX\(-50%\);z-index:5;" class="drag-target invisible-target" data-target="zipper"/);
+  assert.match(scene, /bottom:5%;left:40%;z-index:10;" class="draggable-item interactive-target" data-item="hand"/);
+  const sceneWidth = 750;
+  const sceneHeight = 380;
+  const variables = stagePathVariables(runtime.api, sceneWidth, sceneHeight);
   const ghost = { width: 72, height: 72 };
   const target = {
     left: sceneWidth * 0.5 - 20,
@@ -786,11 +1118,14 @@ test('zipper ghost reaches the unchanged zipper target with at least 35 percent 
     width: 40,
     height: 90
   };
-  const arrival = source.match(/@keyframes demoZipUp[\s\S]*?45%\s*\{\s*left:calc\(50% - (\d+)px\);\s*top:38%;\s*opacity:([\d.]+);/);
-  assert.notEqual(arrival, null, 'zipper ghost arrival needs a pixel offset from the target center');
+  const zipperPath = parsePixelKeyframePath(source, 'demoZipUp', variables);
+  const arrival = zipperPath.find(stage => stage.percentage === 45);
+  const action = zipperPath.find(stage => stage.percentage === 62);
+  assert.notEqual(arrival, undefined, 'zipper ghost needs an arrival frame');
+  assert.notEqual(action, undefined, 'zipper ghost needs an upward action frame');
   const ghostAtArrival = {
-    left: sceneWidth * 0.5 - Number(arrival[1]),
-    top: sceneHeight * 0.38,
+    left: sceneWidth * 0.4 + arrival.translateX,
+    top: sceneHeight * 0.8 + arrival.translateY,
     width: ghost.width,
     height: ghost.height
   };
@@ -798,6 +1133,8 @@ test('zipper ghost reaches the unchanged zipper target with at least 35 percent 
   const overlapHeight = Math.max(0, Math.min(ghostAtArrival.top + ghost.height, target.top + target.height) - Math.max(ghostAtArrival.top, target.top));
   const ratio = (overlapWidth * overlapHeight) / (ghost.width * ghost.height);
   assert.ok(ratio >= 0.35, `zipper ghost overlap ${ratio} must meet the 35% threshold`);
+  assert.equal(action.translateX, arrival.translateX, 'zipper ghost must stay aligned while moving up');
+  assert.ok(action.translateY < arrival.translateY, 'zipper action must move upward after arrival');
 
   const unshiftedRatio = (20 * ghost.height) / (ghost.width * ghost.height);
   assert.ok(unshiftedRatio < 0.35, 'an unshifted center arrival must fail the overlap threshold');

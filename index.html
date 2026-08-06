@@ -246,10 +246,23 @@ html, body {
   0%,35%,100% { transform:translateX(-50%) translateY(0) scale(1); opacity:0; }
   52%,76% { transform:translateX(-50%) translateY(-115px) scale(1.04); opacity:0.9; }
 }
-@keyframes demoBrushVertical {
-  0%,30%,100% { transform:translateY(0) scale(1); opacity:0; }
-  45%,60% { transform:translateY(-92px) scale(1.03); opacity:0.9; }
-  75% { transform:translateY(-54px) scale(1.03); opacity:0.9; }
+@keyframes demoBrushLeft {
+  0% { transform:translate(0,0) scale(1); opacity:0; }
+  20% { transform:translate(0,0) scale(1); opacity:0.9; }
+  45% { transform:translate(var(--demo-brush-left-x),var(--demo-brush-arrive-y)) scale(1.03); opacity:0.9; }
+  60% { transform:translate(var(--demo-brush-left-x),var(--demo-brush-up-y)) scale(1.03); opacity:0.9; }
+  75% { transform:translate(var(--demo-brush-left-x),var(--demo-brush-down-y)) scale(1.03); opacity:0.9; }
+  88% { transform:translate(var(--demo-brush-left-x),var(--demo-brush-arrive-y)) scale(1.03); opacity:0.9; }
+  100% { transform:translate(0,0) scale(1); opacity:0; }
+}
+@keyframes demoBrushRight {
+  0% { transform:translate(0,0) scale(1); opacity:0; }
+  20% { transform:translate(0,0) scale(1); opacity:0.9; }
+  45% { transform:translate(var(--demo-brush-right-x),var(--demo-brush-arrive-y)) scale(1.03); opacity:0.9; }
+  60% { transform:translate(var(--demo-brush-right-x),var(--demo-brush-up-y)) scale(1.03); opacity:0.9; }
+  75% { transform:translate(var(--demo-brush-right-x),var(--demo-brush-down-y)) scale(1.03); opacity:0.9; }
+  88% { transform:translate(var(--demo-brush-right-x),var(--demo-brush-arrive-y)) scale(1.03); opacity:0.9; }
+  100% { transform:translate(0,0) scale(1); opacity:0; }
 }
 @keyframes demoCupTilt {
   0%,40%,100% { transform:translate(-50%,-50%) rotate(0deg); opacity:0; }
@@ -268,8 +281,8 @@ html, body {
 .step-stage.demo-running .demo-brush-2 { animation:demoPasteSqueeze 2.2s ease-in-out infinite; }
 .step-stage.demo-running .demo-brush-2 .demo-paste-drop { animation:demoPasteDrop 2.2s ease-in-out infinite; }
 .step-stage.demo-running .demo-brush-3 { animation:demoPickUp 2.1s ease-in-out infinite; }
-.step-stage.demo-running .demo-brush-4 { animation:demoBrushVertical 2.3s ease-in-out infinite; }
-.step-stage.demo-running .demo-brush-5 { animation:demoBrushVertical 2.3s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-4 { animation:demoBrushLeft 2.3s ease-in-out infinite; }
+.step-stage.demo-running .demo-brush-5 { animation:demoBrushRight 2.3s ease-in-out infinite; }
 .step-stage.demo-running .demo-brush-6 { animation:demoCupTilt 1.9s ease-in-out infinite; }
 .step-stage.demo-running .demo-brush-7 { animation:demoWipeHorizontal 2.0s ease-in-out infinite; }
 
@@ -282,22 +295,22 @@ html, body {
   50%,74% { transform:translate(-50%,28px) scale(1.04); opacity:0.9; }
 }
 @keyframes demoTowelRub {
-  0% { right:8%; transform:translateY(0) rotate(0deg); opacity:0; }
-  18% { right:8%; transform:translateY(0) rotate(0deg); opacity:0.9; }
-  38% { right:50%; transform:translateY(0) rotate(0deg); opacity:0.9; }
-  54% { right:50%; transform:translateY(78px) rotate(-8deg); opacity:0.88; }
-  70% { right:50%; transform:translateY(30px) rotate(8deg); opacity:0.88; }
-  86% { right:8%; transform:translateY(0) rotate(0deg); opacity:0; }
-  100% { right:8%; transform:translateY(0) rotate(0deg); opacity:0; }
+  0% { transform:translate(0,0) rotate(0deg); opacity:0; }
+  18% { transform:translate(0,0) rotate(0deg); opacity:0.9; }
+  38% { transform:translate(var(--demo-wash-center-x),0) rotate(0deg); opacity:0.9; }
+  54% { transform:translate(var(--demo-wash-center-x),78px) rotate(-8deg); opacity:0.88; }
+  70% { transform:translate(var(--demo-wash-center-x),30px) rotate(8deg); opacity:0.88; }
+  86% { transform:translate(0,0) rotate(0deg); opacity:0; }
+  100% { transform:translate(0,0) rotate(0deg); opacity:0; }
 }
 @keyframes demoTowelWring {
-  0% { right:8%; transform:translateY(0) rotate(0deg) scale(1); opacity:0; }
-  18% { right:8%; transform:translateY(0) rotate(0deg) scale(1); opacity:0.9; }
-  38% { right:50%; transform:translateY(0) rotate(0deg) scale(1); opacity:0.9; }
-  54% { right:50%; transform:translateY(76px) rotate(14deg) scale(0.9,1.08); opacity:0.9; }
-  70% { right:50%; transform:translateY(34px) rotate(-12deg) scale(1.04,0.94); opacity:0.9; }
-  86% { right:8%; transform:translateY(0) rotate(0deg) scale(1); opacity:0; }
-  100% { right:8%; transform:translateY(0) rotate(0deg) scale(1); opacity:0; }
+  0% { transform:translate(0,0) rotate(0deg) scale(1); opacity:0; }
+  18% { transform:translate(0,0) rotate(0deg) scale(1); opacity:0.9; }
+  38% { transform:translate(var(--demo-wash-center-x),0) rotate(0deg) scale(1); opacity:0.9; }
+  54% { transform:translate(var(--demo-wash-center-x),76px) rotate(14deg) scale(0.9,1.08); opacity:0.9; }
+  70% { transform:translate(var(--demo-wash-center-x),34px) rotate(-12deg) scale(1.04,0.94); opacity:0.9; }
+  86% { transform:translate(0,0) rotate(0deg) scale(1); opacity:0; }
+  100% { transform:translate(0,0) rotate(0deg) scale(1); opacity:0; }
 }
 @keyframes demoFaceWipe {
   0%,28%,100% { transform:translate(-50%,0) rotate(0deg); opacity:0; }
@@ -345,44 +358,44 @@ html, body {
   52%,72% { transform:translateX(-50%) rotateY(-14deg); opacity:0.9; }
 }
 @keyframes demoLeftSleeve {
-  0% { left:86%; top:48%; opacity:0; }
-  20% { left:86%; top:48%; opacity:0.9; }
-  45% { left:14%; top:22%; opacity:0.9; }
-  62% { left:8%; top:22%; opacity:0.9; }
-  80% { left:14%; top:22%; opacity:0.9; }
-  100% { left:86%; top:48%; opacity:0; }
+  0% { transform:translate(0,0); opacity:0; }
+  20% { transform:translate(0,0); opacity:0.9; }
+  45% { transform:translate(var(--demo-left-sleeve-arrive-x),var(--demo-sleeve-arrive-y)); opacity:0.9; }
+  62% { transform:translate(var(--demo-left-sleeve-action-x),var(--demo-sleeve-arrive-y)); opacity:0.9; }
+  80% { transform:translate(var(--demo-left-sleeve-arrive-x),var(--demo-sleeve-arrive-y)); opacity:0.9; }
+  100% { transform:translate(0,0); opacity:0; }
 }
 @keyframes demoRightSleeve {
-  0% { left:4%; top:48%; opacity:0; }
-  20% { left:4%; top:48%; opacity:0.9; }
-  45% { left:75%; top:22%; opacity:0.9; }
-  62% { left:81%; top:22%; opacity:0.9; }
-  80% { left:75%; top:22%; opacity:0.9; }
-  100% { left:4%; top:48%; opacity:0; }
+  0% { transform:translate(0,0); opacity:0; }
+  20% { transform:translate(0,0); opacity:0.9; }
+  45% { transform:translate(var(--demo-right-sleeve-arrive-x),var(--demo-sleeve-arrive-y)); opacity:0.9; }
+  62% { transform:translate(var(--demo-right-sleeve-action-x),var(--demo-sleeve-arrive-y)); opacity:0.9; }
+  80% { transform:translate(var(--demo-right-sleeve-arrive-x),var(--demo-sleeve-arrive-y)); opacity:0.9; }
+  100% { transform:translate(0,0); opacity:0; }
 }
 @keyframes demoPullDown {
-  0% { left:38%; top:0%; opacity:0; }
-  20% { left:38%; top:0%; opacity:0.9; }
-  45% { left:50%; top:40%; opacity:0.9; }
-  62% { left:50%; top:50%; opacity:0.9; }
-  80% { left:50%; top:40%; opacity:0.9; }
-  100% { left:38%; top:0%; opacity:0; }
+  0% { transform:translate(0,0); opacity:0; }
+  20% { transform:translate(0,0); opacity:0.9; }
+  45% { transform:translate(var(--demo-pull-arrive-x),var(--demo-pull-arrive-y)); opacity:0.9; }
+  62% { transform:translate(var(--demo-pull-arrive-x),var(--demo-pull-action-y)); opacity:0.9; }
+  80% { transform:translate(var(--demo-pull-arrive-x),var(--demo-pull-arrive-y)); opacity:0.9; }
+  100% { transform:translate(0,0); opacity:0; }
 }
 @keyframes demoZipUp {
-  0% { left:40%; top:80%; opacity:0; }
-  20% { left:40%; top:80%; opacity:0.9; }
-  45% { left:calc(50% - 20px); top:38%; opacity:0.9; }
-  62% { left:calc(50% - 20px); top:25%; opacity:0.9; }
-  80% { left:calc(50% - 20px); top:38%; opacity:0.9; }
-  100% { left:40%; top:80%; opacity:0; }
+  0% { transform:translate(0,0); opacity:0; }
+  20% { transform:translate(0,0); opacity:0.9; }
+  45% { transform:translate(var(--demo-zip-arrive-x),var(--demo-zip-arrive-y)); opacity:0.9; }
+  62% { transform:translate(var(--demo-zip-arrive-x),var(--demo-zip-action-y)); opacity:0.9; }
+  80% { transform:translate(var(--demo-zip-arrive-x),var(--demo-zip-arrive-y)); opacity:0.9; }
+  100% { transform:translate(0,0); opacity:0; }
 }
 @keyframes demoCollarAdjust {
-  0% { left:82%; top:14%; opacity:0; }
-  20% { left:82%; top:14%; opacity:0.9; }
-  45% { left:50%; top:5%; opacity:0.9; }
-  62% { left:43%; top:5%; opacity:0.9; }
-  76% { left:57%; top:5%; opacity:0.9; }
-  100% { left:82%; top:14%; opacity:0; }
+  0% { transform:translate(0,0); opacity:0; }
+  20% { transform:translate(0,0); opacity:0.9; }
+  45% { transform:translate(var(--demo-collar-arrive-x),var(--demo-collar-arrive-y)); opacity:0.9; }
+  62% { transform:translate(var(--demo-collar-left-x),var(--demo-collar-arrive-y)); opacity:0.9; }
+  76% { transform:translate(var(--demo-collar-right-x),var(--demo-collar-arrive-y)); opacity:0.9; }
+  100% { transform:translate(0,0); opacity:0; }
 }
 
 .step-stage.demo-running .demo-dress-1 { animation:demoJacketPulse 1.8s ease-in-out infinite; }
@@ -397,6 +410,18 @@ html, body {
   position:absolute; bottom:18%; width:28px; height:16px; border-radius:50%; z-index:15;
   background:linear-gradient(135deg,#F8F8FF,#A9D9FF); box-shadow:0 2px 5px rgba(91,160,213,0.35);
 }
+.state-toothbrush-found, .state-toothbrush-ready, .state-mouth-rinsed, .state-jacket-found {
+  position:absolute; z-index:15; width:32px; height:32px;
+  font-size:26px; line-height:32px; text-align:center; opacity:0.72;
+  color:#FFD93D; text-shadow:0 2px 7px rgba(255,217,61,0.42);
+}
+.state-toothbrush-found::before, .state-toothbrush-ready::before,
+.state-mouth-rinsed::before, .state-jacket-found::before { content:'✦'; }
+.state-toothbrush-found { bottom:18%; left:56%; }
+[data-step="4"] .state-toothbrush-ready { bottom:15%; right:14%; }
+[data-step="5"] .state-toothbrush-ready { bottom:15%; left:14%; }
+.state-mouth-rinsed { top:48%; left:50%; transform:translateX(-50%); color:#62CAFF; text-shadow:0 2px 7px rgba(98,202,255,0.42); }
+.state-jacket-found { top:10%; left:34%; }
 [data-step="3"] .state-paste-on-brush { left:48%; }
 [data-step="4"] .state-paste-on-brush { right:13%; }
 [data-step="5"] .state-paste-on-brush { left:13%; }
@@ -448,8 +473,17 @@ html, body {
 .step-stage.demo-running .state-left-sleeve,
 .step-stage.demo-running .state-both-sleeves { animation:cleanSparkle 1.8s ease-in-out infinite; }
 .step-stage.demo-paused .demo-element,
+.step-stage.demo-paused .demo-element *,
 .step-stage.demo-paused .demo-element::before,
-.step-stage.demo-paused .demo-element::after {
+.step-stage.demo-paused .demo-element::after,
+.step-stage.demo-paused .demo-element *::before,
+.step-stage.demo-paused .demo-element *::after,
+.step-stage.demo-paused .persistent-state,
+.step-stage.demo-paused .persistent-state *,
+.step-stage.demo-paused .persistent-state::before,
+.step-stage.demo-paused .persistent-state::after,
+.step-stage.demo-paused .persistent-state *::before,
+.step-stage.demo-paused .persistent-state *::after {
   animation-play-state:paused !important;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1166,9 +1200,41 @@ const AnimationController = {
   timer: null,
   currentStage: null,
 
+  configureStagePaths(stage) {
+    if (!stage) return;
+    const { width, height } = stage.getBoundingClientRect();
+    const px = value => `${Math.sign(value) * Math.round(Math.abs(value))}px`;
+    const brushArrivalY = -0.9 * height + 372;
+    const offsets = {
+      '--demo-brush-left-x': -0.45 * width + 77.2,
+      '--demo-brush-right-x': 0.45 * width - 77.2,
+      '--demo-brush-arrive-y': brushArrivalY,
+      '--demo-brush-up-y': brushArrivalY - 14,
+      '--demo-brush-down-y': brushArrivalY + 14,
+      '--demo-wash-center-x': -0.42 * width,
+      '--demo-left-sleeve-arrive-x': -0.72 * width,
+      '--demo-left-sleeve-action-x': -0.78 * width,
+      '--demo-sleeve-arrive-y': -0.26 * height,
+      '--demo-right-sleeve-arrive-x': 0.71 * width,
+      '--demo-right-sleeve-action-x': 0.77 * width,
+      '--demo-pull-arrive-x': 0.12 * width,
+      '--demo-pull-arrive-y': 0.4 * height,
+      '--demo-pull-action-y': 0.5 * height,
+      '--demo-zip-arrive-x': 0.1 * width - 20,
+      '--demo-zip-arrive-y': -0.42 * height,
+      '--demo-zip-action-y': -0.55 * height,
+      '--demo-collar-arrive-x': -0.32 * width,
+      '--demo-collar-left-x': -0.39 * width,
+      '--demo-collar-right-x': -0.25 * width,
+      '--demo-collar-arrive-y': -0.09 * height
+    };
+    Object.entries(offsets).forEach(([name, value]) => stage.style.setProperty(name, px(value)));
+  },
+
   schedule(stage) {
     this.clear();
     this.currentStage = stage;
+    this.configureStagePaths(stage);
     if (!stage || !AnimationPolicy.isEnabled() ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     this.timer = setTimeout(() => {
@@ -1459,9 +1525,12 @@ function buildPersistentStateHTML(levelId, stepId) {
   let html = '';
 
   if (levelId === 'brush') {
+    if (stepId >= 2 && stepId <= 3 && prior('toothbrushFound', 1)) html += stateHTML('state-toothbrush-found');
     if (stepId >= 3 && stepId <= 5 && prior('toothpasteApplied', 2)) html += stateHTML('state-paste-on-brush');
+    if (stepId >= 4 && stepId <= 5 && prior('toothbrushPickedUp', 3)) html += stateHTML('state-toothbrush-ready');
     if (prior('rightBrushed', 5)) html += stateHTML('state-clean-both');
     else if (prior('leftBrushed', 4)) html += stateHTML('state-clean-left');
+    if (stepId === 7 && prior('rinsed', 6)) html += stateHTML('state-mouth-rinsed');
     if (stepId === 7) html += stateHTML('state-final-clean-mouth');
   } else if (levelId === 'wash') {
     if (stepId >= 2 && stepId <= 6 && prior('faucetOn', 1)) html += stateHTML('state-water-stream');
@@ -1471,6 +1540,7 @@ function buildPersistentStateHTML(levelId, stepId) {
     if (stepId === 6 && prior('faceWashed', 5)) html += stateHTML('state-clean-face');
     if (stepId === 7 && prior('towelRinsed', 6)) html += stateHTML('state-clean-wet-towel', svgTowel(160,115));
   } else if (levelId === 'dress') {
+    if (prior('jacketFound', 1)) html += stateHTML('state-jacket-found');
     if (prior('frontIdentified', 2)) html += stateHTML('state-jacket-front', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M40,32 L70,58 L100,32 L94,32 L70,50 L46,32 Z"/></svg>');
     if (prior('rightSleeveOn', 4)) html += stateHTML('state-both-sleeves', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z"/><path d="M116,42 Q132,50 136,80 Q138,100 130,118 Q126,96 122,80 Q120,60 114,52 Z"/></svg>');
     else if (prior('leftSleeveOn', 3)) html += stateHTML('state-left-sleeve', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z"/></svg>');
@@ -2664,7 +2734,7 @@ const ResearchMode = {
     // Close setup panel, then start the research skill
     this.closeSetup();
     const skillIdx = { brush: 0, wash: 1, dress: 2 }[this.skillId];
-    _originalStartLevel(skillIdx);
+    startLevel(skillIdx);
   },
 
   // Reset to normal mode
@@ -2932,6 +3002,12 @@ startLevel = function(idx) {
 // 包装原始 handleStepSuccess，注入精确数据记录
 const _originalHandleStepSuccess = handleStepSuccess;
 handleStepSuccess = function(area) {
+  if (state.stepCompleted.has(state.currentStep)) return;
+  AnimationController.pause(area.querySelector('.step-stage'));
+  if (state.stepAbortController) {
+    state.stepAbortController.abort();
+    state.stepAbortController = null;
+  }
   UnifiedDataManager.onStepComplete(true);
   // Log additional gesture info for fidelity
   UnifiedDataManager.events[UnifiedDataManager.events.length - 1].gesture =

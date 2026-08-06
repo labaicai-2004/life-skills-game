@@ -2,19 +2,21 @@
 
 ## 本次结论
 
-状态：`DONE_WITH_CONCERNS`。本次仅完成可自动化部分。`node --test tests/continuous-animation.test.js` 于 2026-08-06 通过 27 项、失败 0 项；JavaScript 语法、3 项技能/21 步数据计数和 `git diff --check` 均通过。没有可用浏览器运行环境，因此下表中的桌面视觉、桌面触控、桌面音频、控制台及 iPad Safari 项均为待人工核查，不能视作通过。
+状态：`DONE_WITH_CONCERNS`。终审修复后的可自动化部分已完成。`node --test tests/continuous-animation.test.js` 于 2026-08-06 通过 35 项、失败 0 项；JavaScript 语法、3 项技能/21 步数据计数和 `git diff --check` 均通过。没有可用浏览器运行环境，因此下表中的桌面视觉、桌面触控、桌面音频、控制台及 iPad Safari 项均为待人工核查，不能视作通过。
 
 ## 自动化证据索引
 
-- A1：[研究条件动画策略矩阵](../../tests/continuous-animation.test.js#L159)。
-- A2：[两秒延迟、播放、暂停与清理](../../tests/continuous-animation.test.js#L185)。
-- A3：[步骤进入、首次触摸暂停与返回首页清理](../../tests/continuous-animation.test.js#L203)；[桌面首次按下暂停](../../tests/continuous-animation.test.js#L221)。
-- A4：[关卡切换先清理旧示范](../../tests/continuous-animation.test.js#L238)、[源码清理顺序契约](../../tests/continuous-animation.test.js#L271)、[开始/返回首页重置持续状态](../../tests/continuous-animation.test.js#L409)。
-- A5：[被动示范不增加事件或研究记录](../../tests/continuous-animation.test.js#L291)、[迭代写入突变可被检出](../../tests/continuous-animation.test.js#L318)、[真实完成只写入一次步骤记录](../../tests/continuous-animation.test.js#L344)。
-- A6：[三项技能各 7 个持续状态键](../../tests/continuous-animation.test.js#L383)。
-- B：[刷牙 7 步示范标记和动画规则](../../tests/continuous-animation.test.js#L455)、[时长边界](../../tests/continuous-animation.test.js#L477)、[影子拖拽物与真实物分离](../../tests/continuous-animation.test.js#L487)、[前序状态](../../tests/continuous-animation.test.js#L499)。
-- C：[洗脸 7 步示范标记](../../tests/continuous-animation.test.js#L523)、[毛巾示范路径](../../tests/continuous-animation.test.js#L545)、[前序状态](../../tests/continuous-animation.test.js#L601)。
-- D：[穿衣 7 步示范标记](../../tests/continuous-animation.test.js#L654)、[示范小手先到目标再动作](../../tests/continuous-animation.test.js#L681)、[前序状态和最终衣领反馈](../../tests/continuous-animation.test.js#L716)、[拉链 35% 重叠](../../tests/continuous-animation.test.js#L778)。
+- A1：[研究条件动画策略矩阵](../../tests/continuous-animation.test.js#L229)。
+- A2：[两秒延迟、播放、暂停与清理](../../tests/continuous-animation.test.js#L255)、[按实际舞台尺寸计算纯位移路径](../../tests/continuous-animation.test.js#L273)。
+- A3：[步骤进入、首次触摸暂停与返回首页清理](../../tests/continuous-animation.test.js#L318)、[桌面首次按下暂停](../../tests/continuous-animation.test.js#L336)、[子元素、伪元素与持续状态层同步暂停](../../tests/continuous-animation.test.js#L353)、[第四级提示自动完成前暂停](../../tests/continuous-animation.test.js#L561)。
+- A4：[关卡切换先清理旧示范](../../tests/continuous-animation.test.js#L391)、[源码清理顺序契约](../../tests/continuous-animation.test.js#L424)、[开始/返回首页重置持续状态](../../tests/continuous-animation.test.js#L638)。
+- A5：[被动示范不增加事件或研究记录](../../tests/continuous-animation.test.js#L469)、[迭代写入突变可被检出](../../tests/continuous-animation.test.js#L496)、[真实完成只写入一次步骤记录](../../tests/continuous-animation.test.js#L522)、[重复有效操作保持完成幂等](../../tests/continuous-animation.test.js#L589)。
+- A6：[三项技能各 7 个持续状态键](../../tests/continuous-animation.test.js#L612)、[四项持续状态按后续步骤显示且不提前出现](../../tests/continuous-animation.test.js#L684)。
+- A7：[真实研究模式入口初始化统一数据会话与任务编号](../../tests/continuous-animation.test.js#L444)。
+- A8：[所有示范关键帧只使用位移、透明度或滤镜](../../tests/continuous-animation.test.js#L369)。
+- B：[刷牙 7 步示范标记和动画规则](../../tests/continuous-animation.test.js#L729)、[时长边界](../../tests/continuous-animation.test.js#L751)、[影子拖拽物与真实物分离](../../tests/continuous-animation.test.js#L761)、[左右刷牙路径按尺寸分别抵达目标](../../tests/continuous-animation.test.js#L773)、[前序状态](../../tests/continuous-animation.test.js#L844)。
+- C：[洗脸 7 步示范标记](../../tests/continuous-animation.test.js#L868)、[毛巾示范路径](../../tests/continuous-animation.test.js#L890)、[前序状态](../../tests/continuous-animation.test.js#L937)。
+- D：[穿衣 7 步示范标记](../../tests/continuous-animation.test.js#L990)、[示范小手先到目标再动作](../../tests/continuous-animation.test.js#L1017)、[前序状态和最终衣领反馈](../../tests/continuous-animation.test.js#L1042)、[拉链 35% 重叠](../../tests/continuous-animation.test.js#L1104)。
 
 “自动化通过”只表示 Node 虚拟运行环境及源码规则已验证，不表示真实浏览器画面、真实触摸或音频已验证。“共享逻辑自动化覆盖”表示状态或被动数据保护由关卡级或全局逻辑测试覆盖，不能当作该单一步骤的端到端交互通过。“待人工”是本次未运行浏览器的诚实状态。
 
@@ -46,7 +48,7 @@
 
 ## 重置、数据和研究条件的自动化结论
 
-重置路径由 A3、A4 验证：返回首页会清理示范并重置持续状态，开始另一关会先清理旧示范再安装和安排新步骤，源码顺序突变会被测试捕获。数据路径由 A5 验证：示范启动和两次动画迭代不增加事件或 `researchRecords`；人为注入一次动画迭代写入会被测试检出；真实完成会新增且仅新增一个 `step_success` 与一条步骤记录。研究条件由 A1 验证：普通训练三种训练方式均启用，研究模式仅“干预期 + 教学模式”启用，基线期和维持期均关闭。
+重置和暂停路径由 A2、A3、A4 验证：返回首页会清理示范并重置持续状态，开始另一关会先清理旧示范再安装和安排新步骤；首次触摸或鼠标按下会冻结示范根节点、后代、伪元素与持续状态层，任意成功路径也会在反馈前暂停并撤销当前步骤监听。数据路径由 A5 验证：示范启动和两次动画迭代不增加事件或 `researchRecords`；人为注入一次动画迭代写入会被测试检出；真实完成只新增一个 `step_success` 与一条步骤记录，重复有效输入不会再次写入。研究条件由 A1、A7 验证：普通训练三种训练方式均启用，研究模式仅“干预期 + 教学模式”启用，基线期和维持期均关闭；真实研究入口会建立统一数据会话，设置所选任务编号，并让首批事件携带同一任务编号。持续状态由 A6 验证，刷牙与穿衣的四项后续提示不会提前出现。动画实现由 A8 及 B、C、D 验证：关键帧不再改变布局位置，刷牙、洗脸和穿衣路径按照安装后的实际舞台尺寸转换为位移，同时保留真实拖拽物、目标与 35% 成功阈值。
 
 ## 用户执行的 iPad Safari 清单
 
