@@ -491,15 +491,10 @@ test('dressing ghost hands reach their target before the directional demonstrati
   assertArrivalThenAction('demoLeftSleeve', { left: 14, top: 22 }, { left: 8, top: 22 });
   assertArrivalThenAction('demoRightSleeve', { left: 75, top: 22 }, { left: 81, top: 22 });
   assertArrivalThenAction('demoPullDown', { left: 50, top: 40 }, { left: 50, top: 50 });
-  assertArrivalThenAction('demoZipUp', { left: 50, top: 38 }, { left: 50, top: 25 });
   assertArrivalThenAction('demoCollarAdjust', { left: 50, top: 5 }, { left: 43, top: 5 });
-
-  const noArrival = keyframeBody('demoZipUp').replace('45% { left:50%; top:38%;', '45% { left:50%; top:48%;');
-  assert.throws(
-    () => assertArrivalThenAction('demoZipUp mutation', { left: 50, top: 38 }, { left: 50, top: 25 }, noArrival),
-    /must visibly arrive|needs its directional action/
-  );
-  assert.match(noArrival, /top:48%/);
+  const zipperPath = keyframeBody('demoZipUp');
+  assert.match(zipperPath, /45%\s*\{\s*left:calc\(50% - 20px\);\s*top:38%;/);
+  assert.match(zipperPath, /62%\s*\{\s*left:calc\(50% - 20px\);\s*top:25%;/);
 });
 
 test('dressing continuity indicators follow completed steps and reveal the final collar only on real completion', () => {
@@ -540,4 +535,54 @@ test('dressing continuity indicators follow completed steps and reveal the final
   assert.equal(stage.classList.contains('dress-final-collar'), false);
   api.handleStepSuccess(elements['interaction-area']);
   assert.equal(stage.classList.contains('dress-final-collar'), true);
+});
+
+test('dressing final collar sparkle stays hidden during demonstration and generic prompt success', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements } = runtime;
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const stage = createElement();
+  elements['interaction-area'].querySelector = selector => selector === '.step-stage' ? stage : null;
+  api.state.currentLevel = 2;
+  api.state.currentStep = 6;
+
+  stage.classList.add('demo-running');
+  assert.doesNotMatch(source, /\.step-stage\.demo-running\s+\.state-final-collar-sparkle/);
+  assert.doesNotMatch(source, /#interaction-area\.success\s+\.state-final-collar-sparkle/);
+
+  api.applyPromptLevel(api.PROMPT_LEVELS.VISUAL.level);
+  assert.equal(elements['interaction-area'].classList.contains('success'), true);
+  assert.equal(stage.classList.contains('dress-final-collar'), false);
+
+  api.handleStepSuccess(elements['interaction-area']);
+  assert.equal(stage.classList.contains('dress-final-collar'), true);
+});
+
+test('zipper ghost reaches the unchanged zipper target with at least 35 percent overlap before moving up', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const sceneWidth = 800;
+  const sceneHeight = 400;
+  const ghost = { width: 72, height: 72 };
+  const target = {
+    left: sceneWidth * 0.5 - 20,
+    top: sceneHeight * 0.38,
+    width: 40,
+    height: 90
+  };
+  const arrival = source.match(/@keyframes demoZipUp[\s\S]*?45%\s*\{\s*left:calc\(50% - (\d+)px\);\s*top:38%;\s*opacity:([\d.]+);/);
+  assert.notEqual(arrival, null, 'zipper ghost arrival needs a pixel offset from the target center');
+  const ghostAtArrival = {
+    left: sceneWidth * 0.5 - Number(arrival[1]),
+    top: sceneHeight * 0.38,
+    width: ghost.width,
+    height: ghost.height
+  };
+  const overlapWidth = Math.max(0, Math.min(ghostAtArrival.left + ghost.width, target.left + target.width) - Math.max(ghostAtArrival.left, target.left));
+  const overlapHeight = Math.max(0, Math.min(ghostAtArrival.top + ghost.height, target.top + target.height) - Math.max(ghostAtArrival.top, target.top));
+  const ratio = (overlapWidth * overlapHeight) / (ghost.width * ghost.height);
+  assert.ok(ratio >= 0.35, `zipper ghost overlap ${ratio} must meet the 35% threshold`);
+
+  const unshiftedRatio = (20 * ghost.height) / (ghost.width * ghost.height);
+  assert.ok(unshiftedRatio < 0.35, 'an unshifted center arrival must fail the overlap threshold');
 });

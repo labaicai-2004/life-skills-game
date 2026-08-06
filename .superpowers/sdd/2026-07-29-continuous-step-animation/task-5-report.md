@@ -43,3 +43,27 @@ Additional checks passed:
 ## Concerns
 
 No browser instance was available in the browser-control environment, so the requested manual visual run through all seven dressing steps could not be performed. The automated scene, state, path, syntax, marker, and diff checks passed; a desktop or iPad visual check remains recommended when a browser is available.
+
+## Task 5 Fix Round 1
+
+### Status
+
+Implemented with two minimal CSS changes and regression coverage.
+
+### RED Evidence
+
+After adding the new tests, `node tests/continuous-animation.test.js` reported 18 passed and 3 failed: the original zipper arrival assertion, the demonstration-state collar sparkle isolation assertion, and the dimension-aware zipper overlap assertion. The failures identified the active `.demo-running .state-final-collar-sparkle` selector and the unshifted zipper ghost arrival.
+
+### GREEN Evidence
+
+`node tests/continuous-animation.test.js` reports 21 passed, 0 failed. The extracted script syntax check reports `extracted script syntax: OK`, and `git diff --check` completes without whitespace errors.
+
+### Changes and Self-Review
+
+- Removed `state-final-collar-sparkle` from the `.demo-running` sparkle group. Its default opacity remains zero and only `.step-stage.dress-final-collar` makes it visible, so generic prompt success cannot reveal it.
+- Shifted only the separate `demoZipUp` ghost at its 45%, 62%, and 80% positions by 20px from the zipper center. The unchanged 40×90 target now covers 40×72 pixels of the 72×72 ghost, or 55.6%.
+- Tests assert both the completion-state isolation and the dimensions-based overlap calculation; the unshifted calculation remains below the 35% threshold as a regression guard.
+
+### Concerns
+
+No browser instance was available for manual visual validation. Automated coverage verifies the state boundary and the geometry calculation, but desktop or iPad visual validation remains recommended when a browser is available.

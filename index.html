@@ -371,9 +371,9 @@ html, body {
 @keyframes demoZipUp {
   0% { left:40%; top:80%; opacity:0; }
   20% { left:40%; top:80%; opacity:0.9; }
-  45% { left:50%; top:38%; opacity:0.9; }
-  62% { left:50%; top:25%; opacity:0.9; }
-  80% { left:50%; top:38%; opacity:0.9; }
+  45% { left:calc(50% - 20px); top:38%; opacity:0.9; }
+  62% { left:calc(50% - 20px); top:25%; opacity:0.9; }
+  80% { left:calc(50% - 20px); top:38%; opacity:0.9; }
   100% { left:40%; top:80%; opacity:0; }
 }
 @keyframes demoCollarAdjust {
@@ -446,8 +446,7 @@ html, body {
 .step-stage.dress-final-collar .state-final-collar-sparkle { opacity:1; }
 .step-stage.demo-running .state-jacket-front,
 .step-stage.demo-running .state-left-sleeve,
-.step-stage.demo-running .state-both-sleeves,
-.step-stage.demo-running .state-final-collar-sparkle { animation:cleanSparkle 1.8s ease-in-out infinite; }
+.step-stage.demo-running .state-both-sleeves { animation:cleanSparkle 1.8s ease-in-out infinite; }
 .step-stage.demo-paused .demo-element,
 .step-stage.demo-paused .demo-element::before,
 .step-stage.demo-paused .demo-element::after {
