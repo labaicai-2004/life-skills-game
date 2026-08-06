@@ -434,3 +434,110 @@ test('prompt highlighting cannot reveal the final mouth sparkle before real brus
   api.handleStepSuccess(elements['interaction-area']);
   assert.equal(stage.classList.contains('brush-final-clean'), true);
 });
+
+test('dressing scenes provide seven delayed, non-interactive demonstration markers', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api } = runtime;
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+  for (let stepId = 1; stepId <= 7; stepId++) {
+    const scene = api.buildScene('dress', api.LEVELS[2].steps[stepId - 1]);
+    assert.match(scene, new RegExp(`demo-element demo-dress-${stepId}`));
+    assert.match(scene, /aria-hidden="true"/);
+    assert.match(source, new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-dress-${stepId}\\s*\\{`));
+    assert.doesNotMatch(scene, /class="[^"]*draggable-item[^"]*demo-element/);
+  }
+
+  for (const stepId of [3, 4, 5, 6, 7]) {
+    const scene = api.buildScene('dress', api.LEVELS[2].steps[stepId - 1]);
+    assert.match(scene, new RegExp(`demo-element demo-dress-${stepId} demo-ghost`));
+  }
+
+  for (const keyframe of [
+    'demoJacketPulse', 'demoJacketFront', 'demoLeftSleeve', 'demoRightSleeve',
+    'demoPullDown', 'demoZipUp', 'demoCollarAdjust'
+  ]) {
+    assert.match(source, new RegExp(`@keyframes ${keyframe}`));
+  }
+});
+
+test('dressing ghost hands reach their target before the directional demonstration', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const keyframeBody = name => {
+    const match = source.match(new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)(?=\\n@keyframes|\\n\\.step-stage)`));
+    assert.notEqual(match, null, `${name} keyframes missing`);
+    return match[1];
+  };
+  const stages = body => [...body.matchAll(/(\d+)%\s*\{([^}]*)\}/g)].map(([, percentage, declarations]) => ({
+    percentage: Number(percentage),
+    left: Number(declarations.match(/left:(\d+)%/)?.[1]),
+    top: Number(declarations.match(/top:(\d+)%/)?.[1]),
+    opacity: Number(declarations.match(/opacity:([\d.]+)/)?.[1])
+  }));
+  const assertArrivalThenAction = (keyframe, target, action, body = keyframeBody(keyframe)) => {
+    const path = stages(body);
+    const arrivalIndex = path.findIndex(stage =>
+      stage.left === target.left && stage.top === target.top && stage.opacity > 0
+    );
+    assert.notEqual(arrivalIndex, -1, `${keyframe} must visibly arrive at its target`);
+    const actionIndex = path.findIndex((stage, index) => index > arrivalIndex &&
+      (stage.left === action.left || stage.top === action.top)
+    );
+    assert.notEqual(actionIndex, -1, `${keyframe} needs its directional action after arriving`);
+    assert.ok(actionIndex > arrivalIndex, `${keyframe} must not act before reaching its target`);
+  };
+
+  assertArrivalThenAction('demoLeftSleeve', { left: 14, top: 22 }, { left: 8, top: 22 });
+  assertArrivalThenAction('demoRightSleeve', { left: 75, top: 22 }, { left: 81, top: 22 });
+  assertArrivalThenAction('demoPullDown', { left: 50, top: 40 }, { left: 50, top: 50 });
+  assertArrivalThenAction('demoZipUp', { left: 50, top: 38 }, { left: 50, top: 25 });
+  assertArrivalThenAction('demoCollarAdjust', { left: 50, top: 5 }, { left: 43, top: 5 });
+
+  const noArrival = keyframeBody('demoZipUp').replace('45% { left:50%; top:38%;', '45% { left:50%; top:48%;');
+  assert.throws(
+    () => assertArrivalThenAction('demoZipUp mutation', { left: 50, top: 38 }, { left: 50, top: 25 }, noArrival),
+    /must visibly arrive|needs its directional action/
+  );
+  assert.match(noArrival, /top:48%/);
+});
+
+test('dressing continuity indicators follow completed steps and reveal the final collar only on real completion', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements } = runtime;
+  const { SkillSceneState, buildPersistentStateHTML } = api;
+  SkillSceneState.reset();
+
+  assert.doesNotMatch(buildPersistentStateHTML('dress', 3), /state-jacket-front/);
+  SkillSceneState.complete('dress', 2);
+  assert.match(buildPersistentStateHTML('dress', 3), /state-jacket-front/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('dress', 4), /state-left-sleeve/);
+  SkillSceneState.complete('dress', 3);
+  assert.match(buildPersistentStateHTML('dress', 4), /state-left-sleeve/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('dress', 5), /state-both-sleeves/);
+  SkillSceneState.complete('dress', 4);
+  assert.match(buildPersistentStateHTML('dress', 5), /state-both-sleeves/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('dress', 6), /state-jacket-flat/);
+  SkillSceneState.complete('dress', 5);
+  assert.match(buildPersistentStateHTML('dress', 6), /state-jacket-flat/);
+
+  assert.doesNotMatch(buildPersistentStateHTML('dress', 7), /state-zipper-closed/);
+  SkillSceneState.complete('dress', 6);
+  assert.match(buildPersistentStateHTML('dress', 7), /state-zipper-closed/);
+  assert.doesNotMatch(buildPersistentStateHTML('dress', 7), /state-final-collar-sparkle/);
+  SkillSceneState.complete('dress', 7);
+  assert.match(buildPersistentStateHTML('dress', 8), /state-final-collar-sparkle/);
+
+  const stage = createElement();
+  elements['interaction-area'].querySelector = selector => selector === '.step-stage' ? stage : null;
+  api.state.currentLevel = 2;
+  api.state.currentStep = 6;
+  api.applyPromptLevel(api.PROMPT_LEVELS.VISUAL.level);
+  assert.equal(stage.classList.contains('dress-final-collar'), false);
+  api.handleStepSuccess(elements['interaction-area']);
+  assert.equal(stage.classList.contains('dress-final-collar'), true);
+});

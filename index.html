@@ -336,6 +336,63 @@ html, body {
 .step-stage.demo-running .demo-water-flow { animation:waterFlow 1.6s ease-in-out infinite; }
 .step-stage.demo-running .demo-water-fade { animation:waterFadeOut 2.0s ease-in-out infinite; }
 
+@keyframes demoJacketPulse {
+  0%,38%,100% { transform:translateX(-50%) scale(1); opacity:0; }
+  54%,74% { transform:translateX(-50%) scale(1.07); opacity:0.88; }
+}
+@keyframes demoJacketFront {
+  0%,34%,100% { transform:translateX(-50%) rotateY(0deg); opacity:0; }
+  52%,72% { transform:translateX(-50%) rotateY(-14deg); opacity:0.9; }
+}
+@keyframes demoLeftSleeve {
+  0% { left:86%; top:48%; opacity:0; }
+  20% { left:86%; top:48%; opacity:0.9; }
+  45% { left:14%; top:22%; opacity:0.9; }
+  62% { left:8%; top:22%; opacity:0.9; }
+  80% { left:14%; top:22%; opacity:0.9; }
+  100% { left:86%; top:48%; opacity:0; }
+}
+@keyframes demoRightSleeve {
+  0% { left:4%; top:48%; opacity:0; }
+  20% { left:4%; top:48%; opacity:0.9; }
+  45% { left:75%; top:22%; opacity:0.9; }
+  62% { left:81%; top:22%; opacity:0.9; }
+  80% { left:75%; top:22%; opacity:0.9; }
+  100% { left:4%; top:48%; opacity:0; }
+}
+@keyframes demoPullDown {
+  0% { left:38%; top:0%; opacity:0; }
+  20% { left:38%; top:0%; opacity:0.9; }
+  45% { left:50%; top:40%; opacity:0.9; }
+  62% { left:50%; top:50%; opacity:0.9; }
+  80% { left:50%; top:40%; opacity:0.9; }
+  100% { left:38%; top:0%; opacity:0; }
+}
+@keyframes demoZipUp {
+  0% { left:40%; top:80%; opacity:0; }
+  20% { left:40%; top:80%; opacity:0.9; }
+  45% { left:50%; top:38%; opacity:0.9; }
+  62% { left:50%; top:25%; opacity:0.9; }
+  80% { left:50%; top:38%; opacity:0.9; }
+  100% { left:40%; top:80%; opacity:0; }
+}
+@keyframes demoCollarAdjust {
+  0% { left:82%; top:14%; opacity:0; }
+  20% { left:82%; top:14%; opacity:0.9; }
+  45% { left:50%; top:5%; opacity:0.9; }
+  62% { left:43%; top:5%; opacity:0.9; }
+  76% { left:57%; top:5%; opacity:0.9; }
+  100% { left:82%; top:14%; opacity:0; }
+}
+
+.step-stage.demo-running .demo-dress-1 { animation:demoJacketPulse 1.8s ease-in-out infinite; }
+.step-stage.demo-running .demo-dress-2 { animation:demoJacketFront 2.0s ease-in-out infinite; }
+.step-stage.demo-running .demo-dress-3 { animation:demoLeftSleeve 2.3s ease-in-out infinite; }
+.step-stage.demo-running .demo-dress-4 { animation:demoRightSleeve 2.3s ease-in-out infinite; }
+.step-stage.demo-running .demo-dress-5 { animation:demoPullDown 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-dress-6 { animation:demoZipUp 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-dress-7 { animation:demoCollarAdjust 2.3s ease-in-out infinite; }
+
 .state-paste-on-brush {
   position:absolute; bottom:18%; width:28px; height:16px; border-radius:50%; z-index:15;
   background:linear-gradient(135deg,#F8F8FF,#A9D9FF); box-shadow:0 2px 5px rgba(91,160,213,0.35);
@@ -378,6 +435,19 @@ html, body {
 }
 .state-clean-face::before { content:'✦  ✦'; }
 .step-stage.demo-running .state-clean-face { animation:cleanSparkle 1.8s ease-in-out infinite; }
+.state-jacket-front, .state-left-sleeve, .state-both-sleeves, .state-jacket-flat, .state-zipper-closed, .state-final-collar-sparkle {
+  position:absolute; top:8%; left:50%; z-index:16; width:255px; height:265px; transform:translateX(-50%);
+}
+.state-jacket-front path { fill:rgba(255,255,255,0.34); }
+.state-left-sleeve path, .state-both-sleeves path { fill:rgba(255,217,61,0.48); }
+.state-jacket-flat line { stroke:#FFFFFF; stroke-width:5; stroke-linecap:round; }
+.state-zipper-closed line { stroke:#FFF7E8; stroke-width:5; stroke-linecap:round; }
+.state-final-collar-sparkle { opacity:0; transition:opacity 0.35s ease-out; }
+.step-stage.dress-final-collar .state-final-collar-sparkle { opacity:1; }
+.step-stage.demo-running .state-jacket-front,
+.step-stage.demo-running .state-left-sleeve,
+.step-stage.demo-running .state-both-sleeves,
+.step-stage.demo-running .state-final-collar-sparkle { animation:cleanSparkle 1.8s ease-in-out infinite; }
 .step-stage.demo-paused .demo-element,
 .step-stage.demo-paused .demo-element::before,
 .step-stage.demo-paused .demo-element::after {
@@ -1402,11 +1472,12 @@ function buildPersistentStateHTML(levelId, stepId) {
     if (stepId === 6 && prior('faceWashed', 5)) html += stateHTML('state-clean-face');
     if (stepId === 7 && prior('towelRinsed', 6)) html += stateHTML('state-clean-wet-towel', svgTowel(160,115));
   } else if (levelId === 'dress') {
-    if (prior('frontIdentified', 2)) html += stateHTML('state-jacket-front');
-    if (prior('rightSleeveOn', 4)) html += stateHTML('state-both-sleeves');
-    else if (prior('leftSleeveOn', 3)) html += stateHTML('state-left-sleeve');
-    if (prior('jacketPulledDown', 5)) html += stateHTML('state-jacket-flat');
-    if (prior('zipperClosed', 6)) html += stateHTML('state-zipper-closed');
+    if (prior('frontIdentified', 2)) html += stateHTML('state-jacket-front', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M40,32 L70,58 L100,32 L94,32 L70,50 L46,32 Z"/></svg>');
+    if (prior('rightSleeveOn', 4)) html += stateHTML('state-both-sleeves', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z"/><path d="M116,42 Q132,50 136,80 Q138,100 130,118 Q126,96 122,80 Q120,60 114,52 Z"/></svg>');
+    else if (prior('leftSleeveOn', 3)) html += stateHTML('state-left-sleeve', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z"/></svg>');
+    if (prior('jacketPulledDown', 5)) html += stateHTML('state-jacket-flat', '<svg viewBox="0 0 140 175" aria-hidden="true"><line x1="24" y1="150" x2="116" y2="150"/></svg>');
+    if (prior('zipperClosed', 6)) html += stateHTML('state-zipper-closed', '<svg viewBox="0 0 140 175" aria-hidden="true"><line x1="70" y1="58" x2="70" y2="148"/></svg>');
+    if (prior('collarAdjusted', 7)) html += stateHTML('state-final-collar-sparkle', '<svg viewBox="0 0 140 175" aria-hidden="true"><text x="38" y="43" fill="#FFD93D" font-size="24">✦</text><text x="82" y="43" fill="#FFD93D" font-size="24">✦</text></svg>');
   }
   return html;
 }
@@ -1509,34 +1580,42 @@ function buildScene(levelId, step) {
   if (levelId==='dress') {
     if (sid===1) {
       objects = `<div style="position:absolute;top:12%;left:50%;transform:translateX(-50%);z-index:5;">${svgJacket(240,250)}</div>`;
+      objects += `<div class="demo-element demo-dress-1" aria-hidden="true" style="top:12%;left:50%;">${svgJacket(240,250)}</div>`;
       guide = arrowHTML(arrow, '62%', '36%', '点击衣服');
     } else if (sid===2) {
       objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:5;">${svgJacket(255,265)}</div>`;
+      objects += `<div class="demo-element demo-dress-2" aria-hidden="true" style="top:8%;left:50%;">${svgJacket(255,265)}</div>`;
       guide = arrowHTML(arrow, '50%', '38%', '点击正面');
     } else if (sid===3) {
       objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
       <div style="position:absolute;top:22%;left:14%;z-index:5;" class="drag-target invisible-target" data-target="sleeve-left"><div style="width:70px;height:90px;border-radius:14px;"></div></div>
       <div style="position:absolute;top:48%;left:4%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-dress-3 demo-ghost" aria-hidden="true" style="top:48%;left:86%;">${svgHand(72,72)}</div>`;
       guide = arrowHTML('left', '48%', '8%', '拖拽小手到左边袖口');
     } else if (sid===4) {
       objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
       <div style="position:absolute;top:22%;right:14%;z-index:5;" class="drag-target invisible-target" data-target="sleeve-right"><div style="width:70px;height:90px;border-radius:14px;"></div></div>
       <div style="position:absolute;top:48%;right:4%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-dress-4 demo-ghost" aria-hidden="true" style="top:48%;left:4%;">${svgHand(72,72)}</div>`;
       guide = arrowHTML('right', '48%', '62%', '拖拽小手到右边袖口');
     } else if (sid===5) {
       objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
       <div style="position:absolute;top:40%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="jacket-body"><div style="width:90px;height:70px;border-radius:14px;"></div></div>
       <div style="position:absolute;top:0;left:38%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-dress-5 demo-ghost" aria-hidden="true" style="top:0;left:38%;">${svgHand(72,72)}</div>`;
       guide = arrowHTML('down', '32%', '42%', '拖拽小手往下拉衣服');
     } else if (sid===6) {
       objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
       <div style="position:absolute;top:38%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="zipper"><div style="width:40px;height:90px;border-radius:14px;"></div></div>
       <div style="position:absolute;bottom:5%;left:40%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-dress-6 demo-ghost" aria-hidden="true" style="top:80%;left:40%;">${svgHand(72,72)}</div>`;
       guide = arrowHTML('up', '50%', '43%', '拖拽小手往上拉拉链');
     } else if (sid===7) {
       objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
       <div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="collar"><div style="width:100px;height:50px;border-radius:14px;"></div></div>
       <div style="position:absolute;top:14%;right:8%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
+      objects += `<div class="demo-element demo-dress-7 demo-ghost" aria-hidden="true" style="top:14%;left:82%;">${svgHand(72,72)}</div>
+      <div class="persistent-state state-final-collar-sparkle" aria-hidden="true"><svg viewBox="0 0 140 175" aria-hidden="true"><text x="38" y="43" fill="#FFD93D" font-size="24">✦</text><text x="82" y="43" fill="#FFD93D" font-size="24">✦</text></svg></div>`;
       guide = arrowHTML('leftright', '16%', '28%', '拖拽小手到领口整理');
     }
     return stepStageHTML(objects, guide, levelId, sid);
@@ -1770,6 +1849,10 @@ function handleStepSuccess(area) {
   if (level.id === 'brush' && level.steps[state.currentStep].id === 7) {
     const stage = area.querySelector('.step-stage');
     if (stage) stage.classList.add('brush-final-clean');
+  }
+  if (level.id === 'dress' && level.steps[state.currentStep].id === 7) {
+    const stage = area.querySelector('.step-stage');
+    if (stage) stage.classList.add('dress-final-collar');
   }
   area.classList.add('success'); playSuccessSound();
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
