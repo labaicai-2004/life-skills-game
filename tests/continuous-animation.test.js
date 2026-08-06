@@ -326,20 +326,46 @@ test('washing scenes provide seven delayed, non-interactive demonstration marker
   }
 });
 
-test('washing towel demonstrations move ghost hands from the right to the centered towel', () => {
+test('washing towel demonstrations stage arrival before two distinct rubbing motions and reset', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const keyframeBody = name => {
     const match = source.match(new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)(?=\\n@keyframes|\\n\\.step-stage)`));
     assert.notEqual(match, null, `${name} keyframes missing`);
     return match[1];
   };
+  const stages = body => [...body.matchAll(/(\d+)%\s*\{([^}]*)\}/g)].map(([, percentage, declarations]) => ({
+    percentage: Number(percentage),
+    right: Number(declarations.match(/right:(\d+)%/)?.[1]),
+    translateY: Number(declarations.match(/translateY\((-?\d+)(?:px)?\)/)?.[1]),
+    opacity: Number(declarations.match(/opacity:([\d.]+)/)?.[1])
+  }));
+
+  const assertStagedPath = (keyframe, path) => {
+    const startIndex = path.findIndex(stage => stage.right === 8 && stage.translateY === 0 && stage.opacity > 0);
+    assert.notEqual(startIndex, -1, `${keyframe} needs a visible right-side start at translateY(0)`);
+
+    const arrivalIndex = path.findIndex((stage, index) => index > startIndex && stage.right === 50 && stage.translateY === 0);
+    assert.notEqual(arrivalIndex, -1, `${keyframe} needs a horizontal-only arrival at the centered towel`);
+
+    const rubbing = path.filter((stage, index) => index > arrivalIndex && stage.right === 50 && stage.translateY !== 0);
+    assert.ok(rubbing.length >= 2, `${keyframe} needs at least two post-arrival vertical motions`);
+    assert.ok(new Set(rubbing.map(stage => stage.translateY)).size >= 2, `${keyframe} needs two distinct post-arrival vertical positions`);
+
+    const lastRubIndex = path.lastIndexOf(rubbing.at(-1));
+    const resetIndex = path.findIndex((stage, index) => index > lastRubIndex && stage.right === 8 && stage.translateY === 0);
+    assert.notEqual(resetIndex, -1, `${keyframe} needs to reset to the right-side start after rubbing`);
+  };
 
   for (const keyframe of ['demoTowelRub', 'demoTowelWring']) {
-    const path = keyframeBody(keyframe);
-    assert.match(path, /right:8%/, `${keyframe} must begin at the ghost hand's right-side start`);
-    assert.match(path, /right:50%/, `${keyframe} must carry the ghost hand to the centered towel`);
-    assert.match(path, /translateY\(/, `${keyframe} must retain the rubbing or wringing motion`);
+    assertStagedPath(keyframe, stages(keyframeBody(keyframe)));
   }
+
+  const allPostArrivalVerticalsZero = keyframeBody('demoTowelRub')
+    .replace(/right:50%; transform:translateY\(-?\d+px\)/g, 'right:50%; transform:translateY(0px)');
+  assert.throws(
+    () => assertStagedPath('demoTowelRub mutation', stages(allPostArrivalVerticalsZero)),
+    /post-arrival vertical motions/
+  );
 });
 
 test('washing continuity indicators appear only after their required completed steps', () => {
