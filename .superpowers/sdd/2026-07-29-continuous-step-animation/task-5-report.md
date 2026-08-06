@@ -6,7 +6,7 @@ Implemented. The dressing skill now has seven non-interactive demonstration laye
 
 ## Commits
 
-The implementation commit is recorded after this report is written. Its message is `增加穿衣七步连续示范动画`.
+- `d3cd8a1 增加穿衣七步连续示范动画`: implementation, tests, development log, and this report.
 
 ## Files
 
