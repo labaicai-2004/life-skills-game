@@ -326,6 +326,22 @@ test('washing scenes provide seven delayed, non-interactive demonstration marker
   }
 });
 
+test('washing towel demonstrations move ghost hands from the right to the centered towel', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const keyframeBody = name => {
+    const match = source.match(new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)(?=\\n@keyframes|\\n\\.step-stage)`));
+    assert.notEqual(match, null, `${name} keyframes missing`);
+    return match[1];
+  };
+
+  for (const keyframe of ['demoTowelRub', 'demoTowelWring']) {
+    const path = keyframeBody(keyframe);
+    assert.match(path, /right:8%/, `${keyframe} must begin at the ghost hand's right-side start`);
+    assert.match(path, /right:50%/, `${keyframe} must carry the ghost hand to the centered towel`);
+    assert.match(path, /translateY\(/, `${keyframe} must retain the rubbing or wringing motion`);
+  }
+});
+
 test('washing continuity indicators appear only after their required completed steps', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
