@@ -42,7 +42,7 @@ The same VM-harness suite also verifies the Task 1 deferred coverage: first `mou
 | Two passive demonstration cycles after normal level initialization | 3 before, 3 after | 0 before, 0 after | No data delta |
 | One genuine brushing-step completion after a paused demonstration | 3 before, 4 after | 1 before, 2 after | Exactly one `step_success` and one step record |
 
-The passive-cycle test follows the real `startLevel → loadStep` route. It takes its snapshot only after the normal `session_start`, `step_start`, and `ltm_chain_start` initialization events have been recorded, then advances the fake clock through the 2000 ms animation start and 4800 ms, equivalent to at least two 2.4 s CSS cycles. `promptState.enabled` is intentionally set to `false` so unrelated Least-to-Most escalation events are disabled while `AnimationPolicy` remains enabled for ordinary play.
+The passive-cycle test follows the real `startLevel → loadStep` route. It takes its snapshot only after the normal `session_start`, `step_start`, and `ltm_chain_start` initialization events have been recorded, advances the fake clock through the 2000 ms animation start, then dispatches two `animationiteration` events on the representative `demo-element` through the VM DOM event system. `promptState.enabled` is intentionally set to `false` so unrelated Least-to-Most escalation events are disabled while `AnimationPolicy` remains enabled for ordinary play.
 
 The genuine-completion test follows the real `startLevel → loadStep → mousedown → mouseup` route. It confirms that `mousedown` begins while the stage is `demo-running`, pauses the stage, and completes the tap through the production mouse listener rather than calling `handleStepSuccess` directly. The deterministic elapsed response time is 3650 ms. The new record has exactly this unchanged key set:
 
@@ -75,7 +75,7 @@ Implemented without a production change. The strengthened end-to-end paths did n
 
 ### Mutation evidence
 
-The suite creates a test-only source variant that writes an `animation_write_mutation` event at the real animation-start callback. The unchanged-data assertion then throws as expected, proving that the passive-integrity check detects a data-writing animation regression. The checked-in `index.html` is never altered by this mutation.
+The suite's Fix Round 2 source variant registers an `animation_iteration_write_mutation` listener on the real representative demo element. The unchanged-data assertion then throws after dispatched `animationiteration` events, proving that the passive-integrity check detects a data-writing animation regression. The checked-in `index.html` is never altered by this mutation.
 
 ### GREEN evidence
 
@@ -90,3 +90,25 @@ No browser instance was available for visual browser verification. The new cover
 ## Concerns
 
 No browser instance was available in the browser-control environment (`agent.browsers.list()` returned an empty list), so desktop and iPad manual visual checks could not be performed. Automated evidence covers all requested policy branches, controller pause/clear behavior, data deltas, exact field keys, and millisecond timing; a manual iPad Safari pass remains recommended when a browser is available.
+
+## Fix Round 2: Iteration events and start-level source contract
+
+### Status
+
+Implemented without a production change. The strengthened iteration and source-order regressions did not reveal a new defect.
+
+### Coverage and mutation evidence
+
+- The VM element stub now stores multiple listeners per event and dispatches browser-like event objects. The passive test starts a real level, waits for `demo-running`, and dispatches two real `animationiteration` events on the representative stage `demo-element`; both event and record counts remain unchanged from the post-initialization snapshot.
+- The required test-only source mutation registers an `animationiteration` listener that calls `UnifiedDataManager.logEvent`. After the same two dispatched iteration events, the no-delta assertion throws, proving that the integration test detects a write caused by animation iteration rather than only by initial animation start.
+- A direct source-contract test extracts the original `function startLevel(idx)` and verifies its first `AnimationController.clear()` appears before both `state.currentLevel=idx` and `loadStep(0)`. The test removes that first clear from the extracted function and confirms the assertion fails, so `loadStep`'s later cleanup cannot mask a regression.
+
+### GREEN evidence
+
+Command: `node --test tests/continuous-animation.test.js`
+
+Result: 27 passed, 0 failed.
+
+### Concerns
+
+No browser instance was available for visual browser verification. The iteration test exercises the production start-level, load-step, controller, VM DOM-event, and data-manager path, but a browser-based visual pass remains recommended.

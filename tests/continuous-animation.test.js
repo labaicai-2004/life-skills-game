@@ -18,11 +18,22 @@ function createElement() {
     style: { setProperty() {} },
     dataset: {},
     isConnected: true,
-    addEventListener(type, handler) { listeners.set(type, handler); },
-    removeEventListener(type) { listeners.delete(type); },
-    dispatch(type, event) { listeners.get(type)(event); },
-    querySelector() { return null; },
-    querySelectorAll() { return []; },
+    addEventListener(type, handler, options = {}) {
+      const entries = listeners.get(type) || [];
+      entries.push({ handler, once: options.once === true });
+      listeners.set(type, entries);
+    },
+    removeEventListener(type, handler) {
+      listeners.set(type, (listeners.get(type) || []).filter(entry => entry.handler !== handler));
+    },
+    dispatch(type, event = {}) {
+      for (const entry of [...(listeners.get(type) || [])]) {
+        entry.handler({ type, target: this, currentTarget: this, ...event });
+        if (entry.once) this.removeEventListener(type, entry.handler);
+      }
+    },
+    querySelector(selector) { return selector === '.demo-element' ? this.demoElements?.[0] || null : null; },
+    querySelectorAll(selector) { return selector === '.demo-element' ? this.demoElements || [] : []; },
     appendChild(child) { this.lastChild = child; },
     removeChild() {},
     click() {},
@@ -67,7 +78,11 @@ function loadAnimationRuntime(sourceMutation = source => source) {
     createElement() {
       const wrapper = createElement();
       Object.defineProperty(wrapper, 'innerHTML', {
-        set() { this.firstElementChild = createElement(); }
+        set(markup) {
+          const stage = createElement();
+          stage.demoElements = markup.includes('demo-element') ? [createElement()] : [];
+          this.firstElementChild = stage;
+        }
       });
       return wrapper;
     }
@@ -253,6 +268,26 @@ test('starting another level clears before installing and scheduling the new sta
   assert.notEqual(api.AnimationController.currentStage, oldStage);
 });
 
+test('the original startLevel clears before state assignment and loadStep', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = source.indexOf('function startLevel(idx) {');
+  const end = source.indexOf('\n}\n', start) + 2;
+  const originalStartLevel = source.slice(start, end);
+  const assertEarlyClear = functionBody => {
+    const clearIndex = functionBody.indexOf('AnimationController.clear();');
+    assert.notEqual(clearIndex, -1, 'original startLevel must clear the previous demonstration');
+    assert.ok(clearIndex < functionBody.indexOf('state.currentLevel=idx'));
+    assert.ok(clearIndex < functionBody.indexOf('loadStep(0)'));
+  };
+
+  assertEarlyClear(originalStartLevel);
+  const withoutFirstClear = originalStartLevel.replace('  AnimationController.clear();\n', '');
+  assert.throws(
+    () => assertEarlyClear(withoutFirstClear),
+    /original startLevel must clear the previous demonstration/
+  );
+});
+
 test('two passive demonstrations after real step initialization do not write events or research records', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
@@ -271,19 +306,19 @@ test('two passive demonstrations after real step initialization do not write eve
   runtime.advanceClock(2000);
   runtime.runTimersThroughNow();
   assert.equal(stage.classList.contains('demo-running'), true);
-
-  runtime.advanceClock(4800);
-  runtime.runTimersThroughNow();
-  assert.equal(stage.classList.contains('demo-running'), true);
+  const representativeDemo = stage.querySelector('.demo-element');
+  assert.notEqual(representativeDemo, null);
+  representativeDemo.dispatch('animationiteration');
+  representativeDemo.dispatch('animationiteration');
 
   assert.equal(api.UnifiedDataManager.events.length, beforeEvents);
   assert.equal(JSON.parse(localStorage.getItem('researchRecords') || '[]').length, beforeRecords);
 });
 
-test('passive data-integrity assertion detects an animation write mutation', () => {
+test('passive data-integrity assertion detects an animation-iteration write mutation', () => {
   const runtime = loadAnimationRuntime(source => source.replace(
     "stage.classList.add('demo-running');",
-    "UnifiedDataManager.logEvent('animation_write_mutation'); stage.classList.add('demo-running');"
+    "stage.classList.add('demo-running'); stage.querySelector('.demo-element')?.addEventListener('animationiteration', () => UnifiedDataManager.logEvent('animation_iteration_write_mutation'));"
   ));
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api, localStorage } = runtime;
@@ -294,6 +329,10 @@ test('passive data-integrity assertion detects an animation write mutation', () 
 
   runtime.advanceClock(2000);
   runtime.runTimersThroughNow();
+  const representativeDemo = runtime.elements.scene.lastChild.querySelector('.demo-element');
+  assert.notEqual(representativeDemo, null);
+  representativeDemo.dispatch('animationiteration');
+  representativeDemo.dispatch('animationiteration');
 
   assert.throws(
     () => assert.equal(api.UnifiedDataManager.events.length, beforeEvents),
