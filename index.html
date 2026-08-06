@@ -288,7 +288,7 @@ html, body {
 .state-clean-left, .state-clean-both { top:31%; left:50%; transform:translateX(-50%); }
 .state-final-clean-mouth { top:43%; left:50%; transform:translate(-50%,-50%) scale(0.82); opacity:0; transition:transform 0.35s ease-out, opacity 0.35s ease-out; }
 .state-final-clean-mouth::before { content:'✦'; }
-#interaction-area.success .state-final-clean-mouth { transform:translate(-50%,-50%) scale(1.16); opacity:1; }
+.step-stage.brush-final-clean .state-final-clean-mouth { transform:translate(-50%,-50%) scale(1.16); opacity:1; }
 .step-stage.demo-running .state-clean-left,
 .step-stage.demo-running .state-clean-both { animation:cleanSparkle 1.8s ease-in-out infinite; }
 .step-stage.demo-paused .demo-element,
@@ -1665,6 +1665,10 @@ function handleStepSuccess(area) {
   const level=LEVELS[state.currentLevel];
   state.stepCompleted.add(state.currentStep);
   SkillSceneState.complete(level.id, level.steps[state.currentStep].id);
+  if (level.id === 'brush' && level.steps[state.currentStep].id === 7) {
+    const stage = area.querySelector('.step-stage');
+    if (stage) stage.classList.add('brush-final-clean');
+  }
   area.classList.add('success'); playSuccessSound();
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
   speak(p[Math.floor(Math.random()*p.length)]);

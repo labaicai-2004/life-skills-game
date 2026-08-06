@@ -92,7 +92,8 @@ function loadAnimationRuntime() {
       setTrainingMode(mode) { currentTrainingMode = mode; },
       get state() { return state; }, loadStep, goHome, startLevel,
       handleStepSuccess, attachGestureListeners, STEP_STATE_KEYS,
-      SkillSceneState, buildPersistentStateHTML, stepStageHTML, buildScene, LEVELS
+      SkillSceneState, buildPersistentStateHTML, stepStageHTML, buildScene, LEVELS,
+      applyPromptLevel, PROMPT_LEVELS
     };
   `;
   try {
@@ -257,6 +258,16 @@ test('brushing scenes provide seven delayed, non-interactive demonstration marke
   }
 });
 
+test('brushing demonstration cycles stay within the 1.4s to 2.4s range', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  for (let stepId = 1; stepId <= 7; stepId++) {
+    const match = source.match(new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-brush-${stepId}\\s*\\{\\s*animation:[^;]*?([\\d.]+)s`));
+    assert.notEqual(match, null, `demo-brush-${stepId} needs a running animation`);
+    const duration = Number(match[1]);
+    assert.ok(duration >= 1.4 && duration <= 2.4, `demo-brush-${stepId} duration ${duration}s is outside 1.4s-2.4s`);
+  }
+});
+
 test('brushing drag demonstrations animate a separate ghost and leave the real draggable item still', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
@@ -291,4 +302,23 @@ test('brushing continuity indicators appear only after their required completed 
   assert.doesNotMatch(buildPersistentStateHTML('brush', 6), /state-final-clean-mouth/);
   assert.match(buildPersistentStateHTML('brush', 7), /state-final-clean-mouth/);
   assert.match(buildPersistentStateHTML('brush', 7), /aria-hidden="true"/);
+});
+
+test('prompt highlighting cannot reveal the final mouth sparkle before real brushing completion', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements } = runtime;
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const stage = createElement();
+  elements['interaction-area'].querySelector = selector => selector === '.step-stage' ? stage : null;
+  api.state.currentLevel = 0;
+  api.state.currentStep = 6;
+
+  api.applyPromptLevel(api.PROMPT_LEVELS.VISUAL.level);
+  assert.equal(elements['interaction-area'].classList.contains('success'), true);
+  assert.equal(stage.classList.contains('brush-final-clean'), false);
+  assert.doesNotMatch(source, /#interaction-area\.success\s+\.state-final-clean-mouth/);
+
+  api.handleStepSuccess(elements['interaction-area']);
+  assert.equal(stage.classList.contains('brush-final-clean'), true);
 });
