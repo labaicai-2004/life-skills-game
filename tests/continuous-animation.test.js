@@ -347,12 +347,19 @@ test('washing towel demonstrations stage arrival before two distinct rubbing mot
     const arrivalIndex = path.findIndex((stage, index) => index > startIndex && stage.right === 50 && stage.translateY === 0);
     assert.notEqual(arrivalIndex, -1, `${keyframe} needs a horizontal-only arrival at the centered towel`);
 
-    const rubbing = path.filter((stage, index) => index > arrivalIndex && stage.right === 50 && stage.translateY !== 0);
-    assert.ok(rubbing.length >= 2, `${keyframe} needs at least two post-arrival vertical motions`);
-    assert.ok(new Set(rubbing.map(stage => stage.translateY)).size >= 2, `${keyframe} needs two distinct post-arrival vertical positions`);
+    const actionIndexes = path
+      .map((stage, index) => ({ stage, index }))
+      .filter(({ stage, index }) => index > arrivalIndex && stage.translateY !== 0);
+    assert.ok(actionIndexes.length >= 2, `${keyframe} needs at least two post-arrival vertical motions`);
+    assert.ok(new Set(actionIndexes.map(({ stage }) => stage.translateY)).size >= 2, `${keyframe} needs two distinct post-arrival vertical positions`);
 
-    const lastRubIndex = path.lastIndexOf(rubbing.at(-1));
-    const resetIndex = path.findIndex((stage, index) => index > lastRubIndex && stage.right === 8 && stage.translateY === 0);
+    const lastActionIndex = actionIndexes.at(-1).index;
+    assert.ok(
+      path.slice(arrivalIndex, lastActionIndex + 1).every(stage => stage.right === 50),
+      `${keyframe} must stay centered from arrival through the last action`
+    );
+
+    const resetIndex = path.findIndex((stage, index) => index > lastActionIndex && stage.right === 8 && stage.translateY === 0);
     assert.notEqual(resetIndex, -1, `${keyframe} needs to reset to the right-side start after rubbing`);
   };
 
@@ -365,6 +372,13 @@ test('washing towel demonstrations stage arrival before two distinct rubbing mot
   assert.throws(
     () => assertStagedPath('demoTowelRub mutation', stages(allPostArrivalVerticalsZero)),
     /post-arrival vertical motions/
+  );
+
+  const rightDrift = keyframeBody('demoTowelRub')
+    .replace('70% { right:50%;', '70% { right:20%;');
+  assert.throws(
+    () => assertStagedPath('demoTowelRub drift mutation', stages(rightDrift)),
+    /stay centered/
   );
 });
 
