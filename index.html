@@ -97,37 +97,41 @@ html, body {
 .screen {
   position:absolute; inset:0; display:flex; flex-direction:column;
   align-items:center; justify-content:center;
-  opacity:0; pointer-events:none; transition:opacity 0.45s ease; padding:20px;
+  opacity:0; pointer-events:none; transition:opacity 0.45s ease; padding:20px; isolation:isolate;
 }
 .screen.active { opacity:1; pointer-events:auto; }
 
 /* ===== START SCREEN ===== */
 .start-bg {
   position:absolute; inset:0;
-  background:linear-gradient(180deg,#FFF9E6 0%,#FFF3D6 45%,#FFEDCC 100%); z-index:-1;
+  background:#7DD7FF url('cartoon-home-sample.png') center/cover no-repeat; z-index:-1;
 }
-.title-area { text-align:center; margin-bottom:36px; }
-.title-icon { font-size:68px; display:block; margin-bottom:6px; animation:titleBounce 2s infinite; }
+.title-area {
+  text-align:center; margin:8px 0 0; padding:8px 26px 10px;
+  background:rgba(255,255,255,0.94); border:4px solid #5C3D2E; border-radius:22px;
+  box-shadow:0 6px 0 rgba(92,61,46,0.22);
+}
+.title-icon { font-size:42px; display:inline-block; margin-right:8px; animation:titleBounce 2s infinite; vertical-align:middle; }
 @keyframes titleBounce {
   0%,100% { transform:translateY(0); }
   50% { transform:translateY(-14px); }
 }
-.title-text { font-size:var(--font-xl); font-weight:800; color:var(--text); letter-spacing:3px; }
-.title-sub { font-size:var(--font-sm); color:var(--text-light); }
+.title-text { display:inline-block; font-size:var(--font-xl); font-weight:800; color:var(--text); letter-spacing:3px; vertical-align:middle; }
+.title-sub { font-size:var(--font-sm); color:var(--text-light); margin-top:-3px; }
 
-.level-cards { display:flex; gap:22px; flex-wrap:wrap; justify-content:center; max-width:900px; width:100%; }
+.level-cards { display:flex; gap:18px; flex-wrap:wrap; justify-content:center; max-width:720px; width:100%; margin-top:auto; margin-bottom:18px; }
 .level-card {
-  flex:1; min-width:200px; max-width:280px;
-  background:var(--card); border-radius:28px;
-  padding:30px 22px 26px; text-align:center; cursor:pointer;
-  box-shadow:var(--shadow); transition:transform 0.18s cubic-bezier(0.68,-0.55,0.265,1.55), box-shadow 0.18s;
+  flex:1; min-width:170px; max-width:210px;
+  background:rgba(255,255,255,0.96); border:4px solid #5C3D2E; border-radius:20px;
+  padding:10px 16px 12px; text-align:center; cursor:pointer;
+  box-shadow:0 7px 0 rgba(92,61,46,0.24); transition:transform 0.18s cubic-bezier(0.68,-0.55,0.265,1.55), box-shadow 0.18s;
   position:relative; overflow:hidden;
 }
-.level-card:active { transform:scale(1.06); box-shadow:var(--shadow-lg); }
-.level-card .card-icon { font-size:76px; display:block; margin-bottom:14px; }
-.level-card .card-title { font-size:var(--font-lg); font-weight:700; color:var(--text); }
-.level-card .card-hint { font-size:var(--font-sm); color:var(--text-light); margin-top:2px; }
-.level-card .card-top { height:10px; position:absolute; top:0;left:0;right:0; border-radius:28px 28px 0 0; }
+.level-card:active { transform:scale(0.97) translateY(3px); box-shadow:0 3px 0 rgba(92,61,46,0.24); }
+.level-card .card-icon { font-size:46px; display:inline-block; margin-right:8px; vertical-align:middle; }
+.level-card .card-title { display:inline-block; font-size:26px; font-weight:700; color:var(--text); vertical-align:middle; }
+.level-card .card-hint { display:none; }
+.level-card .card-top { height:8px; position:absolute; top:0;left:0;right:0; }
 .level-card:nth-child(1) .card-top { background:linear-gradient(135deg,var(--yellow),#FFE88C); }
 .level-card:nth-child(2) .card-top { background:linear-gradient(135deg,var(--blue),#80B8FF); }
 .level-card:nth-child(3) .card-top { background:linear-gradient(135deg,var(--pink),#FF9DC4); }
@@ -186,7 +190,7 @@ html, body {
 /* ===== INTERACTION AREA ===== */
 .interaction-area {
   flex:1; width:100%; max-width:750px;
-  background:var(--card); border-radius:28px;
+  background:var(--card); border:4px solid #5C3D2E; border-radius:24px;
   box-shadow:var(--shadow); position:relative; overflow:hidden;
   display:flex; align-items:center; justify-content:center;
   min-height:310px;
@@ -1005,6 +1009,11 @@ function svgToothbrush(w, h) {
   return `<img src="toothbrush.png?v=2" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="牙刷">`;
 }
 
+function sampleToothbrush(w, h) {
+  w=w||330; h=h||165;
+  return `<img src="cartoon-toothbrush-sample.png?v=1" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 5px 5px rgba(92,61,46,0.2));-webkit-touch-callout:none;" alt="牙刷">`;
+}
+
 function svgToothpaste(w, h) {
   w=w||320; h=h||550;
   return `<img src="toothpaste.png?v=5" width="${w}" height="${h}" draggable="false" style="object-fit:contain;transform:rotate(-90deg);filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="牙膏">`;
@@ -1425,7 +1434,9 @@ function loadStep(idx) {
     scene.dataset.levelId = level.id;
     scene.innerHTML = level.id === 'dress'
       ? `<div class="scene-bg" style="background:linear-gradient(180deg,#FFF3E8 0%,#FFECD8 55%,#FFE4CC 100%);"></div>`
-      : `<img class="scene-bg" src="bathroom-bg.png?v=2" draggable="false" style="object-fit:cover;-webkit-touch-callout:none;" alt="">`;
+      : level.id === 'brush'
+        ? `<img class="scene-bg" src="cartoon-bathroom-sample.png?v=1" draggable="false" style="object-fit:cover;-webkit-touch-callout:none;" alt="">`
+        : `<img class="scene-bg" src="bathroom-bg.png?v=2" draggable="false" style="object-fit:cover;-webkit-touch-callout:none;" alt="">`;
   }
 
   // Remove old stage with exit animation
@@ -1562,9 +1573,9 @@ function buildScene(levelId, step) {
 
   if (levelId==='brush') {
     if (sid===1) {
-      objects = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;">${svgToothbrush()}</div>`;
-      objects += `<div class="demo-element demo-brush-1" aria-hidden="true" style="top:50%;left:50%;">${svgToothbrush()}</div>`;
-      guide = arrowHTML(arrow, '46%', '48%', '点击牙刷');
+      objects = `<div class="interactive-target demo-brush-1" style="position:absolute;top:64%;left:72%;transform:translate(-50%,-50%);z-index:5;">${sampleToothbrush()}</div>`;
+      objects += `<div class="demo-element demo-brush-1" aria-hidden="true" style="display:none;"></div>`;
+      guide = arrowHTML(arrow, '54%', '70%', '点击牙刷');
     } else if (sid===3) {
       objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;">${sinkFaucetImg()}</div>`;
       objects += `<div class="demo-element demo-brush-3 demo-ghost" aria-hidden="true" style="bottom:7%;left:50%;">${svgToothbrush(220,165)}</div>`;
