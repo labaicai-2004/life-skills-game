@@ -1326,11 +1326,47 @@ const VOICE_MAP = {
 };
 
 let currentAudio = null;
+let currentSpeech = null;
+
+function getBestVoice() {
+  const voices = window.speechSynthesis?.getVoices?.() || [];
+  return voices.find(voice => /Tingting|Meijia|Sin-ji|Lili/i.test(voice.name)) ||
+    voices.find(voice => voice.lang?.toLowerCase().startsWith('zh')) || null;
+}
+
+function speakWithSynthesis(text, onEnd) {
+  const synthesis = window.speechSynthesis;
+  if (!synthesis || typeof SpeechSynthesisUtterance !== 'function') {
+    if (onEnd) onEnd();
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'zh-CN';
+  utterance.rate = 0.75;
+  utterance.pitch = 1;
+  const voice = getBestVoice();
+  if (voice) utterance.voice = voice;
+  const finish = () => {
+    if (currentSpeech === utterance) currentSpeech = null;
+    if (onEnd) onEnd();
+  };
+  utterance.onend = finish;
+  utterance.onerror = finish;
+  currentSpeech = utterance;
+  try {
+    synthesis.cancel();
+    synthesis.speak(utterance);
+  } catch(e) {
+    currentSpeech = null;
+    if (onEnd) onEnd();
+  }
+}
 
 function speak(text, onEnd) {
   if (state.muted) { if(onEnd) onEnd(); return; }
   // Stop any currently playing audio
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (currentSpeech) { window.speechSynthesis?.cancel(); currentSpeech = null; }
 
   const file = VOICE_MAP[text];
   if (file) {
@@ -1340,8 +1376,7 @@ function speak(text, onEnd) {
     audio.onerror = () => { currentAudio = null; if (onEnd) onEnd(); };
     audio.play().catch(() => { currentAudio = null; if (onEnd) onEnd(); });
   } else {
-    // Fallback: text not in VOICE_MAP — do nothing
-    if (onEnd) onEnd();
+    speakWithSynthesis(text, onEnd);
   }
 }
 
@@ -1349,6 +1384,7 @@ function toggleMute() {
   state.muted = !state.muted;
   document.getElementById('volume-btn').textContent = state.muted?'🔇':'🔊';
   if (state.muted && currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (state.muted && currentSpeech) { window.speechSynthesis?.cancel(); currentSpeech = null; }
 }
 
 function replayVoice() {
@@ -1367,6 +1403,7 @@ function showScreen(id) {
 function goHome() {
   AnimationController.clear();
   if(currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if(currentSpeech) { window.speechSynthesis?.cancel(); currentSpeech = null; }
   state.currentLevel=-1; state.currentStep=0; state.stepCompleted=new Set();
   SkillSceneState.reset();
   showScreen('start-screen');
