@@ -875,16 +875,16 @@ html, body {
   </div>
   <div class="level-cards">
     <div class="level-card" data-level="0" onclick="startLevel(0)">
-      <div class="card-top"></div><span class="card-icon">🪥</span>
-      <div class="card-title">刷牙</div><div class="card-hint">学习正确刷牙</div>
+      <div class="card-top"></div><span class="card-icon">🧺</span>
+      <div class="card-title">清洗衣服</div><div class="card-hint">学习把衣服洗干净</div>
     </div>
     <div class="level-card" data-level="1" onclick="startLevel(1)">
-      <div class="card-top"></div><span class="card-icon">💧</span>
-      <div class="card-title">洗脸</div><div class="card-hint">学习正确洗脸</div>
+      <div class="card-top"></div><span class="card-icon">👕</span>
+      <div class="card-title">折叠衣服</div><div class="card-hint">学习把衣服叠整齐</div>
     </div>
     <div class="level-card" data-level="2" onclick="startLevel(2)">
-      <div class="card-top"></div><span class="card-icon">👕</span>
-      <div class="card-title">穿衣</div><div class="card-hint">学习自己穿衣</div>
+      <div class="card-top"></div><span class="card-icon">☂️</span>
+      <div class="card-title">收整折叠伞</div><div class="card-hint">学习把雨伞收整齐</div>
     </div>
   </div>
   <div class="parent-entry" onclick="showRecords()" title="学习记录">📋</div>
@@ -942,9 +942,9 @@ html, body {
     <div class="research-field">
       <label>🎯 训练技能 (Skill)</label>
       <div class="skill-btns" id="research-skill-btns">
-        <div class="skill-btn" data-skill="brush">🪥 刷牙</div>
-        <div class="skill-btn" data-skill="wash">💧 洗脸</div>
-        <div class="skill-btn" data-skill="dress">👕 穿衣</div>
+        <div class="skill-btn" data-skill="laundry">🧺 清洗衣服</div>
+        <div class="skill-btn" data-skill="fold-clothes">👕 折叠衣服</div>
+        <div class="skill-btn" data-skill="fold-umbrella">☂️ 收整折叠伞</div>
       </div>
     </div>
     <div class="research-field">
@@ -1099,62 +1099,43 @@ function svgSink(w, h) {
 /* ================================================================
    GAME DATA
    ================================================================ */
+const NEW_LEVEL_IDS = ['laundry', 'fold-clothes', 'fold-umbrella'];
+
 const LEVELS = [
   {
-    id:'brush', name:'刷牙', icon:'🪥',
+    id:'laundry', name:'清洗衣服', icon:'🧺',
     steps:[
-      {id:1,instruction:'找到牙刷',gesture:'tap',target:'toothbrush',arrow:'tap',
-       voice:'小朋友，我们先找到牙刷吧。看到发光的牙刷了吗？点一下它。'},
-      {id:2,instruction:'挤牙膏',gesture:'swipe-down',target:'toothpaste',arrow:'down',
-       voice:'现在把牙膏挤到牙刷上。用手指在牙膏上面，从上往下滑。'},
-      {id:3,instruction:'拿起牙刷',gesture:'tap',target:'toothbrush',arrow:'tap',
-       voice:'牙膏挤好了，拿起牙刷准备刷牙吧。点一下牙刷。'},
-      {id:4,instruction:'刷左边牙齿',gesture:'drag',target:'mouth',dragTarget:'mouth',arrow:'updown',
-       voice:'先刷左边的牙齿。把牙刷拖到小朋友嘴边，上下刷一刷。'},
-      {id:5,instruction:'刷右边牙齿',gesture:'drag',target:'mouth',dragTarget:'mouth',arrow:'updown',
-       voice:'真棒！现在刷右边的牙齿。把牙刷拖到小朋友嘴边，继续上下刷。'},
-      {id:6,instruction:'漱口',gesture:'tap',target:'cup',arrow:'tap',
-       voice:'刷好啦，用水杯漱漱口。点一下水杯。'},
-      {id:7,instruction:'擦嘴巴',gesture:'drag',target:'mouth',dragTarget:'mouth',dragFrom:'right',arrow:'leftright',
-       voice:'最后一步，把毛巾拖到嘴巴上，擦擦嘴巴。'}
+      {id:1,instruction:'放进水盆',gesture:'drag',target:'shirt',dragTarget:'basin',arrow:'down',voice:'把脏衣服放进水盆里。'},
+      {id:2,instruction:'浸湿衣服',gesture:'tap',target:'faucet',arrow:'tap',voice:'打开水龙头，把衣服弄湿。'},
+      {id:3,instruction:'加入洗衣液',gesture:'tap',target:'detergent',arrow:'tap',voice:'按一下，加入洗衣液。'},
+      {id:4,instruction:'揉洗正面',gesture:'swipe-lr',target:'shirt',arrow:'leftright',repeatGoal:3,voice:'用小手来回揉一揉。'},
+      {id:5,instruction:'揉洗背面',gesture:'swipe-lr',target:'shirt',arrow:'leftright',repeatGoal:3,voice:'翻过来，再揉一揉。'},
+      {id:6,instruction:'冲洗衣服',gesture:'drag',target:'shirt',dragTarget:'water',arrow:'down',voice:'用清水把泡泡冲干净。'},
+      {id:7,instruction:'拧干衣服',gesture:'twist',target:'shirt',arrow:'leftright',voice:'两只手轻轻拧一拧。'}
     ]
   },
   {
-    id:'wash', name:'洗脸', icon:'💧',
+    id:'fold-clothes', name:'折叠衣服', icon:'👕',
     steps:[
-      {id:1,instruction:'打开水龙头',gesture:'drag',target:'faucet',dragTarget:'faucet',arrow:'up',
-       voice:'先打开水龙头。把小手拖到水龙头上，往上推一下。'},
-      {id:2,instruction:'接水',gesture:'tap',target:'water',arrow:'tap',
-       voice:'水出来了！用手接一点水。点一下出水的地方。'},
-      {id:3,instruction:'打湿毛巾',gesture:'drag',target:'towel',dragTarget:'towel',arrow:'updown',
-       voice:'把毛巾打湿。把小手拖到毛巾上，上下搓一搓。'},
-      {id:4,instruction:'拧干毛巾',gesture:'drag',target:'towel',dragTarget:'towel',arrow:'updown',
-       voice:'把毛巾拧干一点。把小手拖到毛巾上，上下搓一搓。'},
-      {id:5,instruction:'擦脸',gesture:'drag',target:'face',dragTarget:'face',arrow:'updown',
-       voice:'现在用毛巾擦擦脸。把小手拖到脸上，上下擦一擦，把脸洗干净。'},
-      {id:6,instruction:'冲洗毛巾',gesture:'tap',target:'water',arrow:'tap',
-       voice:'毛巾脏了，用水冲一冲。点一下出水的地方冲洗毛巾。'},
-      {id:7,instruction:'关水龙头',gesture:'drag',target:'faucet',dragTarget:'faucet',arrow:'down',
-       voice:'洗好了，关掉水龙头。把小手拖到水龙头上，往下推。'}
+      {id:1,instruction:'平铺衣服',gesture:'drag',target:'shirt',dragTarget:'table',arrow:'down',voice:'把衣服平平地放在桌上。'},
+      {id:2,instruction:'抚平衣服',gesture:'swipe-down',target:'shirt',arrow:'down',voice:'用小手把衣服抚平。'},
+      {id:3,instruction:'折进这边袖子',gesture:'drag',target:'left-sleeve',dragTarget:'shirt-center',arrow:'right',voice:'把这边的袖子折进来。'},
+      {id:4,instruction:'折进另一边袖子',gesture:'drag',target:'right-sleeve',dragTarget:'shirt-center',arrow:'left',voice:'再把这边的袖子折进来。'},
+      {id:5,instruction:'折叠这边衣身',gesture:'drag',target:'left-body',dragTarget:'shirt-center',arrow:'right',voice:'把衣服这边折到中间。'},
+      {id:6,instruction:'折叠另一边衣身',gesture:'drag',target:'right-body',dragTarget:'shirt-center',arrow:'left',voice:'再把另一边折到中间。'},
+      {id:7,instruction:'向上折好',gesture:'drag',target:'shirt-hem',dragTarget:'shirt-top',arrow:'up',voice:'把衣服下面向上折，叠好啦。'}
     ]
   },
   {
-    id:'dress', name:'穿衣', icon:'👕',
+    id:'fold-umbrella', name:'收整折叠伞', icon:'☂️',
     steps:[
-      {id:1,instruction:'找到衣服',gesture:'tap',target:'jacket',arrow:'tap',
-       voice:'先找到要穿的衣服。看到发光的外套了吗？点一下它。'},
-      {id:2,instruction:'分清正反面',gesture:'tap',target:'jacket-front',arrow:'tap',
-       voice:'穿衣服之前要分清正面和反面。点一下衣服的正面。'},
-      {id:3,instruction:'伸左手进袖子',gesture:'drag',target:'sleeve-left',dragTarget:'sleeve-left',arrow:'left',
-       voice:'先把左手伸进左边的袖子。把小手拖到左边袖口，向左滑。'},
-      {id:4,instruction:'伸右手进袖子',gesture:'drag',target:'sleeve-right',dragTarget:'sleeve-right',arrow:'right',
-       voice:'再把右手伸进右边的袖子。把小手拖到右边袖口，向右滑。'},
-      {id:5,instruction:'拉好衣服',gesture:'drag',target:'jacket-body',dragTarget:'jacket-body',arrow:'down',
-       voice:'把衣服往下拉好。把小手拖到衣服中间，往下拉。'},
-      {id:6,instruction:'拉上拉链',gesture:'drag',target:'zipper',dragTarget:'zipper',arrow:'up',
-       voice:'现在拉上拉链。把小手拖到拉链上，往上拉。'},
-      {id:7,instruction:'整理衣领',gesture:'drag',target:'collar',dragTarget:'collar',arrow:'leftright',
-       voice:'最后整理一下衣领。把小手拖到领口，左右整理一下。衣服穿得整整齐齐。'}
+      {id:1,instruction:'收拢伞架',gesture:'drag',target:'umbrella-slider',dragTarget:'close-position',arrow:'down',voice:'把小滑块慢慢拉下来。'},
+      {id:2,instruction:'缩短伞杆',gesture:'drag',target:'umbrella-shaft',dragTarget:'short-position',arrow:'inward',voice:'两只手拿稳，把伞杆轻轻收短。'},
+      {id:3,instruction:'让扣带朝外',gesture:'rotate',target:'umbrella',arrow:'rotate',voice:'转一转，找到雨伞的小带子。'},
+      {id:4,instruction:'理顺伞布',gesture:'swipe-down',target:'umbrella-panel',arrow:'down',repeatGoal:6,voice:'顺着伞骨，一片一片理整齐。'},
+      {id:5,instruction:'合拢伞片',gesture:'drag',target:'umbrella-panels',dragTarget:'umbrella-shaft',arrow:'inward',voice:'把理好的伞布靠在一起。'},
+      {id:6,instruction:'卷好伞布',gesture:'roll',target:'umbrella-canopy',arrow:'rotate',voice:'朝一个方向，慢慢卷起来。'},
+      {id:7,instruction:'扣好伞带',gesture:'drag',target:'umbrella-strap',dragTarget:'velcro',arrow:'leftright',voice:'把小带子绕过来，扣好。'}
     ]
   }
 ];
@@ -1170,20 +1151,18 @@ let state = {
 };
 
 const STEP_STATE_KEYS = {
-  brush: ['toothbrushFound','toothpasteApplied','toothbrushPickedUp','leftBrushed','rightBrushed','rinsed','mouthWiped'],
-  wash: ['faucetOn','waterCollected','towelWet','towelWrung','faceWashed','towelRinsed','faucetOff'],
-  dress: ['jacketFound','frontIdentified','leftSleeveOn','rightSleeveOn','jacketPulledDown','zipperClosed','collarAdjusted']
+  laundry: ['shirtInBasin','shirtWet','detergentAdded','frontRubbed','backRubbed','shirtRinsed','shirtWrung'],
+  'fold-clothes': ['shirtPlaced','shirtSmoothed','leftSleeveFolded','rightSleeveFolded','leftBodyFolded','rightBodyFolded','shirtFolded'],
+  'fold-umbrella': ['frameClosed','shaftShortened','strapFacingOut','panelsSmoothed','panelsGathered','canopyRolled','strapFastened']
 };
 
 const SkillSceneState = {
   values: {},
 
   reset() {
-    this.values = {
-      brush: Object.fromEntries(STEP_STATE_KEYS.brush.map(k => [k, false])),
-      wash: Object.fromEntries(STEP_STATE_KEYS.wash.map(k => [k, false])),
-      dress: Object.fromEntries(STEP_STATE_KEYS.dress.map(k => [k, false]))
-    };
+    this.values = Object.fromEntries(NEW_LEVEL_IDS.map(levelId => [
+      levelId, Object.fromEntries(STEP_STATE_KEYS[levelId].map(key => [key, false]))
+    ]));
   },
 
   complete(levelId, stepId) {
@@ -2071,52 +2050,52 @@ function spawnCanvasConfetti() {
    每项生活技能的任务分析，对应 ABA 教学的 Task Analysis
    ================================================================ */
 const TASK_ANALYSIS = {
-  brush: {
-    taskId: 'brush',
-    taskName: '刷牙',
-    taskDomain: '个人卫生',
-    targetStimulus: '牙刷、牙膏、水杯、毛巾',
-    setting: '浴室',
+  laundry: {
+    taskId: 'laundry',
+    taskName: '清洗衣服',
+    taskDomain: '日常生活技能',
+    targetStimulus: '脏衣服、水盆、水龙头、洗衣液',
+    setting: '洗衣区',
     steps: [
-      { stepId: 1, behavior: '找到牙刷', targetSD: '牙刷出现在画面中', responseDef: '用手指点击牙刷图片', masteryCriterion: '独立完成点击' },
-      { stepId: 2, behavior: '挤牙膏', targetSD: '牙膏在牙刷上方', responseDef: '由上向下滑动牙膏', masteryCriterion: '完成向下滑动手势' },
-      { stepId: 3, behavior: '拿起牙刷', targetSD: '牙刷在洗漱台旁', responseDef: '点击牙刷', masteryCriterion: '独立点击' },
-      { stepId: 4, behavior: '刷左边牙齿', targetSD: '牙刷在右下角，目标框在嘴部左侧', responseDef: '拖拽牙刷到左侧嘴部目标区', masteryCriterion: '重叠≥35%' },
-      { stepId: 5, behavior: '刷右边牙齿', targetSD: '牙刷在左下角，目标框在嘴部右侧', responseDef: '拖拽牙刷到右侧嘴部目标区', masteryCriterion: '重叠≥35%' },
-      { stepId: 6, behavior: '漱口', targetSD: '水杯在画面中', responseDef: '点击水杯', masteryCriterion: '独立点击' },
-      { stepId: 7, behavior: '擦嘴巴', targetSD: '毛巾在右下角', responseDef: '拖拽毛巾到嘴部', masteryCriterion: '重叠≥35%' }
+      { stepId: 1, behavior: '把脏衣服放进水盆', targetSD: '脏衣服和发光水盆', responseDef: '将衣服拖进水盆', masteryCriterion: '衣服与水盆重叠达到35%' },
+      { stepId: 2, behavior: '用水浸湿衣服', targetSD: '水龙头', responseDef: '点击水龙头', masteryCriterion: '点击后完成注水动画' },
+      { stepId: 3, behavior: '加入洗衣液', targetSD: '洗衣液按压瓶头', responseDef: '点击按压瓶头一次', masteryCriterion: '正确点击一次' },
+      { stepId: 4, behavior: '揉洗衣服正面', targetSD: '衣服正面和左右箭头', responseDef: '在衣服正面来回拖动卡通小手', masteryCriterion: '累计完成3次宽松的左右揉搓' },
+      { stepId: 5, behavior: '揉洗衣服背面', targetSD: '翻面后的衣服和左右箭头', responseDef: '继续来回揉搓', masteryCriterion: '翻面动画后完成3次揉搓' },
+      { stepId: 6, behavior: '用清水冲洗', targetSD: '水流区域', responseDef: '将衣服拖到水流下', masteryCriterion: '衣服在水流区域停留约2秒' },
+      { stepId: 7, behavior: '拧出衣服里的水', targetSD: '双手图标和衣服', responseDef: '完成一次宽松的相反方向拖动', masteryCriterion: '完成一次宽松的相反方向拖动' }
     ]
   },
-  wash: {
-    taskId: 'wash',
-    taskName: '洗脸',
-    taskDomain: '个人卫生',
-    targetStimulus: '水龙头、毛巾',
-    setting: '浴室',
+  'fold-clothes': {
+    taskId: 'fold-clothes',
+    taskName: '折叠衣服',
+    taskDomain: '日常生活技能',
+    targetStimulus: '长袖卫衣、桌面',
+    setting: '桌面',
     steps: [
-      { stepId: 1, behavior: '打开水龙头', targetSD: '水龙头标记区域', responseDef: '拖拽小手到水龙头向上推', masteryCriterion: '重叠≥35%' },
-      { stepId: 2, behavior: '接水', targetSD: '出水区域', responseDef: '点击出水处', masteryCriterion: '独立点击' },
-      { stepId: 3, behavior: '打湿毛巾', targetSD: '毛巾在画面中', responseDef: '上下搓动毛巾', masteryCriterion: '完成上下滑动手势' },
-      { stepId: 4, behavior: '拧干毛巾', targetSD: '毛巾在画面中', responseDef: '上下搓动毛巾', masteryCriterion: '完成上下滑动手势' },
-      { stepId: 5, behavior: '擦脸', targetSD: '人物脸部区域', responseDef: '拖拽小手到脸上', masteryCriterion: '重叠≥35%' },
-      { stepId: 6, behavior: '冲洗毛巾', targetSD: '出水区域', responseDef: '点击出水处', masteryCriterion: '独立点击' },
-      { stepId: 7, behavior: '关水龙头', targetSD: '水龙头标记区域', responseDef: '拖拽小手到水龙头向下推', masteryCriterion: '重叠≥35%' }
+      { stepId: 1, behavior: '把衣服平铺在桌面', targetSD: '桌面中央的衣服轮廓', responseDef: '将衣服拖到桌面中央', masteryCriterion: '衣服进入中央大目标区' },
+      { stepId: 2, behavior: '抚平衣服', targetSD: '衣服和向下箭头', responseDef: '从上到下拖动小手', masteryCriterion: '完成一次从上到下的滑动' },
+      { stepId: 3, behavior: '折画面左侧袖子', targetSD: '画面左侧袖子和中间轮廓区', responseDef: '将左侧袖子拖到衣服中间的轮廓区', masteryCriterion: '袖子与目标区重叠达到35%' },
+      { stepId: 4, behavior: '折画面右侧袖子', targetSD: '画面右侧袖子和衣服中间', responseDef: '将右侧袖子拖到衣服中间', masteryCriterion: '袖子与目标区重叠达到35%' },
+      { stepId: 5, behavior: '折画面左侧衣身', targetSD: '画面左侧衣身和中央目标区', responseDef: '将左侧衣身向中间折叠', masteryCriterion: '左侧衣身进入中央目标区' },
+      { stepId: 6, behavior: '折画面右侧衣身', targetSD: '画面右侧衣身和中央目标区', responseDef: '将右侧衣身向中间折叠', masteryCriterion: '右侧衣身进入中央目标区' },
+      { stepId: 7, behavior: '把下摆向上折', targetSD: '衣服下摆和上半部目标区', responseDef: '将衣服下半部向领口方向拖动', masteryCriterion: '下摆进入上半部目标区' }
     ]
   },
-  dress: {
-    taskId: 'dress',
-    taskName: '穿衣',
-    taskDomain: '个人卫生',
-    targetStimulus: '外套',
-    setting: '卧室',
+  'fold-umbrella': {
+    taskId: 'fold-umbrella',
+    taskName: '收整折叠伞',
+    taskDomain: '日常生活技能',
+    targetStimulus: '六片手动折叠伞、固定伞带',
+    setting: '整理区',
     steps: [
-      { stepId: 1, behavior: '找到衣服', targetSD: '外套在画面中心', responseDef: '点击外套', masteryCriterion: '独立点击' },
-      { stepId: 2, behavior: '分清正反面', targetSD: '外套正面展示', responseDef: '点击外套正面', masteryCriterion: '独立点击' },
-      { stepId: 3, behavior: '伸左手进袖子', targetSD: '左边袖口标记', responseDef: '拖拽小手到左袖口', masteryCriterion: '重叠≥35%' },
-      { stepId: 4, behavior: '伸右手进袖子', targetSD: '右边袖口标记', responseDef: '拖拽小手到右袖口', masteryCriterion: '重叠≥35%' },
-      { stepId: 5, behavior: '拉好衣服', targetSD: '衣服中间标记', responseDef: '向下拖拽', masteryCriterion: '重叠≥35%' },
-      { stepId: 6, behavior: '拉上拉链', targetSD: '拉链区域', responseDef: '向上拖拽', masteryCriterion: '重叠≥35%' },
-      { stepId: 7, behavior: '整理衣领', targetSD: '领口标记', responseDef: '左右拖拽手到领口', masteryCriterion: '重叠≥35%' }
+      { stepId: 1, behavior: '收拢伞架', targetSD: '加大的伞架滑块和收伞目标位置', responseDef: '将伞架滑块向下拖动', masteryCriterion: '滑块向下进入收伞目标位置' },
+      { stepId: 2, behavior: '缩短伞杆', targetSD: '加粗的伞头和伞柄位置', responseDef: '将伞杆缓慢推短', masteryCriterion: '伞杆缩短到发光位置' },
+      { stepId: 3, behavior: '让扣带朝外', targetSD: '雨伞和固定伞带', responseDef: '转动雨伞，使固定伞带出现在画面正面', masteryCriterion: '扣带进入正面目标位置' },
+      { stepId: 4, behavior: '逐片理顺伞布', targetSD: '依次发光的六片伞布', responseDef: '沿每片伞骨从上向下滑动', masteryCriterion: '六片伞布分别完成一次向下整理' },
+      { stepId: 5, behavior: '把伞片合拢', targetSD: '理好的伞片边缘和伞杆中间', responseDef: '将伞片边缘依次向伞杆中间拖动', masteryCriterion: '所有伞片靠拢伞杆' },
+      { stepId: 6, behavior: '沿同一方向卷好伞布', targetSD: '伞布和环形箭头', responseDef: '沿环形箭头拖动伞布', masteryCriterion: '完成约一圈半的宽松环绕动作' },
+      { stepId: 7, behavior: '绕好扣带并扣住', targetSD: '固定带和加大的粘扣位置', responseDef: '将固定带拖过伞身', masteryCriterion: '固定带与粘扣目标区重叠达到35%' }
     ]
   }
 };
@@ -2461,7 +2440,7 @@ const UnifiedDataManager = {
   onStepComplete(success) {
     const level = LEVELS[state.currentLevel];
     const step = level.steps[state.currentStep];
-    const skillMap = { brush: 'tooth brushing', wash: 'face washing', dress: 'dressing' };
+    const skillMap = { laundry: 'clothes washing', 'fold-clothes': 'clothes folding', 'fold-umbrella': 'folding umbrella' };
 
     const record = {
       participantID: ResearchMode.active ? ResearchMode.childId : '',
@@ -2642,7 +2621,7 @@ const ResearchMode = {
   active: false,
   childId: null,
   phase: null,       // 'baseline' | 'intervention' | 'maintenance'
-  skillId: null,     // 'brush' | 'wash' | 'dress'
+  skillId: null,     // 'laundry' | 'fold-clothes' | 'fold-umbrella'
   sessionNum: 1,
   date: null,
 
@@ -2707,7 +2686,7 @@ const ResearchMode = {
 
     const phaseLabels = { baseline: 'Baseline', intervention: 'Intervention', maintenance: 'Maintenance' };
     const phaseLabelsCN = { baseline: '基线期', intervention: '干预期', maintenance: '维持期' };
-    const skillLabels = { brush: '刷牙', wash: '洗脸', dress: '穿衣' };
+    const skillLabels = { laundry: '清洗衣服', 'fold-clothes': '折叠衣服', 'fold-umbrella': '收整折叠伞' };
     const participantID = `${this.childId}_${this.phase}_S${String(this.sessionNum).padStart(2,'0')}`;
 
     // Update status bar
@@ -2744,7 +2723,7 @@ const ResearchMode = {
 
     // Close setup panel, then start the research skill
     this.closeSetup();
-    const skillIdx = { brush: 0, wash: 1, dress: 2 }[this.skillId];
+    const skillIdx = NEW_LEVEL_IDS.indexOf(this.skillId);
     startLevel(skillIdx);
   },
 
