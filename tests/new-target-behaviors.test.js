@@ -1,8 +1,35 @@
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+
+const ROOT = path.join(__dirname, '..');
+const BACKGROUND_ASSETS = [
+  'assets/laundry/laundry-room.png',
+  'assets/folding/folding-table.png',
+  'assets/umbrella/umbrella-room.png'
+];
+const TRANSPARENT_ITEM_ASSETS = [
+  'assets/laundry/shirt-dirty.png',
+  'assets/laundry/shirt-clean.png',
+  'assets/laundry/wash-basin.png',
+  'assets/laundry/detergent.png',
+  'assets/folding/sweatshirt-flat.png',
+  'assets/folding/sweatshirt-folded.png',
+  'assets/umbrella/umbrella-open.png',
+  'assets/umbrella/umbrella-closed.png',
+  'assets/umbrella/umbrella-folded.png'
+];
+const REQUIRED_ASSETS = [...BACKGROUND_ASSETS, ...TRANSPARENT_ITEM_ASSETS];
+
+function imageProperties(file) {
+  const output = execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', '-g', 'hasAlpha', file], { encoding: 'utf8' });
+  return Object.fromEntries(
+    [...output.matchAll(/^\s+(pixelWidth|pixelHeight|hasAlpha):\s+(.+)$/gm)].map(([, key, value]) => [key, value])
+  );
+}
 
 function createElement() {
   return {
@@ -73,6 +100,24 @@ function loadRuntime() {
   vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, speak, state };`, context);
   return { api: context.__testApi, getElement, selectedSkill, spoken };
 }
+
+test('all new local artwork exists with contracted dimensions and alpha', () => {
+  for (const file of REQUIRED_ASSETS) {
+    assert.equal(fs.existsSync(path.join(ROOT, file)), true, `${file} missing`);
+  }
+
+  for (const file of BACKGROUND_ASSETS) {
+    const properties = imageProperties(path.join(ROOT, file));
+    assert.equal(properties.pixelWidth, '2048', `${file} must be 2048px wide`);
+    assert.equal(properties.pixelHeight, '1152', `${file} must be 1152px high`);
+  }
+
+  for (const file of TRANSPARENT_ITEM_ASSETS) {
+    const properties = imageProperties(path.join(ROOT, file));
+    assert.ok(Math.max(Number(properties.pixelWidth), Number(properties.pixelHeight)) >= 1024, `${file} long edge must be at least 1024px`);
+    assert.equal(properties.hasAlpha, 'yes', `${file} must preserve a transparent background`);
+  }
+});
 
 test('new intervention targets expose exactly three seven-step levels', () => {
   const { api } = loadRuntime();
