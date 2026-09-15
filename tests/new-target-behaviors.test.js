@@ -80,6 +80,7 @@ function loadRuntime() {
   };
   const context = {
     AbortController,
+    Audio: class { play() { return { catch() {} }; } pause() {} },
     Blob: class {},
     Date,
     JSON,
@@ -97,7 +98,7 @@ function loadRuntime() {
     window: { addEventListener() {}, matchMedia() { return { matches: false }; }, speechSynthesis }
   };
   context.globalThis = context;
-  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, checkMatch, speak, state };`, context);
+  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, checkMatch, isMovingTowardTarget: typeof isMovingTowardTarget === 'undefined' ? undefined : isMovingTowardTarget, gestureTargetCenter: typeof gestureTargetCenter === 'undefined' ? undefined : gestureTargetCenter, applyPromptLevel, PROMPT_LEVELS, speak, state };`, context);
   return { api: context.__testApi, getElement, selectedSkill, spoken };
 }
 
@@ -126,6 +127,8 @@ test('new intervention targets expose exactly three seven-step levels', () => {
   ]);
   assert.deepEqual(Array.from(api.LEVELS, level => level.steps.length), [7, 7, 7]);
   assert.equal(api.LEVELS[0].steps[0].instruction, '放进水盆');
+  assert.equal(api.LEVELS[0].steps[3].repeatGoal, 3);
+  assert.equal(api.LEVELS[0].steps[4].repeatGoal, 3);
   assert.equal(api.LEVELS[1].steps[6].instruction, '向上折好');
   assert.equal(api.LEVELS[2].steps[3].repeatGoal, 6);
 });
@@ -163,8 +166,40 @@ test('repeat gestures accept only compatible swipe directions', () => {
   assert.equal(api.checkMatch('swipe-down', 'repeat-vertical'), true);
   assert.equal(api.checkMatch('swipe-left', 'repeat-vertical'), false);
   assert.equal(api.checkMatch('swipe-left', 'roll-horizontal'), true);
-  assert.equal(api.checkMatch('swipe-up', 'push-inward'), true);
-  assert.equal(api.checkMatch('tap', 'push-inward'), false);
+});
+
+test('touch and mouse share a 40px inward-target direction check', () => {
+  const { api } = loadRuntime();
+  const start = { x: 0, y: 0 };
+  const targetCenter = { x: 100, y: 0 };
+  assert.equal(api.isMovingTowardTarget(start, { x: 50, y: 0 }, targetCenter), true);
+  assert.equal(api.isMovingTowardTarget(start, { x: -50, y: 0 }, targetCenter), false);
+  assert.equal(api.isMovingTowardTarget(start, { x: 39, y: 0 }, targetCenter), false);
+});
+
+test('inward gestures prefer an explicit target center before the interaction area center', () => {
+  const { api } = loadRuntime();
+  const target = { getBoundingClientRect() { return { left: 20, top: 40, width: 40, height: 20 }; } };
+  const area = {
+    querySelector(selector) { return selector === '[data-gesture-target]' ? target : null; },
+    getBoundingClientRect() { return { left: 0, top: 0, width: 200, height: 100 }; }
+  };
+  assert.deepEqual(JSON.parse(JSON.stringify(api.gestureTargetCenter(area))), { x: 40, y: 50 });
+  area.querySelector = () => null;
+  assert.deepEqual(JSON.parse(JSON.stringify(api.gestureTargetCenter(area))), { x: 100, y: 50 });
+});
+
+test('demonstration completes repeat progress before recording one assisted success', () => {
+  for (const [levelIndex, stepIndex, goal] of [[0, 3, 3], [2, 3, 6]]) {
+    const { api } = loadRuntime();
+    api.state.currentLevel = levelIndex;
+    api.state.currentStep = stepIndex;
+    api.StepProgress.reset(api.LEVELS[levelIndex].steps[stepIndex]);
+    api.applyPromptLevel(api.PROMPT_LEVELS.DEMONSTRATION.level);
+    assert.equal(api.StepProgress.current, goal);
+    assert.equal(api.StepProgress.goal, goal);
+    assert.equal(api.UnifiedDataManager.events.filter(event => event.event === 'step_success').length, 1);
+  }
 });
 
 test('new intervention targets retain the approved state, task analysis, and voice contracts', () => {

@@ -1860,7 +1860,11 @@ function attachGestureListeners(step, area) {
     if (dist < 18) { det = 'tap'; }
     else if (Math.abs(dx) > Math.abs(dy)) { det = dx > 0 ? 'swipe-right' : 'swipe-left'; }
     else { det = dy > 0 ? 'swipe-down' : 'swipe-up'; }
-    if (checkMatch(det, expected)) { advanceStepProgress(area); }
+    if (checkMatch(
+      det, expected,
+      { x: state.gestureStartX, y: state.gestureStartY }, last,
+      gestureTargetCenter(area)
+    )) { advanceStepProgress(area); }
     else { handleStepWrong(area); }
   }, {signal});
 
@@ -1936,17 +1940,36 @@ function attachGestureListeners(step, area) {
     if (dist < 18) { det = 'tap'; }
     else if (Math.abs(dx) > Math.abs(dy)) { det = dx > 0 ? 'swipe-right' : 'swipe-left'; }
     else { det = dy > 0 ? 'swipe-down' : 'swipe-up'; }
-    if (checkMatch(det, expected)) { advanceStepProgress(area); }
+    if (checkMatch(
+      det, expected,
+      { x: state.gestureStartX, y: state.gestureStartY }, last,
+      gestureTargetCenter(area)
+    )) { advanceStepProgress(area); }
     else { handleStepWrong(area); }
   }, {signal});
 }
 
-function checkMatch(det, exp) {
+function gestureTargetCenter(area) {
+  const target = area.querySelector('[data-gesture-target]') || area;
+  const rect = target.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function isMovingTowardTarget(start, end, targetCenter) {
+  const moveX = end.x - start.x, moveY = end.y - start.y;
+  const targetX = targetCenter.x - start.x, targetY = targetCenter.y - start.y;
+  const moveLength = Math.hypot(moveX, moveY);
+  const targetLength = Math.hypot(targetX, targetY);
+  return moveLength >= 40 && targetLength > 0 &&
+    (moveX * targetX + moveY * targetY) / (moveLength * targetLength) >= 0.35;
+}
+
+function checkMatch(det, exp, start, end, targetCenter) {
   if(exp==='drag') return det==='drag'; // drag is handled separately, this is fallback
   if(exp==='tap') return det==='tap';
   if(exp==='repeat-horizontal'||exp==='roll-horizontal'||exp==='swipe-lr') return det==='swipe-left'||det==='swipe-right';
   if(exp==='repeat-vertical') return det==='swipe-up'||det==='swipe-down';
-  if(exp==='push-inward') return det!=='tap';
+  if(exp==='push-inward') return !!start && !!end && !!targetCenter && isMovingTowardTarget(start, end, targetCenter);
   if(exp==='swipe-up') return det==='swipe-up'||det==='swipe-down';
   if(exp==='swipe-down') return det==='swipe-down'||det==='swipe-up';
   if(exp==='swipe-left') return det==='swipe-left'||det==='swipe-right';
@@ -2277,6 +2300,8 @@ function applyPromptLevel(level) {
       // 自动完成（记录为全辅助）
       UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 4, promptName: 'Demonstration', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
       promptState.promptUsed = 4;
+      StepProgress.advance(StepProgress.goal - StepProgress.current);
+      StepProgress.render(area);
       handleStepSuccess(area);
       return;
   }
