@@ -98,8 +98,62 @@ function loadRuntime() {
     window: { addEventListener() {}, matchMedia() { return { matches: false }; }, speechSynthesis }
   };
   context.globalThis = context;
-  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, checkMatch, isMovingTowardTarget: typeof isMovingTowardTarget === 'undefined' ? undefined : isMovingTowardTarget, gestureTargetCenter: typeof gestureTargetCenter === 'undefined' ? undefined : gestureTargetCenter, applyPromptLevel, PROMPT_LEVELS, speak, state };`, context);
+  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, attachGestureListeners, checkMatch, isMovingTowardTarget: typeof isMovingTowardTarget === 'undefined' ? undefined : isMovingTowardTarget, gestureTargetCenter: typeof gestureTargetCenter === 'undefined' ? undefined : gestureTargetCenter, applyPromptLevel, PROMPT_LEVELS, speak, state };`, context);
   return { api: context.__testApi, getElement, selectedSkill, spoken };
+}
+
+function createGestureArea() {
+  const listeners = new Map();
+  const target = {
+    getBoundingClientRect() { return { left: 90, top: -10, width: 20, height: 20 }; }
+  };
+  const area = {
+    targetQueries: 0,
+    classList: { add() {}, remove() {} },
+    style: {},
+    addEventListener(type, handler) { listeners.set(type, handler); },
+    dispatch(type, event = {}) {
+      listeners.get(type)?.({ preventDefault() {}, target: area, currentTarget: area, ...event });
+    },
+    appendChild() {},
+    querySelector(selector) {
+      if (selector === '[data-gesture-target]') {
+        this.targetQueries++;
+        return target;
+      }
+      return null;
+    },
+    querySelectorAll() { return []; },
+    getBoundingClientRect() { return { left: -200, top: -100, width: 200, height: 200 }; }
+  };
+  return area;
+}
+
+function runPushInwardGesture(kind, endX) {
+  const { api } = loadRuntime();
+  const area = createGestureArea();
+  api.state.currentLevel = 0;
+  api.state.currentStep = 0;
+  api.state.stepCompleted = new Set();
+  api.state.stepAbortController = null;
+  api.StepProgress.reset({});
+  api.attachGestureListeners({ gesture: 'push-inward' }, area);
+
+  if (kind === 'touch') {
+    area.dispatch('touchstart', { touches: [{ clientX: 0, clientY: 0 }] });
+    area.dispatch('touchmove', { touches: [{ clientX: endX, clientY: 0 }] });
+    area.dispatch('touchend');
+  } else {
+    area.dispatch('mousedown', { clientX: 0, clientY: 0 });
+    area.dispatch('mousemove', { clientX: endX, clientY: 0 });
+    area.dispatch('mouseup');
+  }
+
+  return {
+    completed: api.state.stepCompleted.has(0),
+    progress: api.StepProgress.current,
+    targetQueries: area.targetQueries
+  };
 }
 
 test('all new local artwork exists with contracted dimensions and alpha', () => {
@@ -187,6 +241,14 @@ test('inward gestures prefer an explicit target center before the interaction ar
   assert.deepEqual(JSON.parse(JSON.stringify(api.gestureTargetCenter(area))), { x: 40, y: 50 });
   area.querySelector = () => null;
   assert.deepEqual(JSON.parse(JSON.stringify(api.gestureTargetCenter(area))), { x: 100, y: 50 });
+});
+
+test('attachGestureListeners routes touch and mouse inward gestures to the explicit target', () => {
+  for (const kind of ['touch', 'mouse']) {
+    assert.deepEqual(runPushInwardGesture(kind, 50), { completed: true, progress: 1, targetQueries: 1 });
+    assert.deepEqual(runPushInwardGesture(kind, -50), { completed: false, progress: 0, targetQueries: 1 });
+    assert.deepEqual(runPushInwardGesture(kind, 39), { completed: false, progress: 0, targetQueries: 1 });
+  }
 });
 
 test('demonstration completes repeat progress before recording one assisted success', () => {
