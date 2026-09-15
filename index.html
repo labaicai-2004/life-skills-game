@@ -1176,6 +1176,23 @@ const SkillSceneState = {
 };
 SkillSceneState.reset();
 
+const StepProgress = {
+  current: 0,
+  goal: 1,
+  reset(step) {
+    this.current = 0;
+    this.goal = Math.max(1, Number(step?.repeatGoal) || 1);
+  },
+  advance(amount = 1) {
+    this.current = Math.min(this.goal, this.current + amount);
+    return { current: this.current, goal: this.goal, complete: this.current >= this.goal };
+  },
+  render(container) {
+    const dots = container?.querySelectorAll('[data-substep]') || [];
+    dots.forEach((dot, index) => dot.classList.toggle('done', index < this.current));
+  }
+};
+
 const AnimationPolicy = {
   isEnabled() {
     if (!ResearchMode.active) return true;
@@ -1438,6 +1455,7 @@ function loadStep(idx) {
   const nextBtn = document.getElementById('next-step-btn');
   if (nextBtn) nextBtn.classList.remove('show');
   const level=LEVELS[state.currentLevel], step=level.steps[idx];
+  StepProgress.reset(step);
   document.getElementById('step-number-label').textContent=`第 ${step.id} 步 / 共 7 步`;
   document.getElementById('step-instruction').textContent=step.instruction;
   renderProgressDots();
@@ -1820,7 +1838,7 @@ function attachGestureListeners(step, area) {
         const ratio = overlapArea / itemArea;
 
         if (ratio > 0.35) {
-          handleStepSuccess(area);
+          advanceStepProgress(area);
           dragItem = null;
           return;
         }
@@ -1842,7 +1860,7 @@ function attachGestureListeners(step, area) {
     if (dist < 18) { det = 'tap'; }
     else if (Math.abs(dx) > Math.abs(dy)) { det = dx > 0 ? 'swipe-right' : 'swipe-left'; }
     else { det = dy > 0 ? 'swipe-down' : 'swipe-up'; }
-    if (checkMatch(det, expected)) { handleStepSuccess(area); }
+    if (checkMatch(det, expected)) { advanceStepProgress(area); }
     else { handleStepWrong(area); }
   }, {signal});
 
@@ -1898,7 +1916,7 @@ function attachGestureListeners(step, area) {
         const overlapX = Math.max(0, Math.min(ir.right, tr.right) - Math.max(ir.left, tr.left));
         const overlapY = Math.max(0, Math.min(ir.bottom, tr.bottom) - Math.max(ir.top, tr.top));
         if ((overlapX * overlapY) / (ir.width * ir.height) > 0.35) {
-          handleStepSuccess(area);
+          advanceStepProgress(area);
           dragItem = null;
           return;
         }
@@ -1918,7 +1936,7 @@ function attachGestureListeners(step, area) {
     if (dist < 18) { det = 'tap'; }
     else if (Math.abs(dx) > Math.abs(dy)) { det = dx > 0 ? 'swipe-right' : 'swipe-left'; }
     else { det = dy > 0 ? 'swipe-down' : 'swipe-up'; }
-    if (checkMatch(det, expected)) { handleStepSuccess(area); }
+    if (checkMatch(det, expected)) { advanceStepProgress(area); }
     else { handleStepWrong(area); }
   }, {signal});
 }
@@ -1926,6 +1944,9 @@ function attachGestureListeners(step, area) {
 function checkMatch(det, exp) {
   if(exp==='drag') return det==='drag'; // drag is handled separately, this is fallback
   if(exp==='tap') return det==='tap';
+  if(exp==='repeat-horizontal'||exp==='roll-horizontal'||exp==='swipe-lr') return det==='swipe-left'||det==='swipe-right';
+  if(exp==='repeat-vertical') return det==='swipe-up'||det==='swipe-down';
+  if(exp==='push-inward') return det!=='tap';
   if(exp==='swipe-up') return det==='swipe-up'||det==='swipe-down';
   if(exp==='swipe-down') return det==='swipe-down'||det==='swipe-up';
   if(exp==='swipe-left') return det==='swipe-left'||det==='swipe-right';
@@ -1933,6 +1954,13 @@ function checkMatch(det, exp) {
   if(exp==='swipe-vertical') return det==='swipe-up'||det==='swipe-down';
   if(exp==='swipe-horizontal') return det==='swipe-left'||det==='swipe-right';
   return true;
+}
+
+function advanceStepProgress(area) {
+  if (StepProgress.current >= StepProgress.goal) return;
+  const progress = StepProgress.advance();
+  StepProgress.render(area);
+  if (progress.complete) handleStepSuccess(area);
 }
 
 /* ================================================================

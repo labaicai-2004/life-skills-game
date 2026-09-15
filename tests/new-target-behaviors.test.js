@@ -97,7 +97,7 @@ function loadRuntime() {
     window: { addEventListener() {}, matchMedia() { return { matches: false }; }, speechSynthesis }
   };
   context.globalThis = context;
-  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, speak, state };`, context);
+  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, checkMatch, speak, state };`, context);
   return { api: context.__testApi, getElement, selectedSkill, spoken };
 }
 
@@ -128,6 +128,43 @@ test('new intervention targets expose exactly three seven-step levels', () => {
   assert.equal(api.LEVELS[0].steps[0].instruction, '放进水盆');
   assert.equal(api.LEVELS[1].steps[6].instruction, '向上折好');
   assert.equal(api.LEVELS[2].steps[3].repeatGoal, 6);
+});
+
+test('StepProgress completes only after the configured repetitions', () => {
+  const { api } = loadRuntime();
+  api.StepProgress.reset({ repeatGoal: 3 });
+  assert.equal(api.StepProgress.advance().complete, false);
+  assert.equal(api.StepProgress.advance().complete, false);
+  assert.equal(api.StepProgress.advance().complete, true);
+});
+
+test('six umbrella panels require six completed smoothing strokes', () => {
+  const { api } = loadRuntime();
+  api.StepProgress.reset({ repeatGoal: 6 });
+  for (let index = 0; index < 5; index++) assert.equal(api.StepProgress.advance().complete, false);
+  assert.equal(api.StepProgress.advance().complete, true);
+});
+
+test('StepProgress preserves one-action steps and renders completed substeps', () => {
+  const { api } = loadRuntime();
+  const dots = Array.from({ length: 3 }, () => ({ classList: { done: false, toggle(name, value) { this.done = value; } } }));
+  api.StepProgress.reset({});
+  assert.deepEqual(JSON.parse(JSON.stringify(api.StepProgress.advance())), { current: 1, goal: 1, complete: true });
+  api.StepProgress.reset({ repeatGoal: 2 });
+  api.StepProgress.advance();
+  api.StepProgress.render({ querySelectorAll() { return dots; } });
+  assert.deepEqual(dots.map(dot => dot.classList.done), [true, false, false]);
+});
+
+test('repeat gestures accept only compatible swipe directions', () => {
+  const { api } = loadRuntime();
+  assert.equal(api.checkMatch('swipe-right', 'repeat-horizontal'), true);
+  assert.equal(api.checkMatch('swipe-up', 'repeat-horizontal'), false);
+  assert.equal(api.checkMatch('swipe-down', 'repeat-vertical'), true);
+  assert.equal(api.checkMatch('swipe-left', 'repeat-vertical'), false);
+  assert.equal(api.checkMatch('swipe-left', 'roll-horizontal'), true);
+  assert.equal(api.checkMatch('swipe-up', 'push-inward'), true);
+  assert.equal(api.checkMatch('tap', 'push-inward'), false);
 });
 
 test('new intervention targets retain the approved state, task analysis, and voice contracts', () => {
