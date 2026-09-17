@@ -234,6 +234,56 @@ html, body {
 .demo-element { position:absolute; z-index:6; }
 .demo-ghost { opacity:0; }
 
+.step-stage[data-level="laundry"] { --laundry-arrive-x:0px; --laundry-arrive-y:0px; }
+.laundry-object { position:absolute; z-index:4; min-width:44px; min-height:44px; }
+.laundry-object img, .laundry-shirt img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.laundry-basin { left:35%; top:36%; width:48%; height:55%; }
+.laundry-shirt { position:absolute; left:46%; top:39%; width:26%; height:40%; z-index:5; }
+.laundry-shirt-start { left:5%; top:18%; }
+.laundry-faucet { left:56%; top:18%; width:88px; height:88px; }
+.laundry-detergent { left:9%; top:32%; width:110px; height:145px; }
+.laundry-hand { left:44%; top:48%; width:88px; height:88px; z-index:9; }
+.laundry-partner-hand { left:66%; top:48%; width:88px; height:88px; z-index:8; pointer-events:none; }
+.laundry-hand svg, .laundry-partner-hand svg { width:100%; height:100%; }
+.laundry-water-target { left:48%; top:27%; width:30%; height:50%; z-index:3; }
+.laundry-water { position:absolute; left:58%; top:26%; width:11%; height:44%; border-radius:30px; background:repeating-linear-gradient(90deg,#B5ECFFB0 0 10px,#70CEF2B0 12px 16px); pointer-events:none; opacity:0; z-index:4; }
+.laundry-bubbles { position:absolute; left:44%; top:43%; width:30%; height:25%; z-index:7; pointer-events:none; opacity:0; border-radius:50%; background:radial-gradient(circle at 15% 50%,#fff 0 12px,transparent 14px),radial-gradient(circle at 45% 65%,#fff 0 16px,transparent 18px),radial-gradient(circle at 70% 40%,#fff 0 13px,transparent 15px),radial-gradient(circle at 90% 75%,#fff 0 10px,transparent 12px); }
+.state-laundry-wet ~ .laundry-shirt { filter:brightness(.88) saturate(1.08); }
+.state-laundry-soapy ~ .laundry-bubbles { opacity:.9; }
+.state-laundry-rinsed ~ .laundry-bubbles { opacity:0; }
+.laundry-filling .laundry-water, .laundry-rinse-stream { opacity:.8; }
+.laundry-filling .laundry-shirt { transition:filter 1.2s; filter:brightness(.88); }
+.laundry-soaping .laundry-bubbles { animation:laundryFoamIn 1.2s ease-out forwards; }
+.laundry-rinsing .laundry-bubbles { animation:laundryFoamOut 2s linear forwards; }
+.laundry-complete[data-step="6"] .laundry-bubbles { opacity:0; }
+.laundry-auto-flip .laundry-shirt img { animation:laundryFlip .9s ease-in-out; }
+.laundry-complete[data-step="7"] .laundry-shirt { transform:scaleX(.78) rotate(-6deg); transition:transform .6s; }
+.laundry-sparkle { position:absolute; top:34%; left:51%; color:#FFC83D; font-size:44px; opacity:0; z-index:10; pointer-events:none; }
+.laundry-complete[data-step="7"] .laundry-sparkle { opacity:1; }
+.laundry-drops { position:absolute; top:74%; left:51%; color:#66BFE4; font-size:30px; pointer-events:none; }
+.laundry-complete[data-step="7"] .laundry-drops { opacity:0; transition:opacity .8s; }
+.laundry-count { position:absolute; bottom:3%; left:43%; display:flex; gap:14px; z-index:10; pointer-events:none; }
+.laundry-count span { width:24px; height:24px; border:3px solid #D9AD55; border-radius:50%; background:#fff; }
+.laundry-count .done { background:#87CDB2; border-color:#579D80; }
+.laundry-guide { position:absolute; left:39%; top:3%; font-size:32px; color:#8B5E35; background:#FFFFFFE8; border-radius:22px; padding:8px 18px; z-index:11; pointer-events:none; }
+@keyframes laundryFlip { 0% { transform:rotateY(0); } 50% { transform:rotateY(90deg); } 100% { transform:rotateY(180deg); } }
+@keyframes laundryFoamIn { from { opacity:0; transform:scale(.7); } to { opacity:.9; transform:scale(1); } }
+@keyframes laundryFoamOut { from { opacity:.9; } to { opacity:0; } }
+@keyframes demoLaundryPlace { 0%,10%,100% { transform:translate(0,0); opacity:0; } 20% { transform:translate(0,0); opacity:.8; } 60%,85% { transform:translate(var(--laundry-arrive-x),var(--laundry-arrive-y)); opacity:.8; } }
+@keyframes demoLaundryTap { 0%,100% { transform:scale(1); opacity:0; } 30%,70% { transform:scale(.88); opacity:.85; } }
+@keyframes demoLaundryRub { 0%,100% { transform:translateX(0); opacity:0; } 20%,65% { transform:translateX(-35px); opacity:.85; } 40%,85% { transform:translateX(35px); opacity:.85; } }
+@keyframes demoLaundryRinse { 0%,100% { transform:translate(0,0); opacity:0; } 10% { transform:translate(0,0); opacity:.8; } 30%,90% { transform:translate(var(--laundry-arrive-x),var(--laundry-arrive-y)); opacity:.8; } }
+@keyframes demoLaundryWring { 0%,100% { transform:translateX(0) rotate(0); opacity:0; } 35%,80% { transform:translateX(45px) rotate(24deg); opacity:.85; } }
+@keyframes demoLaundryPartner { 0%,100% { transform:translateX(0) rotate(0); } 35%,80% { transform:translateX(-45px) rotate(-24deg); } }
+.step-stage.demo-running .demo-laundry-1 { animation:demoLaundryPlace 2.4s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-2 { animation:demoLaundryTap 2s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-3 { animation:demoLaundryTap 2s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-4 { animation:demoLaundryRub 2.4s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-5 { animation:demoLaundryRub 2.4s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-6 { animation:demoLaundryRinse 3.6s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-7 { animation:demoLaundryWring 2.4s ease-in-out infinite; }
+.step-stage.demo-running:not(.demo-paused)[data-step="7"] .laundry-partner-hand { animation:demoLaundryPartner 2.4s ease-in-out infinite; }
+
 @keyframes demoFindPulse {
   0%,45%,100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
   55%,75% { transform:translate(-50%,-50%) scale(1.08); opacity:0.9; }
@@ -1111,7 +1161,7 @@ const LEVELS = [
       {id:4,instruction:'揉洗正面',gesture:'swipe-lr',target:'shirt',arrow:'leftright',repeatGoal:3,voice:'用小手来回揉一揉。'},
       {id:5,instruction:'揉洗背面',gesture:'swipe-lr',target:'shirt',arrow:'leftright',repeatGoal:3,voice:'翻过来，再揉一揉。'},
       {id:6,instruction:'冲洗衣服',gesture:'drag',target:'shirt',dragTarget:'water',arrow:'down',voice:'用清水把泡泡冲干净。'},
-      {id:7,instruction:'拧干衣服',gesture:'twist',target:'shirt',arrow:'leftright',voice:'两只手轻轻拧一拧。'}
+      {id:7,instruction:'拧干衣服',gesture:'push-inward',target:'hand',arrow:'leftright',voice:'两只手轻轻拧一拧。'}
     ]
   },
   {
@@ -1208,6 +1258,13 @@ const AnimationController = {
   configureStagePaths(stage) {
     if (!stage) return;
     const { width, height } = stage.getBoundingClientRect();
+    const laundryItem = stage.querySelector('.laundry-shirt-start');
+    const laundryTarget = stage.querySelector('.drag-target');
+    if (laundryItem && laundryTarget) {
+      const item = laundryItem.getBoundingClientRect(), target = laundryTarget.getBoundingClientRect();
+      stage.style.setProperty('--laundry-arrive-x', `${target.left + (target.width - item.width) / 2 - item.left}px`);
+      stage.style.setProperty('--laundry-arrive-y', `${target.top + (target.height - item.height) / 2 - item.top}px`);
+    }
     const px = value => `${Math.sign(value) * Math.round(Math.abs(value))}px`;
     const brushArrivalY = -0.9 * height + 372;
     const offsets = {
@@ -1418,6 +1475,7 @@ function showScreen(id) {
   const el=document.getElementById(id); if(el) el.classList.add('active');
 }
 function goHome() {
+  if (state.stepAbortController) { state.stepAbortController.abort(); state.stepAbortController = null; }
   AnimationController.clear();
   if(currentAudio) { currentAudio.pause(); currentAudio = null; }
   if(currentSpeech) { window.speechSynthesis?.cancel(); currentSpeech = null; }
@@ -1466,7 +1524,9 @@ function loadStep(idx) {
   // Persistent background — set once per level
   if (!scene.dataset.levelId || scene.dataset.levelId !== level.id) {
     scene.dataset.levelId = level.id;
-    scene.innerHTML = level.id === 'dress'
+    scene.innerHTML = level.id === 'laundry'
+      ? `<img class="scene-bg" src="assets/laundry/laundry-room.png" draggable="false" alt="">`
+      : level.id === 'dress'
       ? `<div class="scene-bg" style="background:linear-gradient(180deg,#FFF3E8 0%,#FFECD8 55%,#FFE4CC 100%);"></div>`
       : level.id === 'brush'
         ? `<img class="scene-bg" src="cartoon-bathroom-sample.png?v=1" draggable="false" style="object-fit:cover;-webkit-touch-callout:none;" alt="">`
@@ -1564,7 +1624,40 @@ function arrLeftRight(){
 /* ================================================================
    SCENE BUILDERS — compose SVG objects + arrow guidance
    ================================================================ */
+function buildLaundryPersistentState(stepId) {
+  const names = ['in-basin','wet','soapy','front-clean','back-clean','rinsed','wrung'];
+  return STEP_STATE_KEYS.laundry.map((key, index) => {
+    if (stepId <= index + 1 || !SkillSceneState.has('laundry', key)) return '';
+    if (key === 'detergentAdded' && stepId > 6 && SkillSceneState.has('laundry', 'shirtRinsed')) return '';
+    return `<span class="persistent-state state-laundry-${names[index]}" aria-hidden="true"></span>`;
+  }).join('');
+}
+
+function buildLaundryScene(step) {
+  const sid = step.id;
+  const image = (file, alt = '') => `<img src="assets/laundry/${file}.png" alt="${alt}" draggable="false">`;
+  const hand = `<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#A77454" stroke-width="3"/></svg>`;
+  const faucet = `<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M12 76V39Q12 20 32 20H54Q76 20 76 41V55H59V41Q59 36 53 36H34Q28 36 28 43V76Z" fill="#A7CBD0" stroke="#624C3D" stroke-width="4" stroke-linejoin="round"/><path d="M22 20V10M9 10H37M9 78H32M59 55H77" fill="none" stroke="#624C3D" stroke-width="6" stroke-linecap="round"/><path d="M9 8H37" stroke="#E8B76A" stroke-width="7" stroke-linecap="round"/></svg>`;
+  const clean = SkillSceneState.has('laundry', 'backRubbed');
+  const shirt = image(clean ? 'shirt-clean' : 'shirt-dirty', '长袖上衣');
+  const isDrag = sid === 1 || sid === 6;
+  let objects = `<div class="laundry-object laundry-basin ${sid === 1 ? 'drag-target' : ''}" ${sid === 1 ? 'data-target="basin"' : 'aria-hidden="true"'}>${image('wash-basin')}</div>`;
+  objects += `<div class="laundry-shirt ${isDrag ? 'laundry-shirt-start draggable-item interactive-target' : ''}" ${isDrag ? 'data-item="shirt"' : 'aria-hidden="true"'}>${shirt}</div>`;
+  objects += `<div class="laundry-object laundry-faucet ${sid === 2 ? 'interactive-target' : ''}" ${sid === 2 ? 'data-item="faucet"' : 'aria-hidden="true"'}>${faucet}</div>`;
+  if (sid === 3) objects += `<div class="laundry-object laundry-detergent interactive-target" data-item="detergent">${image('detergent','洗衣液')}</div>`;
+  objects += `<div class="laundry-water ${sid === 6 ? 'laundry-rinse-stream' : ''}" aria-hidden="true"></div><div class="laundry-bubbles" aria-hidden="true"></div>`;
+  if (sid === 4 || sid === 5 || sid === 7) objects += `<div class="laundry-object laundry-hand interactive-target" data-item="hand">${hand}</div>`;
+  if (sid === 6) objects += '<div class="laundry-object laundry-water-target drag-target" data-target="water" aria-hidden="true"></div>';
+  if (sid === 7) objects += `<div class="laundry-object laundry-partner-hand" aria-hidden="true">${hand}</div><div class="laundry-object" data-gesture-target style="left:63%;top:45%;width:44px;height:88px;pointer-events:none;" aria-hidden="true"></div><div class="laundry-drops" aria-hidden="true">💧 💧</div><div class="laundry-sparkle" aria-hidden="true">✦ ✦</div>`;
+  const demoClass = isDrag ? 'laundry-shirt laundry-shirt-start' : sid === 2 ? 'laundry-faucet' : sid === 3 ? 'laundry-detergent' : 'laundry-hand';
+  const demo = `<div class="demo-element demo-laundry-${sid} demo-ghost laundry-object ${demoClass}" aria-hidden="true">${isDrag ? shirt : hand}</div>`;
+  const labels = ['拖进水盆 ↓','点一下水龙头','按一下洗衣液','← 揉一揉 →','← 再揉一揉 →','放在水流下，等一等','向中间轻轻拧 →'];
+  const dots = step.repeatGoal ? `<div class="laundry-count" aria-hidden="true">${Array.from({length:step.repeatGoal}, () => '<span data-substep></span>').join('')}</div>` : '';
+  return `<div class="step-stage ${sid === 5 ? 'laundry-auto-flip' : ''}" data-level="laundry" data-step="${sid}">${buildLaundryPersistentState(sid)}${objects}${demo}<div class="laundry-guide" aria-hidden="true">${labels[sid-1]}</div>${dots}</div>`;
+}
+
 function buildPersistentStateHTML(levelId, stepId) {
+  if (levelId === 'laundry') return buildLaundryPersistentState(stepId);
   const stateHTML = (cls, content='') => `<div class="persistent-state ${cls}" aria-hidden="true">${content}</div>`;
   const prior = (key, completedStep) => stepId > completedStep && SkillSceneState.has(levelId, key);
   let html = '';
@@ -1602,6 +1695,7 @@ function stepStageHTML(objects, guide, levelId, stepId) {
 }
 
 function buildScene(levelId, step) {
+  if (levelId === 'laundry') return buildLaundryScene(step);
   const sid=step.id, arrow=step.arrow;
   let objects='', guide='';
 
@@ -1746,6 +1840,11 @@ function attachGestureListeners(step, area) {
   const ac = new AbortController();
   state.stepAbortController = ac;
   const {signal} = ac;
+
+  if (LEVELS[state.currentLevel]?.id === 'laundry' && step.id) {
+    attachLaundryGesture(step, area, signal);
+    return;
+  }
 
   const expected = step.gesture;
 
@@ -1949,6 +2048,112 @@ function attachGestureListeners(step, area) {
   }, {signal});
 }
 
+function attachLaundryGesture(step, area, signal) {
+  const item = area.querySelector('.interactive-target');
+  const stage = area.querySelector('.step-stage');
+  const partner = area.querySelector('.laundry-partner-hand');
+  const sid = step.id;
+  const readyAt = Date.now() + (sid === 5 ? 900 : 0);
+  let start = null, last = null, origin = null, dragOrigin = null, busy = false, finished = false;
+  let dwellTimer = null, actionTimer = null;
+  const clearDwell = () => {
+    if (dwellTimer !== null) clearTimeout(dwellTimer);
+    dwellTimer = null;
+    stage?.classList.remove('laundry-rinsing');
+  };
+  const resetPosition = () => {
+    if (item && origin) {
+      item.style.transition = 'transform .3s ease';
+      item.style.transform = '';
+      if (sid === 1 || sid === 6) { item.style.left = origin.left + 'px'; item.style.top = origin.top + 'px'; }
+    }
+    if (partner) partner.style.transform = '';
+  };
+  const complete = () => {
+    if (signal.aborted || state.stepCompleted.has(state.currentStep)) return;
+    finished = true;
+    stage?.classList.add('laundry-complete');
+    advanceStepProgress(area);
+  };
+  const overlap = () => {
+    const target = area.querySelector('.drag-target');
+    if (!item || !target) return false;
+    const a = item.getBoundingClientRect(), b = target.getBoundingClientRect();
+    const width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+    const height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+    return width * height / (a.width * a.height) >= 0.35;
+  };
+  const rinse = () => {
+    if (!overlap()) { clearDwell(); return; }
+    if (dwellTimer !== null) return;
+    stage?.classList.add('laundry-rinsing');
+    dwellTimer = setTimeout(() => { if (overlap()) complete(); }, 2000);
+  };
+  const point = e => {
+    const p = e.touches?.[0] || e.changedTouches?.[0] || e;
+    return { x:p.clientX, y:p.clientY };
+  };
+  const begin = e => {
+    initAudio();
+    AnimationController.pause(stage);
+    if (!item || signal.aborted || busy || Date.now() < readyAt || state.stepCompleted.has(state.currentStep)) return;
+    const p = point(e), rect = item.getBoundingClientRect();
+    if (p.x < rect.left || p.x > rect.right || p.y < rect.top || p.y > rect.bottom) return;
+    clearDwell();
+    start = last = p;
+    const bounds = area.getBoundingClientRect();
+    dragOrigin = { left:rect.left - bounds.left, top:rect.top - bounds.top };
+    if (!origin) origin = dragOrigin;
+    item.style.transition = 'none';
+    e.preventDefault?.();
+  };
+  const move = e => {
+    if (!start || signal.aborted) return;
+    last = point(e);
+    const dx = last.x - start.x, dy = last.y - start.y;
+    if (sid === 1 || sid === 6) {
+      const bounds = area.getBoundingClientRect(), rect = item.getBoundingClientRect();
+      item.style.left = Math.max(0, Math.min(bounds.width - rect.width, dragOrigin.left + dx)) + 'px';
+      item.style.top = Math.max(0, Math.min(bounds.height - rect.height, dragOrigin.top + dy)) + 'px';
+      if (sid === 6) rinse();
+    } else if (sid >= 4) {
+      item.style.transform = `translate(${dx}px,${dy}px) rotate(${sid === 7 ? dx / 3 : 0}deg)`;
+      if (partner) partner.style.transform = `translate(${-dx}px,${-dy}px) rotate(${-dx / 3}deg)`;
+    }
+    e.preventDefault?.();
+  };
+  const end = () => {
+    if (!start || signal.aborted) return;
+    const dx = last.x - start.x, dy = last.y - start.y;
+    const inward = sid === 7 && isMovingTowardTarget(start, last, gestureTargetCenter(area));
+    start = null;
+    if (sid === 6 && overlap()) { rinse(); return; }
+    if (sid === 1 && overlap()) { complete(); return; }
+    if ((sid === 2 || sid === 3) && Math.hypot(dx,dy) < 18) {
+      busy = true;
+      stage?.classList.add(sid === 2 ? 'laundry-filling' : 'laundry-soaping');
+      actionTimer = setTimeout(complete, 1200);
+      return;
+    }
+    resetPosition();
+    if (((sid === 4 || sid === 5) && Math.abs(dx) >= 40 && Math.abs(dx) >= Math.abs(dy)) || inward) {
+      if (sid === 7) complete();
+      else {
+        advanceStepProgress(area);
+        if (StepProgress.current === StepProgress.goal) {
+          const shirt = stage?.querySelector('.laundry-shirt img');
+          if (shirt) shirt.src = 'assets/laundry/shirt-clean.png';
+        }
+      }
+    } else speak('我们再试一次');
+  };
+  const cancel = () => { start = null; clearDwell(); if (!finished) resetPosition(); };
+  signal.addEventListener('abort', () => { clearTimeout(actionTimer); cancel(); });
+  for (const [event, callback] of [['touchstart',begin],['touchmove',move],['touchend',end],['touchcancel',cancel],['mousedown',begin],['mousemove',move],['mouseup',end],['mouseleave',cancel]]) {
+    area.addEventListener(event, callback, { signal, passive:false });
+  }
+}
+
 function gestureTargetCenter(area) {
   const target = area.querySelector('[data-gesture-target]') || area;
   const rect = target.getBoundingClientRect();
@@ -1993,6 +2198,7 @@ function handleStepSuccess(area) {
   const level=LEVELS[state.currentLevel];
   state.stepCompleted.add(state.currentStep);
   SkillSceneState.complete(level.id, level.steps[state.currentStep].id);
+  if (level.id === 'laundry') area.querySelector('.step-stage')?.classList.add('laundry-complete');
   if (level.id === 'brush' && level.steps[state.currentStep].id === 7) {
     const stage = area.querySelector('.step-stage');
     if (stage) stage.classList.add('brush-final-clean');
@@ -2003,7 +2209,7 @@ function handleStepSuccess(area) {
   }
   area.classList.add('success'); playSuccessSound();
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
-  speak(p[Math.floor(Math.random()*p.length)]);
+  speak(level.id === 'laundry' && state.currentStep === 6 ? '衣服洗干净啦' : p[Math.floor(Math.random()*p.length)]);
   spawnParticles(8); renderProgressDots();
   // Show "next step" button instead of auto-advancing
   const btn = document.getElementById('next-step-btn');

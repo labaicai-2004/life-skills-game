@@ -39,6 +39,9 @@ function createElement() {
     addEventListener() {},
     appendChild() {},
     click() {},
+    remove() {},
+    offsetWidth: 100,
+    offsetHeight: 100,
     querySelector() { return null; },
     querySelectorAll() { return []; },
     getBoundingClientRect() { return { left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 }; }
@@ -46,6 +49,10 @@ function createElement() {
 }
 
 function loadRuntime() {
+  let now = 0;
+  const timers = new Map();
+  let timerId = 0;
+  class ControlledDate extends Date { static now() { return now; } }
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   const elements = new Map();
@@ -82,7 +89,7 @@ function loadRuntime() {
     AbortController,
     Audio: class { play() { return { catch() {} }; } pause() {} },
     Blob: class {},
-    Date,
+    Date: ControlledDate,
     JSON,
     Math,
     SpeechSynthesisUtterance,
@@ -93,13 +100,168 @@ function loadRuntime() {
     requestAnimationFrame() {},
     setInterval() { return 1; },
     clearInterval() {},
-    setTimeout() { return 1; },
-    clearTimeout() {},
+    setTimeout(callback, delay) { timers.set(++timerId, { callback, due: now + delay }); return timerId; },
+    clearTimeout(id) { timers.delete(id); },
     window: { addEventListener() {}, matchMedia() { return { matches: false }; }, speechSynthesis }
   };
   context.globalThis = context;
   vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, attachGestureListeners, checkMatch, isMovingTowardTarget: typeof isMovingTowardTarget === 'undefined' ? undefined : isMovingTowardTarget, gestureTargetCenter: typeof gestureTargetCenter === 'undefined' ? undefined : gestureTargetCenter, applyPromptLevel, PROMPT_LEVELS, speak, state };`, context);
-  return { api: context.__testApi, getElement, selectedSkill, spoken };
+  vm.runInNewContext('Object.assign(globalThis.__testApi, { buildScene, SkillSceneState, buildPersistentStateHTML });', context);
+  return { api: context.__testApi, getElement, selectedSkill, spoken,
+    advance(ms) {
+      now += ms;
+      for (const [id, timer] of [...timers]) if (timer.due <= now) { timers.delete(id); timer.callback(); }
+    }
+  };
+}
+
+function laundryGesture(stepId, kind = 'mouse') {
+  const runtime = loadRuntime();
+  const { api } = runtime;
+  const listeners = new Map();
+  const stage = createElement();
+  const item = createElement();
+  const target = createElement();
+  const partner = createElement();
+  item.style.left = '0px'; item.style.top = '0px';
+  item.getBoundingClientRect = () => {
+    const left = parseFloat(item.style.left) || 0, top = parseFloat(item.style.top) || 0;
+    return { left, top, right: left + 100, bottom: top + 100, width: 100, height: 100 };
+  };
+  target.getBoundingClientRect = () => ({ left: 200, top: 0, right: 400, bottom: 200, width: 200, height: 200 });
+  const area = createElement();
+  area.getBoundingClientRect = () => ({ left: 0, top: 0, right: 750, bottom: 380, width: 750, height: 380 });
+  area.querySelector = selector => ({ '.step-stage': stage, '.interactive-target': item, '.draggable-item': item, '.drag-target': target, '[data-gesture-target]': target, '.laundry-partner-hand': partner })[selector] || null;
+  area.addEventListener = (type, callback, options) => {
+    listeners.set(type, callback);
+    options?.signal?.addEventListener('abort', () => listeners.delete(type));
+  };
+  api.state.currentLevel = 0; api.state.currentStep = stepId - 1;
+  api.StepProgress.reset(api.LEVELS[0].steps[stepId - 1]);
+  api.attachGestureListeners(api.LEVELS[0].steps[stepId - 1], area);
+  const dispatch = (phase, x, y = 50) => {
+    const type = kind === 'mouse' ? { start: 'mousedown', move: 'mousemove', end: 'mouseup', cancel: 'mouseleave' }[phase] : { start: 'touchstart', move: 'touchmove', end: 'touchend', cancel: 'touchcancel' }[phase];
+    listeners.get(type)?.({ clientX: x, clientY: y, touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }], preventDefault() {} });
+  };
+  return { ...runtime, item, partner, stage, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
+}
+
+test('laundry renders seven scenes with one main target and passive delayed demos', () => {
+  const { api } = loadRuntime();
+  for (let id = 1; id <= 7; id++) {
+    const scene = api.buildScene('laundry', api.LEVELS[0].steps[id - 1]);
+    assert.match(scene, new RegExp(`demo-element demo-laundry-${id}`));
+    assert.equal((scene.match(/interactive-target/g) || []).length, 1);
+    assert.match(scene, /aria-hidden="true"/);
+    assert.match(scene, /assets\/laundry\//);
+    assert.doesNotMatch(scene, /class="[^"]*interactive-target[^"]*demo-element/);
+  }
+  const scene = id => api.buildScene('laundry', api.LEVELS[0].steps[id - 1]);
+  assert.match(scene(1), /data-target="basin"/);
+  assert.match(scene(2), /data-item="faucet"/);
+  assert.match(scene(3), /data-item="detergent"/);
+  assert.match(scene(5), /laundry-auto-flip/);
+  assert.match(scene(6), /data-target="water"/);
+  assert.match(scene(7), /laundry-partner-hand/);
+  assert.equal(api.LEVELS[0].steps[6].gesture, 'push-inward');
+});
+
+test('laundry persistent state requires real prior completion and keeps clean wet and rinsed outcomes', () => {
+  const { api } = loadRuntime();
+  const states = ['in-basin', 'wet', 'soapy', 'front-clean', 'back-clean', 'rinsed', 'wrung'];
+  for (let id = 1; id <= 7; id++) {
+    assert.doesNotMatch(api.buildPersistentStateHTML('laundry', id + 1), new RegExp(`state-laundry-${states[id - 1]}`));
+    api.SkillSceneState.complete('laundry', id);
+    assert.match(api.buildPersistentStateHTML('laundry', id + 1), new RegExp(`state-laundry-${states[id - 1]}`));
+    assert.doesNotMatch(api.buildPersistentStateHTML('laundry', id), new RegExp(`state-laundry-${states[id - 1]}`));
+  }
+  const final = api.buildPersistentStateHTML('laundry', 8);
+  assert.match(final, /state-laundry-in-basin/);
+  assert.match(final, /state-laundry-rinsed/);
+  assert.doesNotMatch(final, /state-laundry-soapy/);
+});
+
+test('laundry back remains dirty until its own rubbing is completed', () => {
+  const { api } = loadRuntime();
+  api.SkillSceneState.complete('laundry', 4);
+  assert.match(api.buildScene('laundry', api.LEVELS[0].steps[4]), /shirt-dirty\.png/);
+  api.SkillSceneState.complete('laundry', 5);
+  assert.match(api.buildScene('laundry', api.LEVELS[0].steps[5]), /shirt-clean\.png/);
+});
+
+for (const kind of ['mouse', 'touch']) {
+  test(`laundry ${kind} drag accepts 35 percent basin overlap and rejects less`, () => {
+    for (const [endX, expected] of [[184, false], [185, true]]) {
+      const r = laundryGesture(1, kind);
+      r.dispatch('start', 50); r.dispatch('move', endX); r.dispatch('end', endX);
+      assert.equal(r.complete(), expected);
+    }
+  });
+  test(`laundry ${kind} taps require the actual faucet or detergent and filling animation`, () => {
+    for (const id of [2, 3]) {
+      const r = laundryGesture(id, kind);
+      r.dispatch('start', 600); r.dispatch('end', 600);
+      assert.equal(r.complete(), false);
+      r.dispatch('start', 50); r.dispatch('end', 50);
+      assert.equal(r.complete(), false);
+      r.advance(1200);
+      assert.equal(r.complete(), true);
+    }
+  });
+  test(`laundry ${kind} rubbing requires three horizontal strokes on the hand after automatic flip`, () => {
+    for (const id of [4, 5]) {
+      const r = laundryGesture(id, kind);
+      const stroke = (x = 100, y = 50) => { r.dispatch('start', 50); r.dispatch('move', x, y); r.dispatch('end', x, y); };
+      if (id === 5) { stroke(); assert.equal(r.api.StepProgress.current, 0); r.advance(900); }
+      stroke(50, 100); stroke(89);
+      assert.equal(r.api.StepProgress.current, 0);
+      stroke(); stroke(); assert.equal(r.complete(), false);
+      stroke(); assert.equal(r.complete(), true);
+    }
+  });
+  test(`laundry ${kind} rinse needs two continuous seconds and resets outside water or on cancel`, () => {
+    const r = laundryGesture(6, kind);
+    r.dispatch('start', 50); r.dispatch('move', 250);
+    r.advance(1999); assert.equal(r.complete(), false);
+    r.dispatch('move', 50); r.advance(1); assert.equal(r.complete(), false);
+    r.dispatch('move', 250); r.advance(1000); r.dispatch('cancel', 250);
+    r.advance(2000); assert.equal(r.complete(), false);
+    r.dispatch('start', 50); r.dispatch('move', 250); r.advance(1999);
+    assert.equal(r.complete(), false);
+    r.advance(1); assert.equal(r.complete(), true);
+  });
+  test(`laundry ${kind} short water drop cannot bypass dwell and aborted step cancels timer`, () => {
+    const r = laundryGesture(6, kind);
+    r.dispatch('start', 50); r.dispatch('move', 250); r.dispatch('end', 250);
+    assert.equal(r.complete(), false);
+    r.api.state.stepAbortController.abort(); r.advance(3000);
+    assert.equal(r.complete(), false);
+  });
+  test(`laundry ${kind} regrabbing during rinse starts at the current shirt position`, () => {
+    const r = laundryGesture(6, kind);
+    r.dispatch('start', 50); r.dispatch('move', 250); r.dispatch('end', 250);
+    r.advance(1000);
+    r.dispatch('start', 250); r.dispatch('move', 260);
+    assert.equal(r.item.style.left, '210px');
+    r.advance(1999); assert.equal(r.complete(), false);
+    r.advance(1); assert.equal(r.complete(), true);
+  });
+  test(`laundry ${kind} completed rinse cannot be moved or reset while the finger is still held`, () => {
+    const r = laundryGesture(6, kind);
+    r.dispatch('start', 50); r.dispatch('move', 250); r.advance(2000);
+    assert.equal(r.complete(), true);
+    const left = r.item.style.left;
+    r.dispatch('move', 50); r.dispatch('end', 50); r.dispatch('cancel', 50);
+    assert.equal(r.item.style.left, left);
+  });
+  test(`laundry ${kind} inward hand drag mirrors the second hand and rejects outward or short gestures`, () => {
+    const r = laundryGesture(7, kind);
+    for (const x of [0, 89]) { r.dispatch('start', 50); r.dispatch('move', x); r.dispatch('end', x); assert.equal(r.complete(), false); }
+    r.dispatch('start', 50); r.dispatch('move', 100);
+    assert.match(r.partner.style.transform, /translate\(-50px/);
+    r.dispatch('end', 100); assert.equal(r.complete(), true);
+    assert.equal(r.spoken.at(-1).text, '衣服洗干净啦');
+  });
 }
 
 function createGestureArea() {

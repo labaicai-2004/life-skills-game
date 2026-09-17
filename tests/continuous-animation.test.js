@@ -46,6 +46,19 @@ function createElement() {
   };
 }
 
+function installLaundryDragSurface(elements) {
+  const item = createElement(), target = createElement();
+  item.style.left = '0px'; item.style.top = '0px';
+  item.getBoundingClientRect = () => {
+    const left = parseFloat(item.style.left), top = parseFloat(item.style.top);
+    return {left,top,right:left+100,bottom:top+100,width:100,height:100};
+  };
+  target.getBoundingClientRect = () => ({left:200,top:0,right:400,bottom:200,width:200,height:200});
+  const area = elements['interaction-area'];
+  area.getBoundingClientRect = () => ({left:0,top:0,right:750,bottom:380,width:750,height:380});
+  area.querySelector = selector => selector === '.step-stage' ? elements.scene.lastChild : selector === '.interactive-target' ? item : selector === '.drag-target' ? target : null;
+}
+
 function getKeyframeBody(source, name) {
   const marker = `@keyframes ${name}`;
   const markerIndex = source.indexOf(marker);
@@ -131,7 +144,7 @@ function loadAnimationRuntime(sourceMutation = source => source) {
     'selected-skill': createElement()
   };
   elements['selected-phase'].dataset.phase = 'intervention';
-  elements['selected-skill'].dataset.skill = 'brush';
+  elements['selected-skill'].dataset.skill = 'laundry';
   const document = {
     addEventListener() {},
     querySelector(selector) {
@@ -530,7 +543,7 @@ test('real mouse completion after demonstration pause adds one step-success even
   api.ResearchMode.sessionNum = 3;
   api.setTrainingMode(api.TrainingModes.TEACHING);
   api.promptState.enabled = false;
-  elements['interaction-area'].querySelector = selector => selector === '.step-stage' ? elements.scene.lastChild : null;
+  installLaundryDragSurface(elements);
   api.startLevel(0);
   const beforeEvents = api.UnifiedDataManager.events.length;
   const beforeRecords = JSON.parse(localStorage.getItem('researchRecords')).length;
@@ -541,7 +554,8 @@ test('real mouse completion after demonstration pause adds one step-success even
   runtime.advanceClock(1650);
   elements['interaction-area'].dispatch('mousedown', { clientX: 20, clientY: 20 });
   assert.equal(elements.scene.lastChild.classList.contains('demo-paused'), true);
-  elements['interaction-area'].dispatch('mouseup', { clientX: 20, clientY: 20 });
+  elements['interaction-area'].dispatch('mousemove', { clientX: 220, clientY: 20 });
+  elements['interaction-area'].dispatch('mouseup', { clientX: 220, clientY: 20 });
 
   const newEvents = api.UnifiedDataManager.events.slice(beforeEvents);
   const records = JSON.parse(localStorage.getItem('researchRecords'));
@@ -555,7 +569,7 @@ test('real mouse completion after demonstration pause adds one step-success even
     'taskId', 'completionStatus', 'promptLevel', 'trainingMode',
     'responseTimeMs', 'errors', 'timestamp'
   ].sort());
-  assert.equal(record.taskId, 'brush');
+  assert.equal(record.taskId, 'laundry');
 });
 
 test('Level 4 prompt auto-completion pauses the running demonstration before success feedback', () => {
@@ -592,14 +606,15 @@ test('repeated valid mouse input cannot write a second success event or research
   const { api, elements, localStorage } = runtime;
   const area = elements['interaction-area'];
   api.promptState.enabled = false;
-  area.querySelector = selector => selector === '.step-stage' ? elements.scene.lastChild : null;
+  installLaundryDragSurface(elements);
   api.startLevel(0);
   const beforeEvents = api.UnifiedDataManager.events.length;
   const beforeRecords = JSON.parse(localStorage.getItem('researchRecords') || '[]').length;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     area.dispatch('mousedown', { clientX: 20, clientY: 20 });
-    area.dispatch('mouseup', { clientX: 20, clientY: 20 });
+    area.dispatch('mousemove', { clientX: 220, clientY: 20 });
+    area.dispatch('mouseup', { clientX: 220, clientY: 20 });
   }
 
   const newEvents = api.UnifiedDataManager.events.slice(beforeEvents);
@@ -613,7 +628,7 @@ test('STEP_STATE_KEYS maps all three skills to their seven persistent-state keys
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   assert.equal(JSON.stringify(runtime.api.STEP_STATE_KEYS), JSON.stringify({
-    brush: ['toothbrushFound', 'toothpasteApplied', 'toothbrushPickedUp', 'leftBrushed', 'rightBrushed', 'rinsed', 'mouthWiped'],
+    laundry: ['shirtInBasin', 'shirtWet', 'detergentAdded', 'frontRubbed', 'backRubbed', 'shirtRinsed', 'shirtWrung'],
     wash: ['faucetOn', 'waterCollected', 'towelWet', 'towelWrung', 'faceWashed', 'towelRinsed', 'faucetOff'],
     dress: ['jacketFound', 'frontIdentified', 'leftSleeveOn', 'rightSleeveOn', 'jacketPulledDown', 'zipperClosed', 'collarAdjusted']
   }));
@@ -624,14 +639,14 @@ test('SkillSceneState resets, completes mapped steps, and reports only completed
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { SkillSceneState } = runtime.api;
   SkillSceneState.reset();
-  assert.equal(SkillSceneState.has('brush', 'toothpasteApplied'), false);
-  SkillSceneState.complete('brush', 2);
+  assert.equal(SkillSceneState.has('laundry', 'shirtWet'), false);
+  SkillSceneState.complete('laundry', 2);
   SkillSceneState.complete('wash', 5);
-  assert.equal(SkillSceneState.has('brush', 'toothpasteApplied'), true);
+  assert.equal(SkillSceneState.has('laundry', 'shirtWet'), true);
   assert.equal(SkillSceneState.has('wash', 'faceWashed'), true);
   assert.equal(SkillSceneState.has('dress', 'zipperClosed'), false);
   SkillSceneState.reset();
-  assert.equal(SkillSceneState.has('brush', 'toothpasteApplied'), false);
+  assert.equal(SkillSceneState.has('laundry', 'shirtWet'), false);
   assert.equal(SkillSceneState.has('wash', 'faceWashed'), false);
 });
 
@@ -639,9 +654,9 @@ test('starting a level and returning home reset persistent skill state', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api } = runtime;
-  api.SkillSceneState.complete('brush', 2);
+  api.SkillSceneState.complete('laundry', 2);
   api.startLevel(1);
-  assert.equal(api.SkillSceneState.has('brush', 'toothpasteApplied'), false);
+  assert.equal(api.SkillSceneState.has('laundry', 'shirtWet'), false);
   api.SkillSceneState.complete('wash', 1);
   api.goHome();
   assert.equal(api.SkillSceneState.has('wash', 'faucetOn'), false);
@@ -658,27 +673,16 @@ test('handleStepSuccess stores the current level step in persistent state', () =
   assert.equal(api.SkillSceneState.has('dress', 'zipperClosed'), true);
 });
 
-test('persistent state markup includes only prior indicators and stage markup receives level and step', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
-  const { api } = runtime;
-  api.SkillSceneState.reset();
-  api.SkillSceneState.complete('brush', 2);
-  api.SkillSceneState.complete('brush', 4);
-  api.SkillSceneState.complete('brush', 5);
-  const priorState = api.buildPersistentStateHTML('brush', 6);
-  assert.match(api.buildPersistentStateHTML('brush', 3), /state-paste-on-brush/);
-  assert.doesNotMatch(priorState, /state-paste-on-brush/);
-  assert.match(priorState, /state-clean-both/);
-  assert.doesNotMatch(api.buildPersistentStateHTML('brush', 2), /state-paste-on-brush/);
-  assert.match(priorState, /persistent-state/);
-  assert.match(priorState, /aria-hidden="true"/);
-  const stage = api.stepStageHTML('<div class="objects"></div>', '<div class="guide"></div>', 'brush', 6);
-  assert.match(stage, /data-level="brush"/);
-  assert.match(stage, /data-step="6"/);
-  assert.doesNotMatch(stage, /state-paste-on-brush/);
-  assert.match(stage, /objects/);
-  assert.match(stage, /guide/);
+test('laundry stage markup contains only prior completed indicators', () => {
+  const { api } = loadAnimationRuntime();
+  api.SkillSceneState.complete('laundry', 2);
+  assert.doesNotMatch(api.buildPersistentStateHTML('laundry', 2), /state-laundry-wet/);
+  assert.match(api.buildPersistentStateHTML('laundry', 3), /state-laundry-wet/);
+  const stage = api.stepStageHTML('<div class="objects"></div>', '<div class="guide"></div>', 'laundry', 3);
+  assert.match(stage, /data-level="laundry"/);
+  assert.match(stage, /data-step="3"/);
+  assert.match(stage, /state-laundry-wet/);
+  assert.match(stage, /aria-hidden="true"/);
 });
 
 test('found, picked-up, rinsed, and jacket-found states render only in their intended later steps', () => {
@@ -687,15 +691,15 @@ test('found, picked-up, rinsed, and jacket-found states render only in their int
   const { SkillSceneState, buildPersistentStateHTML } = runtime.api;
   const cases = [
     {
-      levelId: 'brush', stepId: 1, className: 'state-toothbrush-found',
-      visibleSteps: [2, 3], hiddenSteps: [1, 4]
+      levelId: 'laundry', stepId: 1, className: 'state-laundry-in-basin',
+      visibleSteps: [2, 7], hiddenSteps: [1]
     },
     {
-      levelId: 'brush', stepId: 3, className: 'state-toothbrush-ready',
-      visibleSteps: [4, 5], hiddenSteps: [3, 6]
+      levelId: 'laundry', stepId: 3, className: 'state-laundry-soapy',
+      visibleSteps: [4, 5], hiddenSteps: [3]
     },
     {
-      levelId: 'brush', stepId: 6, className: 'state-mouth-rinsed',
+      levelId: 'laundry', stepId: 6, className: 'state-laundry-rinsed',
       visibleSteps: [7], hiddenSteps: [6]
     },
     {
@@ -726,143 +730,55 @@ test('found, picked-up, rinsed, and jacket-found states render only in their int
   }
 });
 
-test('brushing scenes provide seven delayed, non-interactive demonstration markers', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
-  const { api } = runtime;
+test('laundry scenes provide seven delayed, non-interactive demonstration markers', () => {
+  const { api } = loadAnimationRuntime();
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-
-  for (let stepId = 1; stepId <= 7; stepId++) {
-    const scene = api.buildScene('brush', api.LEVELS[0].steps[stepId - 1]);
-    assert.match(scene, new RegExp(`demo-element demo-brush-${stepId}`));
+  for (let id = 1; id <= 7; id++) {
+    const scene = api.buildScene('laundry', api.LEVELS[0].steps[id - 1]);
+    assert.match(scene, new RegExp(`demo-element demo-laundry-${id}`));
     assert.match(scene, /aria-hidden="true"/);
-    assert.match(source, new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-brush-${stepId}\\s*\\{`));
-  }
-
-  assert.match(source, /\.demo-element, \.persistent-state\s*\{\s*pointer-events:none;/);
-  for (const keyframe of [
-    'demoFindPulse', 'demoPasteSqueeze', 'demoPasteDrop', 'demoPickUp',
-    'demoBrushLeft', 'demoBrushRight', 'demoCupTilt', 'demoWipeHorizontal', 'cleanSparkle'
-  ]) {
-    assert.match(source, new RegExp(`@keyframes ${keyframe}`));
+    assert.match(source, new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-laundry-${id}\\s*\\{`));
+    assert.equal((scene.match(/interactive-target/g) || []).length, 1);
   }
 });
 
-test('brushing demonstration cycles stay within the 1.4s to 2.4s range', () => {
+test('laundry rinse demonstration holds at the water for at least two seconds', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  for (let stepId = 1; stepId <= 7; stepId++) {
-    const match = source.match(new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-brush-${stepId}\\s*\\{\\s*animation:[^;]*?([\\d.]+)s`));
-    assert.notEqual(match, null, `demo-brush-${stepId} needs a running animation`);
-    const duration = Number(match[1]);
-    assert.ok(duration >= 1.4 && duration <= 2.4, `demo-brush-${stepId} duration ${duration}s is outside 1.4s-2.4s`);
+  const frames = parsePixelKeyframePath(source, 'demoLaundryRinse', {'--laundry-arrive-x':'200px','--laundry-arrive-y':'50px'});
+  const held = frames.filter(frame => frame.translateX === 200 && frame.translateY === 50 && frame.opacity > 0);
+  const duration = Number(source.match(/\.demo-laundry-6 \{ animation:demoLaundryRinse ([\d.]+)s/)[1]);
+  assert.ok((held.at(-1).percentage - held[0].percentage) / 100 * duration >= 2);
+});
+
+test('laundry demonstrations animate separate ghosts and leave the real targets still', () => {
+  const { api } = loadAnimationRuntime();
+  for (let id = 1; id <= 7; id++) {
+    const scene = api.buildScene('laundry', api.LEVELS[0].steps[id - 1]);
+    assert.match(scene, new RegExp(`demo-element demo-laundry-${id} demo-ghost`));
+    assert.doesNotMatch(scene, /class="[^"]*interactive-target[^"]*demo-element/);
   }
 });
 
-test('brushing drag demonstrations animate a separate ghost and leave the real draggable item still', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
-  const { api } = runtime;
-
-  for (const stepId of [4, 5, 7]) {
-    const scene = api.buildScene('brush', api.LEVELS[0].steps[stepId - 1]);
-    assert.match(scene, new RegExp(`demo-element demo-brush-${stepId} demo-ghost`));
-    assert.doesNotMatch(scene, /class="[^"]*draggable-item[^"]*demo-element/);
-  }
+test('laundry drag demonstrations derive arrival from the real item and destination geometry', () => {
+  const { api } = loadAnimationRuntime();
+  const stage = createElement();
+  const item = { getBoundingClientRect: () => ({left:30,top:40,width:100,height:80}) };
+  const target = { getBoundingClientRect: () => ({left:220,top:160,width:200,height:180}) };
+  stage.querySelector = selector => selector === '.laundry-shirt-start' ? item : selector === '.drag-target' ? target : null;
+  api.AnimationController.configureStagePaths(stage);
+  assert.equal(stage.style.getPropertyValue('--laundry-arrive-x'), '240px');
+  assert.equal(stage.style.getPropertyValue('--laundry-arrive-y'), '170px');
 });
 
-test('brushing step 4 and 5 ghosts reach their separate mouth zones before vertical brushing', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
-  const { api } = runtime;
-  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const sceneWidth = 750;
-  const sceneHeight = 380;
-  const variables = stagePathVariables(runtime.api, sceneWidth, sceneHeight);
-  const face = {
-    left: sceneWidth * 0.5 - 120,
-    top: sceneHeight * 0.05,
-    width: 240,
-    height: 280
-  };
-  const ghost = { width: 260, height: 190 };
-  const brushHead = { left: 95, top: 0, width: 70, height: 70 };
-  const animationName = stepId => {
-    const match = source.match(new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-brush-${stepId}\\s*\\{\\s*animation:([A-Za-z0-9_-]+)`));
-    assert.notEqual(match, null, `demo-brush-${stepId} animation missing`);
-    return match[1];
-  };
-  const overlapRatio = (a, b) => {
-    const overlapWidth = Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left));
-    const overlapHeight = Math.max(0, Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top));
-    return (overlapWidth * overlapHeight) / (a.width * a.height);
-  };
-  const cases = [
-    { stepId: 4, side: 'right:5%', zonePercent: 28, zoneFraction: 0.28, originX: sceneWidth * 0.95 - ghost.width },
-    { stepId: 5, side: 'left:5%', zonePercent: 72, zoneFraction: 0.72, originX: sceneWidth * 0.05 }
-  ];
-
-  const names = [];
-  for (const current of cases) {
-    const scene = api.buildScene('brush', api.LEVELS[0].steps[current.stepId - 1]);
-    assert.match(scene, new RegExp(`bottom:5%;${current.side};z-index:10;" class="draggable-item`));
-    assert.match(scene, /top:5%;left:50%;transform:translateX\(-50%\);z-index:2;" class="drag-target" data-target="mouth"/);
-    assert.match(scene, new RegExp(`drop-zone" style="left:${current.zonePercent}%;bottom:10%;width:70px;height:70px`));
-
-    const zone = {
-      left: face.left + face.width * current.zoneFraction - 35,
-      top: face.top + face.height * 0.9 - 70,
-      width: 70,
-      height: 70
-    };
-    const originY = sceneHeight * 0.95 - ghost.height;
-    const name = animationName(current.stepId);
-    names.push(name);
-    const path = parsePixelKeyframePath(source, name, variables);
-    const headAt = point => ({
-      left: current.originX + brushHead.left + point.translateX,
-      top: originY + brushHead.top + point.translateY,
-      width: brushHead.width,
-      height: brushHead.height
-    });
-    const arrivalIndex = path.findIndex(point => point.opacity > 0 && overlapRatio(headAt(point), zone) >= 0.35);
-    assert.notEqual(arrivalIndex, -1, `brush step ${current.stepId} must reach its ${current.zoneFraction === 0.28 ? 'left' : 'right'} mouth zone`);
-    const arrival = path[arrivalIndex];
-    const verticalActions = path.slice(arrivalIndex + 1).filter(point =>
-      point.opacity > 0 &&
-      point.translateX === arrival.translateX &&
-      point.translateY !== arrival.translateY &&
-      overlapRatio(headAt(point), zone) >= 0.35
-    );
-    assert.ok(verticalActions.length >= 2, `brush step ${current.stepId} needs two in-zone vertical motions after arrival`);
-    assert.ok(new Set(verticalActions.map(point => point.translateY)).size >= 2, `brush step ${current.stepId} vertical positions must differ`);
+test('laundry continuity indicators appear only after their required completed steps', () => {
+  const { api } = loadAnimationRuntime();
+  const names = ['in-basin','wet','soapy','front-clean','back-clean','rinsed','wrung'];
+  for (let id = 1; id <= 7; id++) {
+    assert.doesNotMatch(api.buildPersistentStateHTML('laundry', id + 1), new RegExp('state-laundry-' + names[id - 1]));
+    api.SkillSceneState.complete('laundry', id);
+    assert.match(api.buildPersistentStateHTML('laundry', id + 1), new RegExp('state-laundry-' + names[id - 1]));
   }
-
-  assert.notEqual(names[0], names[1], 'left and right brushing ghosts need distinct paths');
-  assert.equal((source.match(/>\s*0\.35/g) || []).length, 2, 'real touch and mouse drag thresholds must remain 35%');
-});
-
-test('brushing continuity indicators appear only after their required completed steps', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
-  const { SkillSceneState, buildPersistentStateHTML } = runtime.api;
-  SkillSceneState.reset();
-
-  assert.doesNotMatch(buildPersistentStateHTML('brush', 3), /state-paste-on-brush/);
-  SkillSceneState.complete('brush', 2);
-  assert.match(buildPersistentStateHTML('brush', 3), /state-paste-on-brush/);
-  assert.doesNotMatch(buildPersistentStateHTML('brush', 6), /state-paste-on-brush/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('brush', 5), /state-clean-left/);
-  SkillSceneState.complete('brush', 4);
-  assert.match(buildPersistentStateHTML('brush', 5), /state-clean-left/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('brush', 6), /state-clean-both/);
-  SkillSceneState.complete('brush', 5);
-  assert.match(buildPersistentStateHTML('brush', 6), /state-clean-both/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('brush', 6), /state-final-clean-mouth/);
-  assert.match(buildPersistentStateHTML('brush', 7), /state-final-clean-mouth/);
-  assert.match(buildPersistentStateHTML('brush', 7), /aria-hidden="true"/);
+  assert.doesNotMatch(api.buildPersistentStateHTML('laundry', 7), /state-laundry-soapy/);
 });
 
 test('washing scenes provide seven delayed, non-interactive demonstration markers', () => {
@@ -968,23 +884,16 @@ test('washing continuity indicators appear only after their required completed s
   assert.match(buildPersistentStateHTML('wash', 7), /aria-hidden="true"/);
 });
 
-test('prompt highlighting cannot reveal the final mouth sparkle before real brushing completion', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
-  const { api, elements } = runtime;
-  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+test('prompt highlighting cannot reveal laundry sparkle before real completion', () => {
+  const { api, elements } = loadAnimationRuntime();
   const stage = createElement();
   elements['interaction-area'].querySelector = selector => selector === '.step-stage' ? stage : null;
   api.state.currentLevel = 0;
   api.state.currentStep = 6;
-
   api.applyPromptLevel(api.PROMPT_LEVELS.VISUAL.level);
-  assert.equal(elements['interaction-area'].classList.contains('success'), true);
-  assert.equal(stage.classList.contains('brush-final-clean'), false);
-  assert.doesNotMatch(source, /#interaction-area\.success\s+\.state-final-clean-mouth/);
-
+  assert.equal(stage.classList.contains('laundry-complete'), false);
   api.handleStepSuccess(elements['interaction-area']);
-  assert.equal(stage.classList.contains('brush-final-clean'), true);
+  assert.equal(stage.classList.contains('laundry-complete'), true);
 });
 
 test('dressing scenes provide seven delayed, non-interactive demonstration markers', () => {
