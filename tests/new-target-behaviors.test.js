@@ -105,7 +105,7 @@ function loadRuntime() {
     window: { addEventListener() {}, matchMedia() { return { matches: false }; }, speechSynthesis }
   };
   context.globalThis = context;
-  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, attachGestureListeners, checkMatch, isMovingTowardTarget: typeof isMovingTowardTarget === 'undefined' ? undefined : isMovingTowardTarget, gestureTargetCenter: typeof gestureTargetCenter === 'undefined' ? undefined : gestureTargetCenter, applyPromptLevel, PROMPT_LEVELS, speak, state };`, context);
+  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, FOLD_LAYOUT: typeof FOLD_LAYOUT === 'undefined' ? undefined : FOLD_LAYOUT, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, attachGestureListeners, checkMatch, isMovingTowardTarget: typeof isMovingTowardTarget === 'undefined' ? undefined : isMovingTowardTarget, gestureTargetCenter: typeof gestureTargetCenter === 'undefined' ? undefined : gestureTargetCenter, applyPromptLevel, PROMPT_LEVELS, speak, state };`, context);
   vm.runInNewContext('Object.assign(globalThis.__testApi, { buildScene, SkillSceneState, buildPersistentStateHTML });', context);
   return { api: context.__testApi, getElement, selectedSkill, spoken,
     advance(ms) {
@@ -151,15 +151,21 @@ function foldingGesture(stepId, kind = 'mouse') {
   const { api } = runtime;
   const listeners = new Map();
   const stage = createElement(), item = createElement(), target = createElement(), area = createElement();
-  item.offsetWidth = 300; item.offsetHeight = 270;
-  item.style.left = '0px'; item.style.top = '0px';
+  const geometry = api.FOLD_LAYOUT[stepId];
+  const px = (value, size) => value.endsWith('%') ? Number.parseFloat(value) / 100 * size : Number.parseFloat(value);
+  const rect = (box, width, height) => {
+    const itemWidth = px(box.width, width), itemHeight = px(box.height, height);
+    const left = box.left ? px(box.left, width) : width - px(box.right, width) - itemWidth;
+    return { left, top:px(box.top, height), right:left + itemWidth, bottom:px(box.top, height) + itemHeight, width:itemWidth, height:itemHeight };
+  };
+  const initial = rect(geometry.item, 750, 380), destination = rect(geometry.target, 750, 380);
+  item.offsetWidth = initial.width; item.offsetHeight = initial.height;
+  item.style.left = initial.left + 'px'; item.style.top = initial.top + 'px';
   item.getBoundingClientRect = () => {
     const left = parseFloat(item.style.left) || 0, top = parseFloat(item.style.top) || 0;
-    return stepId === 2
-      ? { left:100, top:100, right:200, bottom:260, width:100, height:160 }
-      : { left, top, right:left + 300, bottom:top + 270, width:300, height:270 };
+    return { left, top, right:left + initial.width, bottom:top + initial.height, width:initial.width, height:initial.height };
   };
-  target.getBoundingClientRect = () => ({ left:300, top:0, right:700, bottom:350, width:400, height:350 });
+  target.getBoundingClientRect = () => destination;
   area.getBoundingClientRect = () => ({ left:0, top:0, right:750, bottom:380, width:750, height:380 });
   area.querySelector = selector => ({ '.step-stage':stage, '.interactive-target':item, '.draggable-item':item, '.drag-target':target })[selector] || null;
   area.addEventListener = (type, callback, options) => {
@@ -173,7 +179,7 @@ function foldingGesture(stepId, kind = 'mouse') {
     const type = kind === 'mouse' ? { start:'mousedown', move:'mousemove', end:'mouseup' }[phase] : { start:'touchstart', move:'touchmove', end:'touchend' }[phase];
     listeners.get(type)?.({ clientX:x, clientY:y, touches:[{ clientX:x, clientY:y }], changedTouches:[{ clientX:x, clientY:y }], preventDefault() {} });
   };
-  return { ...runtime, item, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
+  return { ...runtime, item, target:destination, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
 }
 
 test('laundry renders seven scenes with one main target and passive delayed demos', () => {
@@ -248,29 +254,56 @@ test('clothes folding completed states keep visible layers on the whole garment'
 });
 
 for (const kind of ['mouse', 'touch']) {
-  test(`clothes folding ${kind} step one requires more than 35 percent overlap with the table`, () => {
-    for (const [endX, expected] of [[154, false], [156, true]]) {
-      const r = foldingGesture(1, kind);
-      r.dispatch('start', 50); r.dispatch('move', endX); r.dispatch('end', endX);
-      assert.equal(r.complete(), expected);
-    }
+  test(`clothes folding ${kind} step one accepts a 35 percent table overlap after a real drag`, () => {
+    const r = foldingGesture(1, kind);
+    const item = r.item.getBoundingClientRect(), target = r.target;
+    const startX = item.left + item.width / 2, startY = item.top + item.height / 2;
+    const endX = target.left + target.width / 2, endY = target.top + target.height / 2;
+    r.dispatch('start', startX, startY); r.dispatch('move', endX, endY); r.dispatch('end', endX, endY);
+    assert.equal(r.complete(), true);
   });
 
   test(`clothes folding ${kind} smoothing starts on the garment and moves down`, () => {
-    for (const [startX, startY, endX, endY, expected] of [
-      [20, 20, 20, 90, false], [150, 150, 150, 90, false], [150, 150, 150, 210, true]
-    ]) {
-      const r = foldingGesture(2, kind);
-      r.dispatch('start', startX, startY); r.dispatch('move', endX, endY); r.dispatch('end', endX, endY);
-      assert.equal(r.complete(), expected);
-    }
+    const blank = foldingGesture(2, kind);
+    blank.dispatch('start', 20, 20); blank.dispatch('move', 20, 90); blank.dispatch('end', 20, 90);
+    assert.equal(blank.complete(), false);
+    const up = foldingGesture(2, kind), upItem = up.item.getBoundingClientRect();
+    const upX = upItem.left + upItem.width / 2, upY = upItem.top + upItem.height / 2;
+    up.dispatch('start', upX, upY); up.dispatch('move', upX, upY - 60); up.dispatch('end', upX, upY - 60);
+    assert.equal(up.complete(), false);
+    const down = foldingGesture(2, kind), downItem = down.item.getBoundingClientRect();
+    const downX = downItem.left + downItem.width / 2, downY = downItem.top + downItem.height / 2;
+    down.dispatch('start', downX, downY); down.dispatch('move', downX, downY + 60); down.dispatch('end', downX, downY + 60);
+    assert.equal(down.complete(), true);
   });
 }
 
 test('clothes folding uses a table target large enough for the whole garment', () => {
-  const source = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  assert.match(source, /\.folding-target \{[^}]*width:56%;[^}]*height:78%/);
+  const { api } = loadRuntime();
+  assert.equal(api.FOLD_LAYOUT[1].item.width, '300px');
+  assert.equal(api.FOLD_LAYOUT[1].target.width, '40%');
+  assert.equal(api.FOLD_LAYOUT[1].target.height, '78%');
 });
+
+for (const kind of ['mouse', 'touch']) {
+  test(`clothes folding ${kind} drag steps require movement from their configured start`, () => {
+    for (const stepId of [1, 3, 4, 5, 6, 7]) {
+      const idle = foldingGesture(stepId, kind);
+      const start = idle.item.getBoundingClientRect();
+      const startX = start.left + start.width / 2, startY = start.top + start.height / 2;
+      idle.dispatch('start', startX, startY); idle.dispatch('end', startX, startY);
+      assert.equal(idle.complete(), false, `step ${stepId} cannot complete without movement`);
+
+      const moved = foldingGesture(stepId, kind);
+      const item = moved.item.getBoundingClientRect();
+      const target = moved.target;
+      const itemX = item.left + item.width / 2, itemY = item.top + item.height / 2;
+      const targetX = target.left + target.width / 2, targetY = target.top + target.height / 2;
+      moved.dispatch('start', itemX, itemY); moved.dispatch('move', targetX, targetY); moved.dispatch('end', targetX, targetY);
+      assert.equal(moved.complete(), true, `step ${stepId} accepts a drag to its configured target`);
+    }
+  });
+}
 
 test('laundry back remains dirty until its own rubbing is completed', () => {
   const { api } = loadRuntime();

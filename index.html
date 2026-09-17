@@ -1240,6 +1240,16 @@ const STEP_STATE_KEYS = {
   'fold-umbrella': ['frameClosed','shaftShortened','strapFacingOut','panelsSmoothed','panelsGathered','canopyRolled','strapFastened']
 };
 
+const FOLD_LAYOUT = {
+  1: { item:{left:'0%', top:'12%', width:'300px', height:'270px', transform:'none'}, target:{left:'30%', top:'10%', width:'40%', height:'78%'} },
+  2: { item:{left:'46%', top:'16%', width:'92px', height:'170px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
+  3: { item:{left:'8%', top:'28%', width:'100px', height:'120px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
+  4: { item:{right:'8%', top:'28%', width:'100px', height:'120px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
+  5: { item:{left:'10%', top:'40%', width:'100px', height:'130px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
+  6: { item:{right:'10%', top:'40%', width:'100px', height:'130px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
+  7: { item:{left:'42%', top:'66%', width:'120px', height:'98px'}, target:{left:'40%', top:'18%', width:'20%', height:'24%'} }
+};
+
 const SkillSceneState = {
   values: {},
 
@@ -1703,16 +1713,12 @@ function buildClothesFoldingPersistentState(stepId) {
 function buildClothesFoldingScene(step) {
   const sid = step.id;
   const actions = ['flat', 'smooth', 'left-sleeve', 'right-sleeve', 'left-body', 'right-body', 'hem-up'];
-  const positions = [
-    'left:12%;top:20%;width:230px;height:205px;', 'left:46%;top:16%;width:92px;height:170px;',
-    'left:22%;top:28%;width:100px;height:120px;', 'right:22%;top:28%;width:100px;height:120px;',
-    'left:29%;top:40%;width:100px;height:130px;', 'right:29%;top:40%;width:100px;height:130px;',
-    'left:43%;top:60%;width:120px;height:98px;'
-  ];
+  const style = box => Object.entries(box).map(([key, value]) => `${key}:${value}`).join(';') + ';';
+  const layout = FOLD_LAYOUT[sid];
   const labels = ['拖到桌子中间', '从上往下抚平', '把这边袖子折进来', '把另一边袖子折进来', '把衣服这边折到中间', '把另一边折到中间', '把衣服下面向上折'];
-  const garment = `<div class="folding-garment ${sid === 1 ? 'draggable-item interactive-target' : ''}" data-garment="whole-sweatshirt" data-fold-action="${actions[sid - 1]}" ${sid === 1 ? 'data-item="shirt"' : 'aria-hidden="true"'}><img class="folding-base" src="assets/folding/sweatshirt-flat.png" draggable="false" alt="长袖卫衣"><img class="folding-layer folding-smooth" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-final" src="assets/folding/sweatshirt-folded.png" draggable="false" alt=""></div>`;
-  const target = `<div class="folding-target drag-target" data-target="shirt-center" aria-hidden="true"></div>`;
-  const touch = sid === 1 ? '' : `<div class="folding-touch draggable-item interactive-target" data-item="${step.target}" data-fold-action="${actions[sid - 1]}" style="${positions[sid - 1]}"></div>`;
+  const garment = `<div class="folding-garment ${sid === 1 ? 'draggable-item interactive-target' : ''}" data-garment="whole-sweatshirt" data-fold-action="${actions[sid - 1]}" ${sid === 1 ? `data-item="shirt" style="${style(layout.item)}"` : 'aria-hidden="true"'}><img class="folding-base" src="assets/folding/sweatshirt-flat.png" draggable="false" alt="长袖卫衣"><img class="folding-layer folding-smooth" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-final" src="assets/folding/sweatshirt-folded.png" draggable="false" alt=""></div>`;
+  const target = `<div class="folding-target drag-target" data-target="shirt-center" style="${style(layout.target)}" aria-hidden="true"></div>`;
+  const touch = sid === 1 ? '' : `<div class="folding-touch draggable-item interactive-target" data-item="${step.target}" data-fold-action="${actions[sid - 1]}" style="${style(layout.item)}"></div>`;
   const demoContent = sid === 1 ? '<img src="assets/folding/sweatshirt-flat.png" draggable="false" alt="">' : svgHand(88,88);
   const demo = `<div class="demo-element demo-fold-clothes-${sid} demo-ghost" aria-hidden="true">${demoContent}</div>`;
   return `<div class="step-stage" data-level="fold-clothes" data-step="${sid}">${buildClothesFoldingPersistentState(sid)}<img class="folding-table" src="assets/folding/folding-table.png" draggable="false" alt="">${garment}${target}${touch}${demo}<div class="folding-guide" aria-hidden="true">${labels[sid - 1]}</div></div>`;
@@ -1955,6 +1961,8 @@ function attachGestureListeners(step, area) {
           item.classList.add('dragging');
           item.classList.remove('snap-back');
           item.style.transition = 'none';
+          dragStartLeft = parseFloat(item.style.left);
+          dragStartTop = parseFloat(item.style.top);
           state.isGestureActive = true;
           e.preventDefault();
           return;
@@ -2004,7 +2012,7 @@ function attachGestureListeners(step, area) {
         const itemArea = ir.width * ir.height;
         const ratio = overlapArea / itemArea;
 
-        if (ratio > 0.35) {
+        if (ratio > 0.35 && Math.hypot(parseFloat(dragItem.style.left) - dragStartLeft, parseFloat(dragItem.style.top) - dragStartTop) >= 40) {
           advanceStepProgress(area);
           dragItem = null;
           return;
@@ -2052,6 +2060,8 @@ function attachGestureListeners(step, area) {
           item.classList.add('dragging');
           item.classList.remove('snap-back');
           item.style.transition = 'none';
+          dragStartLeft = parseFloat(item.style.left);
+          dragStartTop = parseFloat(item.style.top);
           state.isGestureActive = true;
           return;
         }
@@ -2086,7 +2096,7 @@ function attachGestureListeners(step, area) {
         const tr = target.getBoundingClientRect();
         const overlapX = Math.max(0, Math.min(ir.right, tr.right) - Math.max(ir.left, tr.left));
         const overlapY = Math.max(0, Math.min(ir.bottom, tr.bottom) - Math.max(ir.top, tr.top));
-        if ((overlapX * overlapY) / (ir.width * ir.height) > 0.35) {
+        if ((overlapX * overlapY) / (ir.width * ir.height) > 0.35 && Math.hypot(parseFloat(dragItem.style.left) - dragStartLeft, parseFloat(dragItem.style.top) - dragStartTop) >= 40) {
           advanceStepProgress(area);
           dragItem = null;
           return;
