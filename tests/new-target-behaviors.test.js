@@ -146,6 +146,36 @@ function laundryGesture(stepId, kind = 'mouse') {
   return { ...runtime, item, partner, stage, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
 }
 
+function foldingGesture(stepId, kind = 'mouse') {
+  const runtime = loadRuntime();
+  const { api } = runtime;
+  const listeners = new Map();
+  const stage = createElement(), item = createElement(), target = createElement(), area = createElement();
+  item.offsetWidth = 300; item.offsetHeight = 270;
+  item.style.left = '0px'; item.style.top = '0px';
+  item.getBoundingClientRect = () => {
+    const left = parseFloat(item.style.left) || 0, top = parseFloat(item.style.top) || 0;
+    return stepId === 2
+      ? { left:100, top:100, right:200, bottom:260, width:100, height:160 }
+      : { left, top, right:left + 300, bottom:top + 270, width:300, height:270 };
+  };
+  target.getBoundingClientRect = () => ({ left:300, top:0, right:700, bottom:350, width:400, height:350 });
+  area.getBoundingClientRect = () => ({ left:0, top:0, right:750, bottom:380, width:750, height:380 });
+  area.querySelector = selector => ({ '.step-stage':stage, '.interactive-target':item, '.draggable-item':item, '.drag-target':target })[selector] || null;
+  area.addEventListener = (type, callback, options) => {
+    listeners.set(type, callback);
+    options?.signal?.addEventListener('abort', () => listeners.delete(type));
+  };
+  api.state.currentLevel = 1; api.state.currentStep = stepId - 1;
+  api.StepProgress.reset(api.LEVELS[1].steps[stepId - 1]);
+  api.attachGestureListeners(api.LEVELS[1].steps[stepId - 1], area);
+  const dispatch = (phase, x, y = 50) => {
+    const type = kind === 'mouse' ? { start:'mousedown', move:'mousemove', end:'mouseup' }[phase] : { start:'touchstart', move:'touchmove', end:'touchend' }[phase];
+    listeners.get(type)?.({ clientX:x, clientY:y, touches:[{ clientX:x, clientY:y }], changedTouches:[{ clientX:x, clientY:y }], preventDefault() {} });
+  };
+  return { ...runtime, item, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
+}
+
 test('laundry renders seven scenes with one main target and passive delayed demos', () => {
   const { api } = loadRuntime();
   for (let id = 1; id <= 7; id++) {
@@ -204,6 +234,42 @@ test('clothes folding retains only completed folds in the next step', () => {
     assert.match(api.buildPersistentStateHTML('fold-clothes', stepId + 1), new RegExp(`state-fold-${folds[stepId - 1]}`));
     assert.doesNotMatch(api.buildPersistentStateHTML('fold-clothes', stepId), new RegExp(`state-fold-${folds[stepId - 1]}`));
   }
+});
+
+test('clothes folding completed states keep visible layers on the whole garment', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const layers = [
+    ['smooth', 'folding-smooth'], ['left-sleeve', 'folding-left-sleeve'], ['right-sleeve', 'folding-right-sleeve'],
+    ['left-body', 'folding-left-body'], ['right-body', 'folding-right-body'], ['hem-up', 'folding-final']
+  ];
+  for (const [state, layer] of layers) {
+    assert.match(source, new RegExp(`state-fold-${state} ~ \\.folding-garment .*\\.${layer}`));
+  }
+});
+
+for (const kind of ['mouse', 'touch']) {
+  test(`clothes folding ${kind} step one requires more than 35 percent overlap with the table`, () => {
+    for (const [endX, expected] of [[154, false], [156, true]]) {
+      const r = foldingGesture(1, kind);
+      r.dispatch('start', 50); r.dispatch('move', endX); r.dispatch('end', endX);
+      assert.equal(r.complete(), expected);
+    }
+  });
+
+  test(`clothes folding ${kind} smoothing starts on the garment and moves down`, () => {
+    for (const [startX, startY, endX, endY, expected] of [
+      [20, 20, 20, 90, false], [150, 150, 150, 90, false], [150, 150, 150, 210, true]
+    ]) {
+      const r = foldingGesture(2, kind);
+      r.dispatch('start', startX, startY); r.dispatch('move', endX, endY); r.dispatch('end', endX, endY);
+      assert.equal(r.complete(), expected);
+    }
+  });
+}
+
+test('clothes folding uses a table target large enough for the whole garment', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.match(source, /\.folding-target \{[^}]*width:56%;[^}]*height:78%/);
 });
 
 test('laundry back remains dirty until its own rubbing is completed', () => {
@@ -466,7 +532,7 @@ test('new intervention targets retain the approved state, task analysis, and voi
     JSON.parse(JSON.stringify(api.LEVELS.map(level => level.steps.map(step => step.voice)))),
     [
       ['把脏衣服放进水盆里。', '打开水龙头，把衣服弄湿。', '按一下，加入洗衣液。', '用小手来回揉一揉。', '翻过来，再揉一揉。', '用清水把泡泡冲干净。', '两只手轻轻拧一拧。'],
-      ['把衣服平平地放在桌上。', '用小手把衣服抚平。', '把这边的袖子折进来。', '再把这边的袖子折进来。', '把衣服这边折到中间。', '再把另一边折到中间。', '把衣服下面向上折，叠好啦。'],
+      ['把衣服平平地放在桌上。', '用小手把衣服抚平。', '把这边的袖子折进来。', '再把另一边的袖子折进来。', '把衣服这边折到中间。', '再把另一边折到中间。', '把衣服下面向上折，叠好啦。'],
       ['把小滑块慢慢拉下来。', '两只手拿稳，把伞杆轻轻收短。', '转一转，找到雨伞的小带子。', '顺着伞骨，一片一片理整齐。', '把理好的伞布靠在一起。', '朝一个方向，慢慢卷起来。', '把小带子绕过来，扣好。']
     ]
   );

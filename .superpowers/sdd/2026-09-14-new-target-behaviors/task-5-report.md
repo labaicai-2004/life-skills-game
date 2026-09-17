@@ -31,3 +31,9 @@
 - `tests/new-target-behaviors.test.js`
 - `tests/continuous-animation.test.js`
 - `dev-logs/2026-09-17.md`
+
+## Fix round：独立审查修复
+
+审查指出第一步的桌面目标区无法与 300×270 的完整卫衣达到 35% 重叠，第二步会接受空白起始和向上滑动，且后续折叠状态缺少稳定的可见层。先增加了 mouse/touch 的真实事件路径测试：第一步 34.7% 重叠不通过、35.3% 通过；第二步空白起始和向上不通过、从卫衣操作区向下超过 40px 通过。测试在旧实现上失败后，扩大桌面实际命中区至 56%×78%，但把可见虚线框收在中央，避免覆盖整个桌面；第2步增加仅该步使用的手势监听；每一个已完成状态均在同一卫衣容器中激活独立可见层，最后一步切换到本地 folded 素材。第4步语音改为“再把另一边的袖子折进来”。
+
+修复后 `node --test tests/new-target-behaviors.test.js` 为 40/40 通过。完整命令 `node --test tests/new-target-behaviors.test.js tests/continuous-animation.test.js` 为 73/75 通过，剩余 2 项均为 Task 6 的旧穿衣断言失败。

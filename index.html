@@ -287,15 +287,19 @@ html, body {
 .folding-table { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
 .folding-garment { position:absolute; left:50%; top:12%; width:300px; height:270px; transform:translateX(-50%); z-index:5; }
 .folding-garment img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.folding-base { transition:opacity .35s ease; }
 .folding-layer { position:absolute; inset:0; opacity:0; pointer-events:none; transform-origin:center; }
+.state-fold-smooth ~ .folding-garment .folding-smooth { opacity:.22; filter:brightness(1.18); }
 .state-fold-left-sleeve ~ .folding-garment .folding-left-sleeve { opacity:1; clip-path:polygon(0 18%,38% 18%,48% 72%,12% 72%); transform:translateX(74px) rotate(8deg); }
 .state-fold-right-sleeve ~ .folding-garment .folding-right-sleeve { opacity:1; clip-path:polygon(62% 18%,100% 18%,88% 72%,52% 72%); transform:translateX(-74px) rotate(-8deg); }
-.state-fold-left-body ~ .folding-garment { transform:translateX(-50%) scaleX(.84); transform-origin:center; }
-.state-fold-right-body ~ .folding-garment { transform:translateX(-50%) scaleX(.66); transform-origin:center; }
-.state-fold-hem-up ~ .folding-garment { transform:translateX(-50%) scale(.6,.52); transform-origin:center top; }
+.state-fold-left-body ~ .folding-garment .folding-left-body { opacity:1; clip-path:polygon(18% 36%,50% 36%,50% 98%,18% 98%); transform:translateX(63px); }
+.state-fold-right-body ~ .folding-garment .folding-right-body { opacity:1; clip-path:polygon(50% 36%,82% 36%,82% 98%,50% 98%); transform:translateX(-63px); }
+.state-fold-hem-up ~ .folding-garment .folding-final { opacity:1; }
+.state-fold-hem-up ~ .folding-garment .folding-base { opacity:0; }
 .folding-touch { position:absolute; z-index:9; min-width:88px; min-height:88px; border-radius:20px; background:rgba(255,217,61,.14); border:3px solid rgba(255,217,61,.65); box-shadow:0 0 18px rgba(255,217,61,.68); }
 .folding-touch::after { content:''; position:absolute; inset:-7px; border:3px dashed rgba(255,217,61,.78); border-radius:24px; animation:targetPulse 1s ease-in-out infinite; }
-.folding-target { position:absolute; left:43%; top:35%; width:14%; height:28%; z-index:4; }
+.folding-target { position:absolute; left:22%; top:10%; width:56%; height:78%; z-index:4; }
+.folding-target::after { inset:18% 20%; }
 .folding-guide { position:absolute; left:50%; top:3%; transform:translateX(-50%); font-size:28px; color:#8B5E35; background:#FFFFFFE8; border-radius:22px; padding:8px 18px; z-index:11; pointer-events:none; white-space:nowrap; }
 .demo-fold-clothes-1 { left:12%; top:20%; width:230px; height:205px; }
 .demo-fold-clothes-2, .demo-fold-clothes-3, .demo-fold-clothes-4, .demo-fold-clothes-5, .demo-fold-clothes-6, .demo-fold-clothes-7 { left:50%; top:16%; width:88px; height:88px; }
@@ -1200,7 +1204,7 @@ const LEVELS = [
       {id:1,instruction:'平铺衣服',gesture:'drag',target:'shirt',dragTarget:'table',arrow:'down',voice:'把衣服平平地放在桌上。'},
       {id:2,instruction:'抚平衣服',gesture:'swipe-down',target:'shirt',arrow:'down',voice:'用小手把衣服抚平。'},
       {id:3,instruction:'折进这边袖子',gesture:'drag',target:'left-sleeve',dragTarget:'shirt-center',arrow:'right',voice:'把这边的袖子折进来。'},
-      {id:4,instruction:'折进另一边袖子',gesture:'drag',target:'right-sleeve',dragTarget:'shirt-center',arrow:'left',voice:'再把这边的袖子折进来。'},
+      {id:4,instruction:'折进另一边袖子',gesture:'drag',target:'right-sleeve',dragTarget:'shirt-center',arrow:'left',voice:'再把另一边的袖子折进来。'},
       {id:5,instruction:'折叠这边衣身',gesture:'drag',target:'left-body',dragTarget:'shirt-center',arrow:'right',voice:'把衣服这边折到中间。'},
       {id:6,instruction:'折叠另一边衣身',gesture:'drag',target:'right-body',dragTarget:'shirt-center',arrow:'left',voice:'再把另一边折到中间。'},
       {id:7,instruction:'向上折好',gesture:'drag',target:'shirt-hem',dragTarget:'shirt-top',arrow:'up',voice:'把衣服下面向上折，叠好啦。'}
@@ -1706,7 +1710,7 @@ function buildClothesFoldingScene(step) {
     'left:43%;top:60%;width:120px;height:98px;'
   ];
   const labels = ['拖到桌子中间', '从上往下抚平', '把这边袖子折进来', '把另一边袖子折进来', '把衣服这边折到中间', '把另一边折到中间', '把衣服下面向上折'];
-  const garment = `<div class="folding-garment ${sid === 1 ? 'draggable-item interactive-target' : ''}" data-garment="whole-sweatshirt" data-fold-action="${actions[sid - 1]}" ${sid === 1 ? 'data-item="shirt"' : 'aria-hidden="true"'}><img src="assets/folding/sweatshirt-flat.png" draggable="false" alt="长袖卫衣"><img class="folding-layer folding-left-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""></div>`;
+  const garment = `<div class="folding-garment ${sid === 1 ? 'draggable-item interactive-target' : ''}" data-garment="whole-sweatshirt" data-fold-action="${actions[sid - 1]}" ${sid === 1 ? 'data-item="shirt"' : 'aria-hidden="true"'}><img class="folding-base" src="assets/folding/sweatshirt-flat.png" draggable="false" alt="长袖卫衣"><img class="folding-layer folding-smooth" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-final" src="assets/folding/sweatshirt-folded.png" draggable="false" alt=""></div>`;
   const target = `<div class="folding-target drag-target" data-target="shirt-center" aria-hidden="true"></div>`;
   const touch = sid === 1 ? '' : `<div class="folding-touch draggable-item interactive-target" data-item="${step.target}" data-fold-action="${actions[sid - 1]}" style="${positions[sid - 1]}"></div>`;
   const demoContent = sid === 1 ? '<img src="assets/folding/sweatshirt-flat.png" draggable="false" alt="">' : svgHand(88,88);
@@ -1903,6 +1907,10 @@ function attachGestureListeners(step, area) {
 
   if (LEVELS[state.currentLevel]?.id === 'laundry' && step.id) {
     attachLaundryGesture(step, area, signal);
+    return;
+  }
+  if (LEVELS[state.currentLevel]?.id === 'fold-clothes' && step.id === 2) {
+    attachFoldSmoothingGesture(area, signal);
     return;
   }
 
@@ -2106,6 +2114,35 @@ function attachGestureListeners(step, area) {
     )) { advanceStepProgress(area); }
     else { handleStepWrong(area); }
   }, {signal});
+}
+
+function attachFoldSmoothingGesture(area, signal) {
+  const item = area.querySelector('.interactive-target');
+  const stage = area.querySelector('.step-stage');
+  let start = null;
+  const point = e => {
+    const p = e.touches?.[0] || e.changedTouches?.[0] || e;
+    return { x:p.clientX, y:p.clientY };
+  };
+  const beginsOnGarment = p => {
+    const rect = item?.getBoundingClientRect();
+    return rect && p.x >= rect.left && p.x <= rect.right && p.y >= rect.top && p.y <= rect.bottom;
+  };
+  const begin = e => {
+    const p = point(e);
+    if (!beginsOnGarment(p)) return;
+    initAudio(); AnimationController.pause(stage); start = p; e.preventDefault?.();
+  };
+  const end = e => {
+    if (!start) return;
+    const last = point(e), dx = last.x - start.x, dy = last.y - start.y;
+    start = null;
+    if (dy >= 40 && dy > Math.abs(dx)) advanceStepProgress(area);
+    else handleStepWrong(area);
+  };
+  for (const [event, callback] of [['touchstart',begin],['touchend',end],['mousedown',begin],['mouseup',end]]) {
+    area.addEventListener(event, callback, { signal, passive:false });
+  }
 }
 
 function attachLaundryGesture(step, area, signal) {
