@@ -21,3 +21,14 @@ Updated the two remaining old dressing-state assertions to umbrella continuity a
 CUA inventory reported no connected browser surfaces. An attempted native Chrome connection was interrupted after blocking, so no desktop visual or seven-step manual browser result is claimed. A local preview server attempt was also subject to sandbox approval; its final availability was not relied on for verification. Desktop visual/full-flow verification and physical iPad Safari verification remain Task 9 work. The local asset images were inspected directly, but that is not a substitute for rendered-scene inspection.
 
 Potential visual refinements to inspect at Task 9: the six panel fan is drawn as low-detail blue cloth paths over the matching local umbrella assembly; the shaft-shortening illustration uses a translated lower shaft/handle layer. Step 2 currently highlights the lower grip while the voice instructs two-handed stabilization; it does not add a second static hand illustration. These should be considered during the task review and rendered-scene audit.
+
+## Fix round 1
+
+Addressed both Important review findings, without Task 7 changes.
+
+1. The former triangular SVG paths extended outside their 52×144 containers. Replaced them with six 52×144 visible blue cloth rectangles sharing exactly the same inline geometry as their pointer hit boxes, a vertical rib, contained crease marks, and contained arrow. SVG overflow is now hidden. A separate noninteractive upper connector joins all six cloth pieces to the one umbrella cap/shaft. The passive hand stays centered on the current panel and its entire downward stroke stays within the cloth; advancing changes both the current highlight and hand position.
+2. Added a noninteractive stabilizing hand at the umbrella head in step 2 and a moving hand inside the existing lower grip. The lower grip remains the single interactive target and no multitouch requirement was added.
+
+RED evidence: four newly added focused checks failed before the fix, for missing hit-box-aligned visible cloth and missing stabilizing/moving hands. The gesture fixture now derives all six hit boxes from the real generated panel markup. Added mouse and touch strokes along each visible cloth/rib and blank-space rejections, plus geometry checks linking the cloth dimensions, hit dimensions, viewBox, arrow bounds and actual successive demonstration-hand positions. This catches the previous outside-viewBox/rectangular-hit mismatch rather than merely checking panel count.
+
+GREEN evidence: `node --test tests/new-target-behaviors.test.js tests/continuous-animation.test.js` → **92 passed, 0 failed**. `git diff --check` → exit 0. Browser automation was not retried; the previously documented Task 9 visual and physical-device checks remain pending. The prior report's missing-upper-hand caveat is resolved by this round.

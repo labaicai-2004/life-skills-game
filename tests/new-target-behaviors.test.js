@@ -182,6 +182,14 @@ function foldingGesture(stepId, kind = 'mouse') {
   return { ...runtime, item, target:destination, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
 }
 
+function umbrellaPanelMarkup(api) {
+  const scene=api.buildScene('fold-umbrella',api.LEVELS[2].steps[3]);
+  return [...scene.matchAll(/<div class="umbrella-panel ([^"]*)" data-umbrella-panel="(\d+)" style="([^"]*)"><svg viewBox="([^"]*)"[^>]*>([\s\S]*?)<\/svg><\/div>/g)].map(match=>({
+    number:Number(match[2]), style:Object.fromEntries([...match[3].matchAll(/([\w-]+):([\d.]+)px/g)].map(([,key,value])=>[key,Number(value)])),
+    viewBox:match[4].split(' ').map(Number),svg:match[5]
+  }));
+}
+
 function umbrellaGesture(stepId, kind = 'mouse') {
   const runtime = loadRuntime(), { api } = runtime, listeners = new Map();
   const box = (left, top, width, height) => ({ left, top, width, height, right:left + width, bottom:top + height });
@@ -195,10 +203,13 @@ function umbrellaGesture(stepId, kind = 'mouse') {
   const starts = [[154,162,52,52],[154,254,64,60],[145,90,90,100],[24,60,52,144],[24,76,70,140],[146,80,74,128],[218,124,76,48]];
   const targets = [[154,242,64,60],[154,194,64,60],[145,90,90,100],[24,60,52,144],[145,76,70,140],[146,80,74,128],[146,124,76,48]];
   const stage = node(box(0,0,360,320)), item = node(box(...starts[stepId - 1])), target = node(box(...targets[stepId - 1]));
-  const panels = Array.from({length:6}, (_, i) => { const panel = node(box(24 + 52 * i,60,52,144)); panel.dataset.umbrellaPanel = String(i+1); return panel; });
+  const panels = umbrellaPanelMarkup(api).map(({number,style}) => { const panel = node(box(style.left,style.top??60,style.width??52,style.height??144)); panel.dataset.umbrellaPanel = String(number); return panel; });
   const dots = Array.from({length:6}, () => node(box(0,0,20,20)));
+  const demo=node(box(0,0,64,64));
+  const demoStyle=api.buildScene('fold-umbrella',api.LEVELS[2].steps[stepId-1]).match(/class="demo-element demo-umbrella-\d demo-ghost umbrella-demo" style="([^"]+)"/)[1];
+  for(const [,key,value] of demoStyle.matchAll(/([\w-]+):(-?[\d.]+)px/g)) demo.style[key]=value+'px';
   const area = node(box(0,0,750,380));
-  area.querySelector = selector => ({'.step-stage':stage,'.interactive-target':item,'.draggable-item':item,'.drag-target':[1,2,5,7].includes(stepId)?target:null,'.umbrella-object':stage,'[data-gesture-target]':target})[selector] || null;
+  area.querySelector = selector => ({'.step-stage':stage,'.interactive-target':item,'.draggable-item':item,'.drag-target':[1,2,5,7].includes(stepId)?target:null,'.umbrella-object':stage,'.umbrella-demo':demo,'[data-gesture-target]':target})[selector] || null;
   area.querySelectorAll = selector => selector === '[data-umbrella-panel]' ? panels : selector === '[data-substep]' ? dots : [];
   stage.querySelector = area.querySelector; stage.querySelectorAll = area.querySelectorAll;
   area.addEventListener = (type, callback, options) => { listeners.set(type, callback); options?.signal?.addEventListener('abort', () => listeners.delete(type)); };
@@ -209,7 +220,7 @@ function umbrellaGesture(stepId, kind = 'mouse') {
     const type = kind === 'mouse' ? {start:'mousedown',move:'mousemove',end:'mouseup',cancel:'mouseleave'}[phase] : {start:'touchstart',move:'touchmove',end:'touchend',cancel:'touchcancel'}[phase];
     listeners.get(type)?.({clientX:x,clientY:y,touches:[{clientX:x,clientY:y}],changedTouches:[{clientX:x,clientY:y}],preventDefault(){}});
   };
-  return {...runtime, stage,item,target,panels,dots,dispatch,stroke(x,y,dx,dy) { dispatch('start',x,y);dispatch('move',x+dx,y+dy);dispatch('end',x+dx,y+dy); },complete:()=>api.state.stepCompleted.has(stepId-1)};
+  return {...runtime, stage,item,target,panels,dots,demo,dispatch,stroke(x,y,dx,dy) { dispatch('start',x,y);dispatch('move',x+dx,y+dy);dispatch('end',x+dx,y+dy); },complete:()=>api.state.stepCompleted.has(stepId-1)};
 }
 
 test('umbrella scenes retain one complete local umbrella with seven passive demos and six panels', () => {
@@ -228,7 +239,52 @@ test('umbrella scenes retain one complete local umbrella with seven passive demo
   assert.doesNotMatch(JSON.stringify(api.LEVELS[2]),/伞套|书包|收进包/);
 });
 
+test('umbrella visible panel cloth fills exactly its hit box and rib crease and arrow stay inside it', () => {
+  const {api}=loadRuntime();
+  const panels=umbrellaPanelMarkup(api);
+  assert.equal(panels.length,6);
+  for(const panel of panels) {
+    const cloth=panel.svg.match(/<rect class="panel-cloth" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/);
+    assert.ok(cloth,'the visible cloth must fill the same rectangle used for pointer hit testing');
+    assert.deepEqual(cloth.slice(1).map(Number),[0,0,panel.style.width,panel.style.height]);
+    assert.ok(panel.style.width>=44 && panel.style.height>=44);
+    assert.deepEqual(panel.viewBox,[0,0,panel.style.width,panel.style.height]);
+    assert.match(panel.svg,/<path class="panel-rib" d="M26 8 V132"/);
+    assert.match(panel.svg,/<path class="panel-crease" d="M15 38 L35 56 L16 85 L34 115"/);
+  }
+  const source=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+  const arrow=Object.fromEntries([...source.match(/\.umbrella-panel\.active::after\s*\{([^}]+)\}/)[1].matchAll(/(left|top|width|height):([\d.]+)px/g)].map(([,key,value])=>[key,Number(value)]));
+  assert.ok(arrow.left>=0 && arrow.left+arrow.width<=52);
+  assert.ok(arrow.top>=0 && arrow.top+arrow.height+25<=144);
+});
+
+test('umbrella shaft scene shows a passive upper stabilizing hand and one moving lower hand', () => {
+  const {api}=loadRuntime();
+  const scene=api.buildScene('fold-umbrella',api.LEVELS[2].steps[1]);
+  assert.match(scene,/<div class="umbrella-stabilizing-hand" aria-hidden="true"><svg/);
+  assert.doesNotMatch(scene,/<div class="umbrella-stabilizing-hand[^\"]*(interactive-target|draggable-item)/);
+  assert.match(scene,/<div class="umbrella-touch interactive-target draggable-item" data-item="umbrella-shaft"[^>]*><svg/);
+  assert.equal((scene.match(/interactive-target/g)||[]).length,1);
+});
+
 for (const kind of ['mouse','touch']) {
+  test(`umbrella ${kind} follows real visible panel rectangles and rejects blank space`, () => {
+    const r=umbrellaGesture(4,kind),panels=umbrellaPanelMarkup(r.api);
+    for(const [index,panel] of panels.entries()) {
+      assert.equal(parseFloat(r.demo.style.left)+32,panel.style.left+26,'hand stays centered on the currently highlighted cloth');
+      assert.ok(parseFloat(r.demo.style.top)>=panel.style.top);
+      assert.ok(parseFloat(r.demo.style.top)+64+parseFloat(r.demo.style['--umbrella-demo-y'])<=panel.style.top+panel.style.height,'entire demonstration stroke stays over cloth');
+      const cloth=panel.svg.match(/<rect class="panel-cloth" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/);
+      assert.ok(cloth,'test gestures must start on actual rendered cloth');
+      const [x,y,w]=cloth.slice(1).map(Number);
+      r.stroke(panel.style.left-1,panel.style.top+y+10,0,60);
+      r.stroke(panel.style.left+x+w/2,panel.style.top-1,0,60);
+      assert.equal(r.api.StepProgress.current,index,'blank space cannot count');
+      r.stroke(panel.style.left+x+w/2,panel.style.top+y+10,0,60);
+      assert.equal(r.api.StepProgress.current,index+1,'visible vertical rib path counts');
+    }
+    assert.equal(r.complete(),true);
+  });
   test(`umbrella ${kind} only the current panel accepts one downward stroke and six are required`, () => {
     const r=umbrellaGesture(4,kind);
     assert.equal(r.panels.filter(p=>p.classList.contains('active')).length,1);

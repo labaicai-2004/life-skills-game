@@ -302,8 +302,9 @@ html, body {
 .step-stage[data-step="3"].umbrella-complete .umbrella-panel-fan { opacity:1; }
 .state-umbrella-strap-front ~ .umbrella-object .umbrella-closed-top,
 .step-stage[data-step="3"].umbrella-complete .umbrella-closed-top { clip-path:inset(0 0 84% 0); }
-.umbrella-panel { position:absolute; top:60px; width:52px; height:144px; }
-.umbrella-panel svg { width:100%; height:100%; overflow:visible; }
+.umbrella-panel-neck { position:absolute; left:0; top:0; width:360px; height:60px; pointer-events:none; }
+.umbrella-panel { position:absolute; }
+.umbrella-panel svg { display:block; width:100%; height:100%; overflow:hidden; }
 .umbrella-panel .panel-crease { opacity:.7; transition:opacity .35s ease; }
 .umbrella-panel.smoothed .panel-crease,.state-umbrella-smooth ~ .umbrella-object .panel-crease { opacity:0; }
 .umbrella-panel.active { filter:drop-shadow(0 0 8px #FFD93D); }
@@ -321,6 +322,8 @@ html, body {
 .step-stage[data-step="3"].umbrella-complete .umbrella-strap { opacity:1; }
 .umbrella-touch,.umbrella-drop { position:absolute; min-width:44px; min-height:44px; border-radius:14px; }
 .umbrella-touch { z-index:10; border:3px solid #FFD15B; background:#FFD15B33; box-shadow:0 0 15px #FFD15B99; touch-action:none; }
+.umbrella-stabilizing-hand { position:absolute; left:149px; top:2px; width:64px; height:64px; z-index:7; pointer-events:none; transform:rotate(90deg); }
+.umbrella-stabilizing-hand svg,.umbrella-touch svg { width:100%; height:100%; pointer-events:none; }
 .umbrella-touch[data-item="umbrella-slider"] { background:#FFC553; border:4px solid #624C3D; }
 .umbrella-touch[data-item="umbrella-slider"]::after { content:'↓'; display:block; text-align:center; font-size:34px; color:#624C3D; }
 .umbrella-touch[data-item="umbrella-strap"] { background:#2F7EE0; border:4px solid #624C3D; }
@@ -1807,13 +1810,15 @@ function buildUmbrellaFoldingScene(step) {
   const targets = {1:[154,242,64,60],2:[154,194,64,60],5:[145,76,70,140],7:[146,124,76,48]};
   const box = ([x,y,w,h]) => `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
   const image = (name,cls) => `<img class="umbrella-picture ${cls}" src="assets/umbrella/umbrella-${name}.png" alt="" draggable="false">`;
-  const panels = Array.from({length:6},(_,i) => `<div class="umbrella-panel ${sid===4&&i===0?'active interactive-target':''}" data-umbrella-panel="${i+1}" style="left:${24+52*i}px;"><svg viewBox="0 0 52 144" aria-hidden="true"><path d="M${156-52*i} -35 L3 132 Q26 143 49 132 Z" fill="${i%2?'#3689E0':'#4B99E9'}" stroke="#624C3D" stroke-width="3" stroke-linejoin="round"/><path class="panel-crease" d="M15 38 L35 56 L16 85 L34 115" fill="none" stroke="#285DA0" stroke-width="3"/><circle cx="26" cy="136" r="6" fill="#FFD15B" stroke="#624C3D" stroke-width="3"/></svg></div>`).join('');
-  const touch = sid===4 ? '' : `<div class="umbrella-touch interactive-target ${targets[sid]?'draggable-item':''}" data-item="${step.target}" style="${box(items[sid-1])}"></div>`;
+  const hand = '<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#624C3D" stroke-width="3"/></svg>';
+  const neck = '<svg class="umbrella-panel-neck" viewBox="0 0 360 60" aria-hidden="true"><path d="M180 25 L24 60 H336 Z" fill="#3689E0" stroke="#624C3D" stroke-width="3"/></svg>';
+  const panels = Array.from({length:6},(_,i) => `<div class="umbrella-panel ${sid===4&&i===0?'active interactive-target':''}" data-umbrella-panel="${i+1}" style="${box([24+52*i,60,52,144])}"><svg viewBox="0 0 52 144" aria-hidden="true"><rect class="panel-cloth" x="0" y="0" width="52" height="144" fill="${i%2?'#3689E0':'#4B99E9'}" stroke="#624C3D" stroke-width="3"/><path class="panel-rib" d="M26 8 V132" fill="none" stroke="#624C3D" stroke-width="3"/><path class="panel-crease" d="M15 38 L35 56 L16 85 L34 115" fill="none" stroke="#285DA0" stroke-width="3"/><circle cx="26" cy="136" r="6" fill="#FFD15B" stroke="#624C3D" stroke-width="3"/></svg></div>`).join('');
+  const touch = sid===4 ? '' : `<div class="umbrella-touch interactive-target ${targets[sid]?'draggable-item':''}" data-item="${step.target}" style="${box(items[sid-1])}">${sid===2?hand:''}</div>`;
   const target = targets[sid] ? `<div class="umbrella-drop drag-target" data-target="${step.dragTarget}" style="${box(targets[sid])}" aria-hidden="true"></div>` : '';
   const delta = targets[sid] ? [targets[sid][0]-items[sid-1][0],targets[sid][1]-items[sid-1][1]] : sid===4 ? [0,70] : [65,0];
-  const demo = `<div class="demo-element demo-umbrella-${sid} demo-ghost umbrella-demo" style="left:${items[sid-1][0]}px;top:${items[sid-1][1]}px;--umbrella-demo-x:${delta[0]}px;--umbrella-demo-y:${delta[1]}px;" aria-hidden="true"><svg viewBox="0 0 88 88"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#624C3D" stroke-width="3"/></svg></div>`;
+  const demo = `<div class="demo-element demo-umbrella-${sid} demo-ghost umbrella-demo" style="left:${items[sid-1][0]-(sid===4?6:0)}px;top:${items[sid-1][1]+(sid===4?10:0)}px;--umbrella-demo-x:${delta[0]}px;--umbrella-demo-y:${delta[1]}px;" aria-hidden="true">${hand}</div>`;
   const labels = ['拉小滑块 ↓','拿稳伞头，伞柄向上推 ↑','轻轻转一转 →','顺着发光伞片往下理 ↓','把伞布拢到中间 →','向右轻轻卷一卷 →','把小带子绕过来 ←'];
-  return `<div class="step-stage" data-level="fold-umbrella" data-step="${sid}">${buildUmbrellaPersistentState(sid)}<div class="umbrella-object" data-umbrella="whole">${image('open','umbrella-open')}${image('closed','umbrella-closed-top')}${image('closed','umbrella-closed-bottom')}<div class="umbrella-panel-fan">${panels}</div><div class="umbrella-wrap-lines" aria-hidden="true"></div><div class="umbrella-strap" aria-hidden="true"></div>${image('folded','umbrella-final')}${target}${touch}${demo}</div>${sid===4?'<div class="umbrella-stars" aria-hidden="true">'+Array.from({length:6},()=>'<span data-substep>★</span>').join('')+'</div>':''}<div class="umbrella-guide" aria-hidden="true">${labels[sid-1]}</div></div>`;
+  return `<div class="step-stage" data-level="fold-umbrella" data-step="${sid}">${buildUmbrellaPersistentState(sid)}<div class="umbrella-object" data-umbrella="whole">${image('open','umbrella-open')}${image('closed','umbrella-closed-top')}${image('closed','umbrella-closed-bottom')}<div class="umbrella-panel-fan">${neck}${panels}</div><div class="umbrella-wrap-lines" aria-hidden="true"></div><div class="umbrella-strap" aria-hidden="true"></div>${image('folded','umbrella-final')}${sid===2?`<div class="umbrella-stabilizing-hand" aria-hidden="true">${hand}</div>`:''}${target}${touch}${demo}</div>${sid===4?'<div class="umbrella-stars" aria-hidden="true">'+Array.from({length:6},()=>'<span data-substep>★</span>').join('')+'</div>':''}<div class="umbrella-guide" aria-hidden="true">${labels[sid-1]}</div></div>`;
 }
 
 function buildPersistentStateHTML(levelId, stepId) {
@@ -2372,7 +2377,7 @@ function attachUmbrellaGesture(step, area, signal) {
       panel.classList.toggle('smoothed',index<StepProgress.current);
     });
     const demo = stage?.querySelector('.umbrella-demo');
-    if (sid===4 && demo) demo.style.left = `${24+52*Math.min(5,StepProgress.current)}px`;
+    if (sid===4 && demo) demo.style.left = `${18+52*Math.min(5,StepProgress.current)}px`;
   };
   if (sid===4) renderPanels();
   const point = e => { const p = e.touches?.[0] || e.changedTouches?.[0] || e; return {x:p.clientX,y:p.clientY}; };
