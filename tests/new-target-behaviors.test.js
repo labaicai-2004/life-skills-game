@@ -181,6 +181,31 @@ test('laundry persistent state requires real prior completion and keeps clean we
   assert.doesNotMatch(final, /state-laundry-soapy/);
 });
 
+test('clothes folding keeps one whole sweatshirt through all seven states', () => {
+  const { api } = loadRuntime();
+  const expectedActions = ['flat', 'smooth', 'left-sleeve', 'right-sleeve', 'left-body', 'right-body', 'hem-up'];
+  for (let stepId = 1; stepId <= 7; stepId++) {
+    const scene = api.buildScene('fold-clothes', api.LEVELS[1].steps[stepId - 1]);
+    assert.match(scene, /data-garment="whole-sweatshirt"/);
+    assert.match(scene, new RegExp(`demo-element demo-fold-clothes-${stepId}`));
+    assert.match(scene, new RegExp(`data-fold-action="${expectedActions[stepId - 1]}"`));
+    assert.equal((scene.match(/interactive-target/g) || []).length, 1);
+    assert.match(scene, /assets\/folding\/sweatshirt-(flat|folded)\.png/);
+    assert.doesNotMatch(scene, /class="[^"]*interactive-target[^"]*demo-element/);
+  }
+});
+
+test('clothes folding retains only completed folds in the next step', () => {
+  const { api } = loadRuntime();
+  const folds = ['flat', 'smooth', 'left-sleeve', 'right-sleeve', 'left-body', 'right-body', 'hem-up'];
+  for (let stepId = 1; stepId <= 7; stepId++) {
+    assert.doesNotMatch(api.buildPersistentStateHTML('fold-clothes', stepId + 1), new RegExp(`state-fold-${folds[stepId - 1]}`));
+    api.SkillSceneState.complete('fold-clothes', stepId);
+    assert.match(api.buildPersistentStateHTML('fold-clothes', stepId + 1), new RegExp(`state-fold-${folds[stepId - 1]}`));
+    assert.doesNotMatch(api.buildPersistentStateHTML('fold-clothes', stepId), new RegExp(`state-fold-${folds[stepId - 1]}`));
+  }
+});
+
 test('laundry back remains dirty until its own rubbing is completed', () => {
   const { api } = loadRuntime();
   api.SkillSceneState.complete('laundry', 4);

@@ -463,7 +463,7 @@ test('real ResearchMode.start initializes one unified session with the selected 
   elements['research-date'].value = '2026-08-06';
   elements['research-week'].value = '2';
   elements['selected-phase'].dataset.phase = 'intervention';
-  elements['selected-skill'].dataset.skill = 'wash';
+  elements['selected-skill'].dataset.skill = 'fold-clothes';
   api.promptState.enabled = false;
 
   api.ResearchMode.start();
@@ -471,12 +471,12 @@ test('real ResearchMode.start initializes one unified session with the selected 
   assert.equal(api.ResearchMode.active, true);
   assert.equal(api.state.currentLevel, 1);
   assert.equal(api.UnifiedDataManager.active, true);
-  assert.equal(api.UnifiedDataManager.taskId, 'wash');
+  assert.equal(api.UnifiedDataManager.taskId, 'fold-clothes');
   assert.deepEqual(Array.from(api.UnifiedDataManager.events, event => event.event), [
     'session_start', 'step_start', 'ltm_chain_start'
   ]);
   assert.equal(api.UnifiedDataManager.events.filter(event => event.event === 'session_start').length, 1);
-  assert.ok(api.UnifiedDataManager.events.every(event => event.taskId === 'wash'));
+  assert.ok(api.UnifiedDataManager.events.every(event => event.taskId === 'fold-clothes'));
 });
 
 test('two passive demonstrations after real step initialization do not write events or research records', () => {
@@ -629,8 +629,8 @@ test('STEP_STATE_KEYS maps all three skills to their seven persistent-state keys
   assert.equal(runtime.error, undefined, runtime.error?.message);
   assert.equal(JSON.stringify(runtime.api.STEP_STATE_KEYS), JSON.stringify({
     laundry: ['shirtInBasin', 'shirtWet', 'detergentAdded', 'frontRubbed', 'backRubbed', 'shirtRinsed', 'shirtWrung'],
-    wash: ['faucetOn', 'waterCollected', 'towelWet', 'towelWrung', 'faceWashed', 'towelRinsed', 'faucetOff'],
-    dress: ['jacketFound', 'frontIdentified', 'leftSleeveOn', 'rightSleeveOn', 'jacketPulledDown', 'zipperClosed', 'collarAdjusted']
+    'fold-clothes': ['shirtPlaced', 'shirtSmoothed', 'leftSleeveFolded', 'rightSleeveFolded', 'leftBodyFolded', 'rightBodyFolded', 'shirtFolded'],
+    'fold-umbrella': ['frameClosed', 'shaftShortened', 'strapFacingOut', 'panelsSmoothed', 'panelsGathered', 'canopyRolled', 'strapFastened']
   }));
 });
 
@@ -641,13 +641,13 @@ test('SkillSceneState resets, completes mapped steps, and reports only completed
   SkillSceneState.reset();
   assert.equal(SkillSceneState.has('laundry', 'shirtWet'), false);
   SkillSceneState.complete('laundry', 2);
-  SkillSceneState.complete('wash', 5);
+  SkillSceneState.complete('fold-clothes', 5);
   assert.equal(SkillSceneState.has('laundry', 'shirtWet'), true);
-  assert.equal(SkillSceneState.has('wash', 'faceWashed'), true);
-  assert.equal(SkillSceneState.has('dress', 'zipperClosed'), false);
+  assert.equal(SkillSceneState.has('fold-clothes', 'leftBodyFolded'), true);
+  assert.equal(SkillSceneState.has('fold-umbrella', 'canopyRolled'), false);
   SkillSceneState.reset();
   assert.equal(SkillSceneState.has('laundry', 'shirtWet'), false);
-  assert.equal(SkillSceneState.has('wash', 'faceWashed'), false);
+  assert.equal(SkillSceneState.has('fold-clothes', 'leftBodyFolded'), false);
 });
 
 test('starting a level and returning home reset persistent skill state', () => {
@@ -657,9 +657,9 @@ test('starting a level and returning home reset persistent skill state', () => {
   api.SkillSceneState.complete('laundry', 2);
   api.startLevel(1);
   assert.equal(api.SkillSceneState.has('laundry', 'shirtWet'), false);
-  api.SkillSceneState.complete('wash', 1);
+  api.SkillSceneState.complete('fold-clothes', 1);
   api.goHome();
-  assert.equal(api.SkillSceneState.has('wash', 'faucetOn'), false);
+  assert.equal(api.SkillSceneState.has('fold-clothes', 'shirtPlaced'), false);
 });
 
 test('handleStepSuccess stores the current level step in persistent state', () => {
@@ -667,10 +667,10 @@ test('handleStepSuccess stores the current level step in persistent state', () =
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api } = runtime;
   api.SkillSceneState.reset();
-  api.state.currentLevel = 2;
+  api.state.currentLevel = 1;
   api.state.currentStep = 5;
   api.handleStepSuccess(createElement());
-  assert.equal(api.SkillSceneState.has('dress', 'zipperClosed'), true);
+  assert.equal(api.SkillSceneState.has('fold-clothes', 'rightBodyFolded'), true);
 });
 
 test('laundry stage markup contains only prior completed indicators', () => {
@@ -685,7 +685,7 @@ test('laundry stage markup contains only prior completed indicators', () => {
   assert.match(stage, /aria-hidden="true"/);
 });
 
-test('found, picked-up, rinsed, and jacket-found states render only in their intended later steps', () => {
+test('laundry and clothes-folding states render only after their intended steps', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { SkillSceneState, buildPersistentStateHTML } = runtime.api;
@@ -703,7 +703,7 @@ test('found, picked-up, rinsed, and jacket-found states render only in their int
       visibleSteps: [7], hiddenSteps: [6]
     },
     {
-      levelId: 'dress', stepId: 1, className: 'state-jacket-found',
+      levelId: 'fold-clothes', stepId: 1, className: 'state-fold-flat',
       visibleSteps: [2, 7], hiddenSteps: [1]
     }
   ];
@@ -781,107 +781,48 @@ test('laundry continuity indicators appear only after their required completed s
   assert.doesNotMatch(api.buildPersistentStateHTML('laundry', 7), /state-laundry-soapy/);
 });
 
-test('washing scenes provide seven delayed, non-interactive demonstration markers', () => {
+test('clothes folding scenes provide seven delayed, non-interactive demonstration markers', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api } = runtime;
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
   for (let stepId = 1; stepId <= 7; stepId++) {
-    const scene = api.buildScene('wash', api.LEVELS[1].steps[stepId - 1]);
-    assert.match(scene, new RegExp(`demo-element demo-wash-${stepId}`));
+    const scene = api.buildScene('fold-clothes', api.LEVELS[1].steps[stepId - 1]);
+    assert.match(scene, /data-garment="whole-sweatshirt"/);
+    assert.match(scene, new RegExp(`demo-element demo-fold-clothes-${stepId}`));
     assert.match(scene, /aria-hidden="true"/);
-    assert.match(source, new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-wash-${stepId}\\s*\\{`));
+    assert.match(source, new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-fold-clothes-${stepId}\\s*\\{`));
     assert.doesNotMatch(scene, /class="[^"]*draggable-item[^"]*demo-element/);
   }
 
   for (const keyframe of [
-    'demoHandPushUp', 'demoCollectWater', 'demoTowelRub', 'demoTowelWring',
-    'demoFaceWipe', 'demoTowelRinse', 'demoHandPushDown', 'waterFlow', 'waterFadeOut'
+    'demoFoldPlace', 'demoFoldSmooth', 'demoFoldLeftSleeve', 'demoFoldRightSleeve',
+    'demoFoldLeftBody', 'demoFoldRightBody', 'demoFoldHemUp'
   ]) {
     assert.match(source, new RegExp(`@keyframes ${keyframe}`));
   }
 });
 
-test('washing towel demonstrations stage arrival before two distinct rubbing motions and reset', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
+test('clothes folding side demonstrations move toward the highlighted fold area', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const variables = stagePathVariables(runtime.api, 750, 380);
-  const assertStagedPath = (keyframe, path) => {
-    const startIndex = path.findIndex(stage => stage.translateX === 0 && stage.translateY === 0 && stage.opacity > 0);
-    assert.notEqual(startIndex, -1, `${keyframe} needs a visible static-position start`);
-
-    const arrivalIndex = path.findIndex((stage, index) => index > startIndex && stage.translateX === -315 && stage.translateY === 0);
-    assert.notEqual(arrivalIndex, -1, `${keyframe} needs a horizontal-only arrival at the centered towel`);
-
-    const actionIndexes = path
-      .map((stage, index) => ({ stage, index }))
-      .filter(({ stage, index }) => index > arrivalIndex && stage.translateY !== 0);
-    assert.ok(actionIndexes.length >= 2, `${keyframe} needs at least two post-arrival vertical motions`);
-    assert.ok(new Set(actionIndexes.map(({ stage }) => stage.translateY)).size >= 2, `${keyframe} needs two distinct post-arrival vertical positions`);
-
-    const lastActionIndex = actionIndexes.at(-1).index;
-    assert.ok(
-      path.slice(arrivalIndex, lastActionIndex + 1).every(stage => stage.translateX === -315),
-      `${keyframe} must stay centered from arrival through the last action`
-    );
-
-    const resetIndex = path.findIndex((stage, index) => index > lastActionIndex && stage.translateX === 0 && stage.translateY === 0);
-    assert.notEqual(resetIndex, -1, `${keyframe} needs to reset to the right-side start after rubbing`);
-  };
-
-  for (const keyframe of ['demoTowelRub', 'demoTowelWring']) {
-    assertStagedPath(keyframe, parsePixelKeyframePath(source, keyframe, variables));
-  }
-
-  const allPostArrivalVerticalsZero = getKeyframeBody(source, 'demoTowelRub')
-    .replace(/translate\((?:-315px|var\(--demo-wash-center-x\)),(?:78|30)px\)/g, 'translate(-315px,0)');
-  assert.throws(
-    () => assertStagedPath('demoTowelRub mutation', parsePixelKeyframeBody(allPostArrivalVerticalsZero, variables)),
-    /post-arrival vertical motions/
-  );
-
-  const rightDrift = getKeyframeBody(source, 'demoTowelRub')
-    .replace(/70% \{ transform:translate\((?:-315px|var\(--demo-wash-center-x\)),30px\)/, '70% { transform:translate(-250px,30px)');
-  assert.throws(
-    () => assertStagedPath('demoTowelRub drift mutation', parsePixelKeyframeBody(rightDrift, variables)),
-    /stay centered/
-  );
+  const left = parsePixelKeyframePath(source, 'demoFoldLeftSleeve');
+  const right = parsePixelKeyframePath(source, 'demoFoldRightSleeve');
+  assert.ok(left.some(frame => frame.translateX > 0 && frame.opacity > 0));
+  assert.ok(right.some(frame => frame.translateX < 0 && frame.opacity > 0));
 });
 
-test('washing continuity indicators appear only after their required completed steps', () => {
+test('clothes folding continuity indicators appear only after their required completed steps', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { SkillSceneState, buildPersistentStateHTML } = runtime.api;
+  const names = ['flat', 'smooth', 'left-sleeve', 'right-sleeve', 'left-body', 'right-body', 'hem-up'];
   SkillSceneState.reset();
-
-  assert.doesNotMatch(buildPersistentStateHTML('wash', 2), /state-water-stream/);
-  SkillSceneState.complete('wash', 1);
-  assert.match(buildPersistentStateHTML('wash', 2), /state-water-stream/);
-  assert.match(buildPersistentStateHTML('wash', 6), /state-water-stream/);
-  assert.doesNotMatch(buildPersistentStateHTML('wash', 7), /state-water-stream/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('wash', 3), /state-hand-droplets/);
-  SkillSceneState.complete('wash', 2);
-  assert.match(buildPersistentStateHTML('wash', 3), /state-hand-droplets/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('wash', 4), /state-wet-towel/);
-  SkillSceneState.complete('wash', 3);
-  assert.match(buildPersistentStateHTML('wash', 4), /state-wet-towel/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('wash', 5), /state-reduced-droplets/);
-  SkillSceneState.complete('wash', 4);
-  assert.match(buildPersistentStateHTML('wash', 5), /state-reduced-droplets/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('wash', 6), /state-clean-face/);
-  SkillSceneState.complete('wash', 5);
-  assert.match(buildPersistentStateHTML('wash', 6), /state-clean-face/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('wash', 7), /state-clean-wet-towel/);
-  SkillSceneState.complete('wash', 6);
-  assert.match(buildPersistentStateHTML('wash', 7), /state-clean-wet-towel/);
-  assert.match(buildPersistentStateHTML('wash', 7), /aria-hidden="true"/);
+  for (let stepId = 1; stepId <= 7; stepId++) {
+    assert.doesNotMatch(buildPersistentStateHTML('fold-clothes', stepId + 1), new RegExp(`state-fold-${names[stepId - 1]}`));
+    SkillSceneState.complete('fold-clothes', stepId);
+    assert.match(buildPersistentStateHTML('fold-clothes', stepId + 1), new RegExp(`state-fold-${names[stepId - 1]}`));
+  }
 });
 
 test('prompt highlighting cannot reveal laundry sparkle before real completion', () => {

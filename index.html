@@ -284,6 +284,36 @@ html, body {
 .step-stage.demo-running .demo-laundry-7 { animation:demoLaundryWring 2.4s ease-in-out infinite; }
 .step-stage.demo-running:not(.demo-paused)[data-step="7"] .laundry-partner-hand { animation:demoLaundryPartner 2.4s ease-in-out infinite; }
 
+.folding-table { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+.folding-garment { position:absolute; left:50%; top:12%; width:300px; height:270px; transform:translateX(-50%); z-index:5; }
+.folding-garment img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.folding-layer { position:absolute; inset:0; opacity:0; pointer-events:none; transform-origin:center; }
+.state-fold-left-sleeve ~ .folding-garment .folding-left-sleeve { opacity:1; clip-path:polygon(0 18%,38% 18%,48% 72%,12% 72%); transform:translateX(74px) rotate(8deg); }
+.state-fold-right-sleeve ~ .folding-garment .folding-right-sleeve { opacity:1; clip-path:polygon(62% 18%,100% 18%,88% 72%,52% 72%); transform:translateX(-74px) rotate(-8deg); }
+.state-fold-left-body ~ .folding-garment { transform:translateX(-50%) scaleX(.84); transform-origin:center; }
+.state-fold-right-body ~ .folding-garment { transform:translateX(-50%) scaleX(.66); transform-origin:center; }
+.state-fold-hem-up ~ .folding-garment { transform:translateX(-50%) scale(.6,.52); transform-origin:center top; }
+.folding-touch { position:absolute; z-index:9; min-width:88px; min-height:88px; border-radius:20px; background:rgba(255,217,61,.14); border:3px solid rgba(255,217,61,.65); box-shadow:0 0 18px rgba(255,217,61,.68); }
+.folding-touch::after { content:''; position:absolute; inset:-7px; border:3px dashed rgba(255,217,61,.78); border-radius:24px; animation:targetPulse 1s ease-in-out infinite; }
+.folding-target { position:absolute; left:43%; top:35%; width:14%; height:28%; z-index:4; }
+.folding-guide { position:absolute; left:50%; top:3%; transform:translateX(-50%); font-size:28px; color:#8B5E35; background:#FFFFFFE8; border-radius:22px; padding:8px 18px; z-index:11; pointer-events:none; white-space:nowrap; }
+.demo-fold-clothes-1 { left:12%; top:20%; width:230px; height:205px; }
+.demo-fold-clothes-2, .demo-fold-clothes-3, .demo-fold-clothes-4, .demo-fold-clothes-5, .demo-fold-clothes-6, .demo-fold-clothes-7 { left:50%; top:16%; width:88px; height:88px; }
+@keyframes demoFoldPlace { 0%,100% { transform:translate(0,0); opacity:0; } 20%,70% { transform:translate(170px,12px); opacity:.8; } }
+@keyframes demoFoldSmooth { 0%,100% { transform:translate(-50%,0); opacity:0; } 25%,75% { transform:translate(-50%,135px); opacity:.85; } }
+@keyframes demoFoldLeftSleeve { 0%,100% { transform:translate(-115px,75px); opacity:0; } 25%,75% { transform:translate(15px,75px); opacity:.85; } }
+@keyframes demoFoldRightSleeve { 0%,100% { transform:translate(25px,75px); opacity:0; } 25%,75% { transform:translate(-105px,75px); opacity:.85; } }
+@keyframes demoFoldLeftBody { 0%,100% { transform:translate(-118px,120px); opacity:0; } 25%,75% { transform:translate(-18px,120px); opacity:.85; } }
+@keyframes demoFoldRightBody { 0%,100% { transform:translate(28px,120px); opacity:0; } 25%,75% { transform:translate(-72px,120px); opacity:.85; } }
+@keyframes demoFoldHemUp { 0%,100% { transform:translate(-50%,155px); opacity:0; } 25%,75% { transform:translate(-50%,35px); opacity:.85; } }
+.step-stage.demo-running .demo-fold-clothes-1 { animation:demoFoldPlace 2.4s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-2 { animation:demoFoldSmooth 2.1s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-3 { animation:demoFoldLeftSleeve 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-4 { animation:demoFoldRightSleeve 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-5 { animation:demoFoldLeftBody 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-6 { animation:demoFoldRightBody 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-7 { animation:demoFoldHemUp 2.2s ease-in-out infinite; }
+
 @keyframes demoFindPulse {
   0%,45%,100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
   55%,75% { transform:translate(-50%,-50%) scale(1.08); opacity:0.9; }
@@ -1526,6 +1556,8 @@ function loadStep(idx) {
     scene.dataset.levelId = level.id;
     scene.innerHTML = level.id === 'laundry'
       ? `<img class="scene-bg" src="assets/laundry/laundry-room.png" draggable="false" alt="">`
+      : level.id === 'fold-clothes'
+      ? `<img class="scene-bg" src="assets/folding/folding-table.png" draggable="false" alt="">`
       : level.id === 'dress'
       ? `<div class="scene-bg" style="background:linear-gradient(180deg,#FFF3E8 0%,#FFECD8 55%,#FFE4CC 100%);"></div>`
       : level.id === 'brush'
@@ -1656,8 +1688,35 @@ function buildLaundryScene(step) {
   return `<div class="step-stage ${sid === 5 ? 'laundry-auto-flip' : ''}" data-level="laundry" data-step="${sid}">${buildLaundryPersistentState(sid)}${objects}${demo}<div class="laundry-guide" aria-hidden="true">${labels[sid-1]}</div>${dots}</div>`;
 }
 
+function buildClothesFoldingPersistentState(stepId) {
+  const names = ['flat', 'smooth', 'left-sleeve', 'right-sleeve', 'left-body', 'right-body', 'hem-up'];
+  return STEP_STATE_KEYS['fold-clothes'].map((key, index) =>
+    stepId > index + 1 && SkillSceneState.has('fold-clothes', key)
+      ? `<span class="persistent-state state-fold-${names[index]}" aria-hidden="true"></span>` : ''
+  ).join('');
+}
+
+function buildClothesFoldingScene(step) {
+  const sid = step.id;
+  const actions = ['flat', 'smooth', 'left-sleeve', 'right-sleeve', 'left-body', 'right-body', 'hem-up'];
+  const positions = [
+    'left:12%;top:20%;width:230px;height:205px;', 'left:46%;top:16%;width:92px;height:170px;',
+    'left:22%;top:28%;width:100px;height:120px;', 'right:22%;top:28%;width:100px;height:120px;',
+    'left:29%;top:40%;width:100px;height:130px;', 'right:29%;top:40%;width:100px;height:130px;',
+    'left:43%;top:60%;width:120px;height:98px;'
+  ];
+  const labels = ['拖到桌子中间', '从上往下抚平', '把这边袖子折进来', '把另一边袖子折进来', '把衣服这边折到中间', '把另一边折到中间', '把衣服下面向上折'];
+  const garment = `<div class="folding-garment ${sid === 1 ? 'draggable-item interactive-target' : ''}" data-garment="whole-sweatshirt" data-fold-action="${actions[sid - 1]}" ${sid === 1 ? 'data-item="shirt"' : 'aria-hidden="true"'}><img src="assets/folding/sweatshirt-flat.png" draggable="false" alt="长袖卫衣"><img class="folding-layer folding-left-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""></div>`;
+  const target = `<div class="folding-target drag-target" data-target="shirt-center" aria-hidden="true"></div>`;
+  const touch = sid === 1 ? '' : `<div class="folding-touch draggable-item interactive-target" data-item="${step.target}" data-fold-action="${actions[sid - 1]}" style="${positions[sid - 1]}"></div>`;
+  const demoContent = sid === 1 ? '<img src="assets/folding/sweatshirt-flat.png" draggable="false" alt="">' : svgHand(88,88);
+  const demo = `<div class="demo-element demo-fold-clothes-${sid} demo-ghost" aria-hidden="true">${demoContent}</div>`;
+  return `<div class="step-stage" data-level="fold-clothes" data-step="${sid}">${buildClothesFoldingPersistentState(sid)}<img class="folding-table" src="assets/folding/folding-table.png" draggable="false" alt="">${garment}${target}${touch}${demo}<div class="folding-guide" aria-hidden="true">${labels[sid - 1]}</div></div>`;
+}
+
 function buildPersistentStateHTML(levelId, stepId) {
   if (levelId === 'laundry') return buildLaundryPersistentState(stepId);
+  if (levelId === 'fold-clothes') return buildClothesFoldingPersistentState(stepId);
   const stateHTML = (cls, content='') => `<div class="persistent-state ${cls}" aria-hidden="true">${content}</div>`;
   const prior = (key, completedStep) => stepId > completedStep && SkillSceneState.has(levelId, key);
   let html = '';
@@ -1696,6 +1755,7 @@ function stepStageHTML(objects, guide, levelId, stepId) {
 
 function buildScene(levelId, step) {
   if (levelId === 'laundry') return buildLaundryScene(step);
+  if (levelId === 'fold-clothes') return buildClothesFoldingScene(step);
   const sid=step.id, arrow=step.arrow;
   let objects='', guide='';
 
