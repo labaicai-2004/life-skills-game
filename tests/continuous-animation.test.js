@@ -889,47 +889,31 @@ test('dressing ghost hands reach their target before the directional demonstrati
   assertArrivalThenAction('demoCollarAdjust', { translateX: -240, translateY: -34 }, { translateX: -293, translateY: -34 });
 });
 
-test('dressing continuity indicators follow completed steps and reveal the final collar only on real completion', () => {
+test('umbrella continuity retains each completed action and fastens only on real completion', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api, elements } = runtime;
   const { SkillSceneState, buildPersistentStateHTML } = api;
   SkillSceneState.reset();
 
-  assert.doesNotMatch(buildPersistentStateHTML('dress', 3), /state-jacket-front/);
-  SkillSceneState.complete('dress', 2);
-  assert.match(buildPersistentStateHTML('dress', 3), /state-jacket-front/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('dress', 4), /state-left-sleeve/);
-  SkillSceneState.complete('dress', 3);
-  assert.match(buildPersistentStateHTML('dress', 4), /state-left-sleeve/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('dress', 5), /state-both-sleeves/);
-  SkillSceneState.complete('dress', 4);
-  assert.match(buildPersistentStateHTML('dress', 5), /state-both-sleeves/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('dress', 6), /state-jacket-flat/);
-  SkillSceneState.complete('dress', 5);
-  assert.match(buildPersistentStateHTML('dress', 6), /state-jacket-flat/);
-
-  assert.doesNotMatch(buildPersistentStateHTML('dress', 7), /state-zipper-closed/);
-  SkillSceneState.complete('dress', 6);
-  assert.match(buildPersistentStateHTML('dress', 7), /state-zipper-closed/);
-  assert.doesNotMatch(buildPersistentStateHTML('dress', 7), /state-final-collar-sparkle/);
-  SkillSceneState.complete('dress', 7);
-  assert.match(buildPersistentStateHTML('dress', 8), /state-final-collar-sparkle/);
+  for (const [index,name] of ['closed','short','strap-front','smooth','gathered','rolled','fastened'].entries()) {
+    assert.doesNotMatch(buildPersistentStateHTML('fold-umbrella',index+2),new RegExp(`state-umbrella-${name}`));
+    SkillSceneState.complete('fold-umbrella',index+1);
+    assert.match(buildPersistentStateHTML('fold-umbrella',index+2),new RegExp(`state-umbrella-${name}`));
+    assert.doesNotMatch(buildPersistentStateHTML('fold-umbrella',index+1),new RegExp(`state-umbrella-${name}`));
+  }
 
   const stage = createElement();
   elements['interaction-area'].querySelector = selector => selector === '.step-stage' ? stage : null;
   api.state.currentLevel = 2;
   api.state.currentStep = 6;
   api.applyPromptLevel(api.PROMPT_LEVELS.VISUAL.level);
-  assert.equal(stage.classList.contains('dress-final-collar'), false);
+  assert.equal(stage.classList.contains('umbrella-complete'), false);
   api.handleStepSuccess(elements['interaction-area']);
-  assert.equal(stage.classList.contains('dress-final-collar'), true);
+  assert.equal(stage.classList.contains('umbrella-complete'), true);
 });
 
-test('dressing final collar sparkle stays hidden during demonstration and generic prompt success', () => {
+test('umbrella strap stays unfastened during passive demonstration and generic visual prompts', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api, elements } = runtime;
@@ -940,15 +924,15 @@ test('dressing final collar sparkle stays hidden during demonstration and generi
   api.state.currentStep = 6;
 
   stage.classList.add('demo-running');
-  assert.doesNotMatch(source, /\.step-stage\.demo-running\s+\.state-final-collar-sparkle/);
-  assert.doesNotMatch(source, /#interaction-area\.success\s+\.state-final-collar-sparkle/);
+  assert.doesNotMatch(source, /\.step-stage\.demo-running\s+\.umbrella-final/);
+  assert.doesNotMatch(source, /#interaction-area\.success\s+\.umbrella-final/);
 
   api.applyPromptLevel(api.PROMPT_LEVELS.VISUAL.level);
   assert.equal(elements['interaction-area'].classList.contains('success'), true);
-  assert.equal(stage.classList.contains('dress-final-collar'), false);
+  assert.equal(stage.classList.contains('umbrella-complete'), false);
 
   api.handleStepSuccess(elements['interaction-area']);
-  assert.equal(stage.classList.contains('dress-final-collar'), true);
+  assert.equal(stage.classList.contains('umbrella-complete'), true);
 });
 
 test('zipper ghost reaches the unchanged zipper target with at least 35 percent overlap before moving up', () => {

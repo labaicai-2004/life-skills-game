@@ -284,6 +284,75 @@ html, body {
 .step-stage.demo-running .demo-laundry-7 { animation:demoLaundryWring 2.4s ease-in-out infinite; }
 .step-stage.demo-running:not(.demo-paused)[data-step="7"] .laundry-partner-hand { animation:demoLaundryPartner 2.4s ease-in-out infinite; }
 
+.umbrella-object { position:absolute; width:360px; height:320px; left:50%; top:4%; transform:translateX(-50%); }
+.umbrella-picture { position:absolute; left:20px; top:0; width:320px; height:320px; object-fit:contain; pointer-events:none; transition:opacity .6s ease,transform .6s ease; }
+.umbrella-closed-top { clip-path:inset(0 0 38% 0); opacity:0; }
+.umbrella-closed-bottom { clip-path:inset(62% 0 0 0); opacity:0; }
+.umbrella-final { opacity:0; }
+.state-umbrella-closed ~ .umbrella-object .umbrella-open,
+.step-stage[data-step="1"].umbrella-complete .umbrella-open { opacity:0; }
+.state-umbrella-closed ~ .umbrella-object .umbrella-closed-top,
+.state-umbrella-closed ~ .umbrella-object .umbrella-closed-bottom,
+.step-stage[data-step="1"].umbrella-complete .umbrella-closed-top,
+.step-stage[data-step="1"].umbrella-complete .umbrella-closed-bottom { opacity:1; }
+.state-umbrella-short ~ .umbrella-object .umbrella-closed-bottom,
+.step-stage[data-step="2"].umbrella-complete .umbrella-closed-bottom { transform:translateY(-54px); }
+.umbrella-panel-fan { position:absolute; inset:0; opacity:0; pointer-events:none; transform-origin:180px 30px; transition:transform .7s ease,opacity .6s ease; }
+.state-umbrella-strap-front ~ .umbrella-object .umbrella-panel-fan,
+.step-stage[data-step="3"].umbrella-complete .umbrella-panel-fan { opacity:1; }
+.state-umbrella-strap-front ~ .umbrella-object .umbrella-closed-top,
+.step-stage[data-step="3"].umbrella-complete .umbrella-closed-top { clip-path:inset(0 0 84% 0); }
+.umbrella-panel { position:absolute; top:60px; width:52px; height:144px; }
+.umbrella-panel svg { width:100%; height:100%; overflow:visible; }
+.umbrella-panel .panel-crease { opacity:.7; transition:opacity .35s ease; }
+.umbrella-panel.smoothed .panel-crease,.state-umbrella-smooth ~ .umbrella-object .panel-crease { opacity:0; }
+.umbrella-panel.active { filter:drop-shadow(0 0 8px #FFD93D); }
+.umbrella-panel.active::after { content:'↓'; position:absolute; top:38px; left:7px; width:38px; height:55px; text-align:center; color:#FFF8BA; font-size:48px; animation:umbrellaPanelArrow 1.8s ease-in-out infinite; }
+.state-umbrella-gathered ~ .umbrella-object .umbrella-panel-fan,
+.step-stage[data-step="5"].umbrella-complete .umbrella-panel-fan { transform:scaleX(.25); }
+.state-umbrella-rolled ~ .umbrella-object .umbrella-panel-fan,
+.step-stage[data-step="6"].umbrella-complete .umbrella-panel-fan { transform:scaleX(.19); }
+.umbrella-wrap-lines { position:absolute; left:151px; top:72px; width:59px; height:126px; border-radius:18px; background:repeating-linear-gradient(155deg,transparent 0 25px,#253F70 27px 31px,transparent 33px 45px); opacity:0; pointer-events:none; }
+.state-umbrella-rolled ~ .umbrella-object .umbrella-wrap-lines,
+.step-stage[data-step="6"].umbrella-complete .umbrella-wrap-lines { opacity:1; }
+.umbrella-strap { position:absolute; left:198px; top:124px; width:96px; height:44px; background:#2F7EE0; border:4px solid #624C3D; border-radius:10px; opacity:0; transform-origin:left center; pointer-events:none; }
+.umbrella-strap::after { content:''; position:absolute; right:6px; top:7px; width:21px; height:21px; background:#FFD15B; border:3px solid #624C3D; border-radius:50%; }
+.state-umbrella-strap-front ~ .umbrella-object .umbrella-strap,
+.step-stage[data-step="3"].umbrella-complete .umbrella-strap { opacity:1; }
+.umbrella-touch,.umbrella-drop { position:absolute; min-width:44px; min-height:44px; border-radius:14px; }
+.umbrella-touch { z-index:10; border:3px solid #FFD15B; background:#FFD15B33; box-shadow:0 0 15px #FFD15B99; touch-action:none; }
+.umbrella-touch[data-item="umbrella-slider"] { background:#FFC553; border:4px solid #624C3D; }
+.umbrella-touch[data-item="umbrella-slider"]::after { content:'↓'; display:block; text-align:center; font-size:34px; color:#624C3D; }
+.umbrella-touch[data-item="umbrella-strap"] { background:#2F7EE0; border:4px solid #624C3D; }
+.umbrella-touch[data-item="umbrella-strap"]::after { content:'●'; color:#FFD15B; font-size:32px; position:absolute; right:6px; top:-3px; }
+.umbrella-drop { pointer-events:none; border:3px dashed #E0AC36; background:#FFF4BF44; z-index:8; }
+.umbrella-guide { position:absolute; bottom:2%; left:50%; transform:translateX(-50%); border-radius:20px; padding:6px 15px; color:#624C3D; background:#FFFFFFE8; font-size:22px; white-space:nowrap; pointer-events:none; }
+.umbrella-stars { position:absolute; left:50%; bottom:13%; transform:translateX(-50%); display:flex; gap:9px; }
+.umbrella-stars span { font-size:27px; color:#D9CEC0; text-shadow:0 1px #FFF; }
+.umbrella-stars span.done { color:#E9AC24; }
+.umbrella-demo { position:absolute; width:64px; height:64px; opacity:0; pointer-events:none; }
+.umbrella-demo svg { width:100%; height:100%; }
+.step-stage.demo-running .demo-umbrella-1 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-2 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-3 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-4 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-5 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-6 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-7 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.umbrella-turning .umbrella-closed-top { animation:umbrellaTurn .6s ease-in-out; }
+.umbrella-rolling .umbrella-panel-fan { animation:umbrellaRoll 1.5s ease-in-out forwards; }
+.step-stage.umbrella-complete .umbrella-touch,.step-stage.umbrella-complete .umbrella-drop { opacity:0; pointer-events:none; }
+.step-stage[data-step="7"].umbrella-complete .umbrella-final,
+.state-umbrella-fastened ~ .umbrella-object .umbrella-final { opacity:1; transform:translateY(-12px) scale(.82); }
+.step-stage[data-step="7"].umbrella-complete .umbrella-closed-top,
+.step-stage[data-step="7"].umbrella-complete .umbrella-closed-bottom,
+.step-stage[data-step="7"].umbrella-complete .umbrella-panel-fan,
+.step-stage[data-step="7"].umbrella-complete .umbrella-strap,
+.step-stage[data-step="7"].umbrella-complete .umbrella-wrap-lines { opacity:0; }
+@keyframes demoUmbrellaAction { 0%,15% { opacity:0; transform:translate(0,0); } 25%,35% { opacity:.8; transform:translate(0,0); } 70%,85% { opacity:.8; transform:translate(var(--umbrella-demo-x,0px),var(--umbrella-demo-y,70px)); } 100% { opacity:0; transform:translate(var(--umbrella-demo-x,0px),var(--umbrella-demo-y,70px)); } }
+@keyframes umbrellaPanelArrow { 0%,30%,100% { transform:translateY(0); } 70% { transform:translateY(25px); } }
+@keyframes umbrellaTurn { 0% { transform:rotateY(0deg); } 50% { transform:rotateY(90deg); } 100% { transform:rotateY(180deg); } }
+@keyframes umbrellaRoll { 0% { transform:scaleX(.25) rotateY(0deg); } 100% { transform:scaleX(.19) rotateY(540deg); } }
 .folding-table { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
 .folding-garment { position:absolute; left:50%; top:12%; width:300px; height:270px; transform:translateX(-50%); z-index:5; }
 .folding-garment img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
@@ -1572,6 +1641,8 @@ function loadStep(idx) {
       ? `<img class="scene-bg" src="assets/laundry/laundry-room.png" draggable="false" alt="">`
       : level.id === 'fold-clothes'
       ? `<img class="scene-bg" src="assets/folding/folding-table.png" draggable="false" alt="">`
+      : level.id === 'fold-umbrella'
+      ? `<img class="scene-bg" src="assets/umbrella/umbrella-room.png" draggable="false" alt="">`
       : level.id === 'dress'
       ? `<div class="scene-bg" style="background:linear-gradient(180deg,#FFF3E8 0%,#FFECD8 55%,#FFE4CC 100%);"></div>`
       : level.id === 'brush'
@@ -1724,9 +1795,31 @@ function buildClothesFoldingScene(step) {
   return `<div class="step-stage" data-level="fold-clothes" data-step="${sid}">${buildClothesFoldingPersistentState(sid)}<img class="folding-table" src="assets/folding/folding-table.png" draggable="false" alt="">${garment}${target}${touch}${demo}<div class="folding-guide" aria-hidden="true">${labels[sid - 1]}</div></div>`;
 }
 
+function buildUmbrellaPersistentState(stepId) {
+  const names = ['closed','short','strap-front','smooth','gathered','rolled','fastened'];
+  return STEP_STATE_KEYS['fold-umbrella'].map((key,index) => stepId > index + 1 && SkillSceneState.has('fold-umbrella',key)
+    ? `<span class="persistent-state state-umbrella-${names[index]}" aria-hidden="true"></span>` : '').join('');
+}
+
+function buildUmbrellaFoldingScene(step) {
+  const sid = step.id;
+  const items = [[154,162,52,52],[154,254,64,60],[145,90,90,100],[24,60,52,144],[24,76,70,140],[146,80,74,128],[218,124,76,48]];
+  const targets = {1:[154,242,64,60],2:[154,194,64,60],5:[145,76,70,140],7:[146,124,76,48]};
+  const box = ([x,y,w,h]) => `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+  const image = (name,cls) => `<img class="umbrella-picture ${cls}" src="assets/umbrella/umbrella-${name}.png" alt="" draggable="false">`;
+  const panels = Array.from({length:6},(_,i) => `<div class="umbrella-panel ${sid===4&&i===0?'active interactive-target':''}" data-umbrella-panel="${i+1}" style="left:${24+52*i}px;"><svg viewBox="0 0 52 144" aria-hidden="true"><path d="M${156-52*i} -35 L3 132 Q26 143 49 132 Z" fill="${i%2?'#3689E0':'#4B99E9'}" stroke="#624C3D" stroke-width="3" stroke-linejoin="round"/><path class="panel-crease" d="M15 38 L35 56 L16 85 L34 115" fill="none" stroke="#285DA0" stroke-width="3"/><circle cx="26" cy="136" r="6" fill="#FFD15B" stroke="#624C3D" stroke-width="3"/></svg></div>`).join('');
+  const touch = sid===4 ? '' : `<div class="umbrella-touch interactive-target ${targets[sid]?'draggable-item':''}" data-item="${step.target}" style="${box(items[sid-1])}"></div>`;
+  const target = targets[sid] ? `<div class="umbrella-drop drag-target" data-target="${step.dragTarget}" style="${box(targets[sid])}" aria-hidden="true"></div>` : '';
+  const delta = targets[sid] ? [targets[sid][0]-items[sid-1][0],targets[sid][1]-items[sid-1][1]] : sid===4 ? [0,70] : [65,0];
+  const demo = `<div class="demo-element demo-umbrella-${sid} demo-ghost umbrella-demo" style="left:${items[sid-1][0]}px;top:${items[sid-1][1]}px;--umbrella-demo-x:${delta[0]}px;--umbrella-demo-y:${delta[1]}px;" aria-hidden="true"><svg viewBox="0 0 88 88"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#624C3D" stroke-width="3"/></svg></div>`;
+  const labels = ['拉小滑块 ↓','拿稳伞头，伞柄向上推 ↑','轻轻转一转 →','顺着发光伞片往下理 ↓','把伞布拢到中间 →','向右轻轻卷一卷 →','把小带子绕过来 ←'];
+  return `<div class="step-stage" data-level="fold-umbrella" data-step="${sid}">${buildUmbrellaPersistentState(sid)}<div class="umbrella-object" data-umbrella="whole">${image('open','umbrella-open')}${image('closed','umbrella-closed-top')}${image('closed','umbrella-closed-bottom')}<div class="umbrella-panel-fan">${panels}</div><div class="umbrella-wrap-lines" aria-hidden="true"></div><div class="umbrella-strap" aria-hidden="true"></div>${image('folded','umbrella-final')}${target}${touch}${demo}</div>${sid===4?'<div class="umbrella-stars" aria-hidden="true">'+Array.from({length:6},()=>'<span data-substep>★</span>').join('')+'</div>':''}<div class="umbrella-guide" aria-hidden="true">${labels[sid-1]}</div></div>`;
+}
+
 function buildPersistentStateHTML(levelId, stepId) {
   if (levelId === 'laundry') return buildLaundryPersistentState(stepId);
   if (levelId === 'fold-clothes') return buildClothesFoldingPersistentState(stepId);
+  if (levelId === 'fold-umbrella') return buildUmbrellaPersistentState(stepId);
   const stateHTML = (cls, content='') => `<div class="persistent-state ${cls}" aria-hidden="true">${content}</div>`;
   const prior = (key, completedStep) => stepId > completedStep && SkillSceneState.has(levelId, key);
   let html = '';
@@ -1766,6 +1859,7 @@ function stepStageHTML(objects, guide, levelId, stepId) {
 function buildScene(levelId, step) {
   if (levelId === 'laundry') return buildLaundryScene(step);
   if (levelId === 'fold-clothes') return buildClothesFoldingScene(step);
+  if (levelId === 'fold-umbrella') return buildUmbrellaFoldingScene(step);
   const sid=step.id, arrow=step.arrow;
   let objects='', guide='';
 
@@ -1910,6 +2004,11 @@ function attachGestureListeners(step, area) {
   const ac = new AbortController();
   state.stepAbortController = ac;
   const {signal} = ac;
+
+  if (LEVELS[state.currentLevel]?.id === 'fold-umbrella' && step.id) {
+    attachUmbrellaGesture(step, area, signal);
+    return;
+  }
 
   if (LEVELS[state.currentLevel]?.id === 'laundry' && step.id) {
     attachLaundryGesture(step, area, signal);
@@ -2261,6 +2360,84 @@ function attachLaundryGesture(step, area, signal) {
   }
 }
 
+function attachUmbrellaGesture(step, area, signal) {
+  const sid = step.id, stage = area.querySelector('.step-stage');
+  const panels = [...area.querySelectorAll('[data-umbrella-panel]')];
+  const item = area.querySelector('.interactive-target'), target = area.querySelector('.drag-target');
+  let start = null, last = null, origin = null, busy = false, timer = null;
+  const renderPanels = () => {
+    panels.forEach((panel,index) => {
+      panel.classList.toggle('active',sid===4 && index===StepProgress.current);
+      panel.classList.toggle('interactive-target',sid===4 && index===StepProgress.current);
+      panel.classList.toggle('smoothed',index<StepProgress.current);
+    });
+    const demo = stage?.querySelector('.umbrella-demo');
+    if (sid===4 && demo) demo.style.left = `${24+52*Math.min(5,StepProgress.current)}px`;
+  };
+  if (sid===4) renderPanels();
+  const point = e => { const p = e.touches?.[0] || e.changedTouches?.[0] || e; return {x:p.clientX,y:p.clientY}; };
+  const reset = () => {
+    if (item && origin) {
+      item.style.transition = 'left .25s ease,top .25s ease';
+      item.style.left = origin.left+'px'; item.style.top = origin.top+'px';
+    }
+  };
+  const complete = () => {
+    if (signal.aborted || state.stepCompleted.has(state.currentStep)) return;
+    busy = true;
+    stage?.classList.remove('umbrella-rolling','umbrella-turning');
+    advanceStepProgress(area);
+  };
+  const begin = e => {
+    if (signal.aborted || busy || state.stepCompleted.has(state.currentStep)) return;
+    const current = sid===4 ? panels[StepProgress.current] : item;
+    if (!current) return;
+    const p=point(e), rect=current.getBoundingClientRect();
+    if (p.x<rect.left || p.x>rect.right || p.y<rect.top || p.y>rect.bottom) return;
+    initAudio(); AnimationController.pause(stage);
+    start=last=p;
+    if (target && item) {
+      const bounds=area.querySelector('.umbrella-object').getBoundingClientRect();
+      origin={left:rect.left-bounds.left,top:rect.top-bounds.top};
+      item.style.transition='none';
+    }
+    e.preventDefault?.();
+  };
+  const move = e => {
+    if (!start || busy || signal.aborted) return;
+    last=point(e);
+    if (target && item) {
+      item.style.left=origin.left+last.x-start.x+'px';
+      item.style.top=origin.top+last.y-start.y+'px';
+    }
+    e.preventDefault?.();
+  };
+  const end = () => {
+    if (!start || busy || signal.aborted) return;
+    const dx=last.x-start.x,dy=last.y-start.y;
+    let valid=false;
+    if (target && item) {
+      const a=item.getBoundingClientRect(),b=target.getBoundingClientRect();
+      const overlap=Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top))/(a.width*a.height);
+      const direction=sid===1 ? dy>=40 && dy>=Math.abs(dx) : sid===2 ? dy<=-40 && -dy>=Math.abs(dx) : isMovingTowardTarget(start,last,{x:b.left+b.width/2,y:b.top+b.height/2});
+      valid=direction && overlap+Number.EPSILON>=.35;
+    } else if (sid===4) valid=dy>=40 && dy>=Math.abs(dx);
+    else valid=Math.abs(dx)>=40 && Math.abs(dx)>=Math.abs(dy) && (sid!==6 || dx>0);
+    start=null;
+    if (!valid) { reset(); speak('我们再试一次'); return; }
+    if (sid===3 || sid===6) {
+      busy=true;
+      stage?.classList.add(sid===6?'umbrella-rolling':'umbrella-turning');
+      timer=setTimeout(complete,sid===6?1500:600);
+    } else if (sid===4) {
+      advanceStepProgress(area); renderPanels();
+    } else complete();
+  };
+  const cancel=()=>{ start=null; if (!busy) reset(); };
+  signal.addEventListener('abort',()=>{ clearTimeout(timer); cancel(); });
+  for (const [event,callback] of [['touchstart',begin],['touchmove',move],['touchend',end],['touchcancel',cancel],['mousedown',begin],['mousemove',move],['mouseup',end],['mouseleave',cancel]]) area.addEventListener(event,callback,{signal,passive:false});
+}
+
 function gestureTargetCenter(area) {
   const target = area.querySelector('[data-gesture-target]') || area;
   const rect = target.getBoundingClientRect();
@@ -2306,6 +2483,7 @@ function handleStepSuccess(area) {
   state.stepCompleted.add(state.currentStep);
   SkillSceneState.complete(level.id, level.steps[state.currentStep].id);
   if (level.id === 'laundry') area.querySelector('.step-stage')?.classList.add('laundry-complete');
+  if (level.id === 'fold-umbrella') area.querySelector('.step-stage')?.classList.add('umbrella-complete');
   if (level.id === 'brush' && level.steps[state.currentStep].id === 7) {
     const stage = area.querySelector('.step-stage');
     if (stage) stage.classList.add('brush-final-clean');
@@ -2316,7 +2494,7 @@ function handleStepSuccess(area) {
   }
   area.classList.add('success'); playSuccessSound();
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
-  speak(level.id === 'laundry' && state.currentStep === 6 ? '衣服洗干净啦' : p[Math.floor(Math.random()*p.length)]);
+  speak(state.currentStep === 6 && level.id === 'laundry' ? '衣服洗干净啦' : state.currentStep === 6 && level.id === 'fold-umbrella' ? '雨伞整理得真整齐' : p[Math.floor(Math.random()*p.length)]);
   spawnParticles(8); renderProgressDots();
   // Show "next step" button instead of auto-advancing
   const btn = document.getElementById('next-step-btn');

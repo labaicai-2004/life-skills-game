@@ -182,6 +182,100 @@ function foldingGesture(stepId, kind = 'mouse') {
   return { ...runtime, item, target:destination, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
 }
 
+function umbrellaGesture(stepId, kind = 'mouse') {
+  const runtime = loadRuntime(), { api } = runtime, listeners = new Map();
+  const box = (left, top, width, height) => ({ left, top, width, height, right:left + width, bottom:top + height });
+  const node = (rect) => {
+    const element = createElement(), classes = new Set();
+    element.classList = { add(...names) { names.forEach(name => classes.add(name)); }, remove(...names) { names.forEach(name => classes.delete(name)); }, contains(name) { return classes.has(name); }, toggle(name, on) { on ? classes.add(name) : classes.delete(name); } };
+    element.style.left = rect.left + 'px'; element.style.top = rect.top + 'px';
+    element.getBoundingClientRect = () => box(parseFloat(element.style.left), parseFloat(element.style.top), rect.width, rect.height);
+    return element;
+  };
+  const starts = [[154,162,52,52],[154,254,64,60],[145,90,90,100],[24,60,52,144],[24,76,70,140],[146,80,74,128],[218,124,76,48]];
+  const targets = [[154,242,64,60],[154,194,64,60],[145,90,90,100],[24,60,52,144],[145,76,70,140],[146,80,74,128],[146,124,76,48]];
+  const stage = node(box(0,0,360,320)), item = node(box(...starts[stepId - 1])), target = node(box(...targets[stepId - 1]));
+  const panels = Array.from({length:6}, (_, i) => { const panel = node(box(24 + 52 * i,60,52,144)); panel.dataset.umbrellaPanel = String(i+1); return panel; });
+  const dots = Array.from({length:6}, () => node(box(0,0,20,20)));
+  const area = node(box(0,0,750,380));
+  area.querySelector = selector => ({'.step-stage':stage,'.interactive-target':item,'.draggable-item':item,'.drag-target':[1,2,5,7].includes(stepId)?target:null,'.umbrella-object':stage,'[data-gesture-target]':target})[selector] || null;
+  area.querySelectorAll = selector => selector === '[data-umbrella-panel]' ? panels : selector === '[data-substep]' ? dots : [];
+  stage.querySelector = area.querySelector; stage.querySelectorAll = area.querySelectorAll;
+  area.addEventListener = (type, callback, options) => { listeners.set(type, callback); options?.signal?.addEventListener('abort', () => listeners.delete(type)); };
+  api.state.currentLevel = 2; api.state.currentStep = stepId - 1;
+  api.StepProgress.reset(api.LEVELS[2].steps[stepId - 1]);
+  api.attachGestureListeners(api.LEVELS[2].steps[stepId - 1], area);
+  const dispatch = (phase,x,y) => {
+    const type = kind === 'mouse' ? {start:'mousedown',move:'mousemove',end:'mouseup',cancel:'mouseleave'}[phase] : {start:'touchstart',move:'touchmove',end:'touchend',cancel:'touchcancel'}[phase];
+    listeners.get(type)?.({clientX:x,clientY:y,touches:[{clientX:x,clientY:y}],changedTouches:[{clientX:x,clientY:y}],preventDefault(){}});
+  };
+  return {...runtime, stage,item,target,panels,dots,dispatch,stroke(x,y,dx,dy) { dispatch('start',x,y);dispatch('move',x+dx,y+dy);dispatch('end',x+dx,y+dy); },complete:()=>api.state.stepCompleted.has(stepId-1)};
+}
+
+test('umbrella scenes retain one complete local umbrella with seven passive demos and six panels', () => {
+  const { api } = loadRuntime();
+  for (let id=1;id<=7;id++) {
+    const scene = api.buildScene('fold-umbrella', api.LEVELS[2].steps[id-1]);
+    assert.equal((scene.match(/data-umbrella="whole"/g)||[]).length,1);
+    assert.match(scene,new RegExp(`demo-element demo-umbrella-${id}`));
+    assert.match(scene,/assets\/umbrella\/umbrella-/);
+    assert.equal((scene.match(/interactive-target/g)||[]).length,1);
+    assert.doesNotMatch(scene,/class="[^"]*interactive-target[^"]*demo-element/);
+  }
+  const scene=api.buildScene('fold-umbrella',api.LEVELS[2].steps[3]);
+  assert.equal((scene.match(/data-umbrella-panel=/g)||[]).length,6);
+  assert.equal((scene.match(/data-substep/g)||[]).length,6);
+  assert.doesNotMatch(JSON.stringify(api.LEVELS[2]),/伞套|书包|收进包/);
+});
+
+for (const kind of ['mouse','touch']) {
+  test(`umbrella ${kind} only the current panel accepts one downward stroke and six are required`, () => {
+    const r=umbrellaGesture(4,kind);
+    assert.equal(r.panels.filter(p=>p.classList.contains('active')).length,1);
+    r.stroke(102,90,0,60); r.stroke(50,90,0,-60); r.stroke(50,90,60,0); r.stroke(50,90,0,39);
+    assert.equal(r.api.StepProgress.current,0);
+    for(let i=0;i<6;i++) {
+      r.stroke(50+52*i,90,0,60);
+      assert.equal(r.api.StepProgress.current,i+1);
+      assert.equal(r.complete(),i===5);
+      assert.equal(r.dots.filter(d=>d.classList.contains('done')).length,i+1);
+      assert.equal(r.panels.filter(p=>p.classList.contains('active')).length,i===5?0:1);
+      if(i===0) { r.stroke(50,90,0,60); assert.equal(r.api.StepProgress.current,1); }
+    }
+  });
+  test(`umbrella ${kind} slider shaft and gathering require correct direction and a target drop`, () => {
+    for(const [id,x,y,dx,dy] of [[1,180,180,0,80],[2,180,280,0,-60],[5,50,110,121,0]]) {
+      const r=umbrellaGesture(id,kind);
+      r.stroke(x,y,0,0);r.stroke(x,y,-dx,-dy); assert.equal(r.complete(),false);
+      r.stroke(x,y,dx,dy); assert.equal(r.complete(),true,`step ${id}`);
+    }
+  });
+  test(`umbrella ${kind} rotation starts on umbrella and roll completes only after 1500ms`, () => {
+    const turn=umbrellaGesture(3,kind);
+    turn.stroke(10,10,60,0);turn.stroke(180,110,0,60);assert.equal(turn.complete(),false);
+    turn.stroke(180,110,60,0);assert.equal(turn.complete(),false);turn.advance(600);assert.equal(turn.complete(),true);
+    const roll=umbrellaGesture(6,kind);
+    roll.stroke(180,110,-60,0);roll.stroke(180,110,39,0);assert.equal(roll.complete(),false);
+    roll.stroke(180,110,60,0);assert.equal(roll.stage.classList.contains('umbrella-rolling'),true);
+    roll.advance(1499);assert.equal(roll.complete(),false);roll.advance(1);assert.equal(roll.complete(),true);
+  });
+  test(`umbrella ${kind} strap needs 35 percent overlap and locks only on success`, () => {
+    for(const [dx,expected] of [[-49.1,false],[-49.2,true]]) {
+      const r=umbrellaGesture(7,kind);
+      r.stroke(240,145,dx,24);assert.equal(r.complete(),expected);
+      assert.equal(r.stage.classList.contains('umbrella-complete'),expected);
+      if(expected) assert.equal(r.spoken.at(-1).text,'雨伞整理得真整齐');
+    }
+  });
+  test(`umbrella ${kind} cancel and aborted roll never complete a step`, () => {
+    const r=umbrellaGesture(4,kind);
+    r.dispatch('start',50,90);r.dispatch('move',50,150);r.dispatch('cancel',50,150);r.dispatch('end',50,150);
+    assert.equal(r.api.StepProgress.current,0);
+    const roll=umbrellaGesture(6,kind);roll.stroke(180,110,60,0);roll.api.state.stepAbortController.abort();roll.advance(2000);
+    assert.equal(roll.complete(),false);
+  });
+}
+
 test('laundry renders seven scenes with one main target and passive delayed demos', () => {
   const { api } = loadRuntime();
   for (let id = 1; id <= 7; id++) {
