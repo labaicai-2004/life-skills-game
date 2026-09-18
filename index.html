@@ -2476,6 +2476,14 @@ function checkMatch(det, exp, start, end, targetCenter) {
 function advanceStepProgress(area) {
   if (StepProgress.current >= StepProgress.goal) return;
   const progress = StepProgress.advance();
+  if (StepProgress.goal > 1) {
+    const step = LEVELS[state.currentLevel].steps[state.currentStep];
+    UnifiedDataManager.logEvent('substep_complete', {
+      substepIndex: progress.current,
+      substepGoal: progress.goal,
+      panelNumber: step.target === 'umbrella-panel' ? progress.current : null
+    });
+  }
   StepProgress.render(area);
   if (progress.complete) handleStepSuccess(area);
 }
@@ -2522,7 +2530,7 @@ function goNextStep() {
   if (state.currentStep < level.steps.length - 1) {
     loadStep(state.currentStep + 1);
   } else {
-    handleLevelComplete();
+    finishCurrentLevel();
   }
 }
 
@@ -2542,9 +2550,11 @@ function handleStepWrong(area) {
   setTimeout(()=>area.classList.remove('wrong'), 600);
 }
 
-function handleLevelComplete() {
-  const level=LEVELS[state.currentLevel]; playCelebrationSound();
-  saveRecord(level.id, level.name, level.icon);
+function finishCurrentLevel() {
+  const level = LEVELS[state.currentLevel];
+  if (!level) return;
+  if (UnifiedDataManager.active) UnifiedDataManager.endSession();
+  playCelebrationSound();
   document.getElementById('celebration-title').textContent=`${level.icon} ${level.name}完成啦！`;
   document.getElementById('celebration-sub').textContent='你真的太厉害了！';
   document.getElementById('celebration').classList.add('active');
@@ -3628,16 +3638,6 @@ loadStep = function(idx) {
     startingLevel: promptState.currentLevel
   });
   setTimeout(() => startPromptEscalation(), 200);
-};
-
-// 包装原始 handleLevelComplete，注入 Session 结束
-const _originalHandleLevelComplete = handleLevelComplete;
-handleLevelComplete = function() {
-  _originalHandleLevelComplete();
-  // 延迟一下等庆祝弹窗显示后再结束 session
-  setTimeout(() => {
-    UnifiedDataManager.endSession();
-  }, 1000);
 };
 
 // 包装原始 goHome，确保 session 正确结束

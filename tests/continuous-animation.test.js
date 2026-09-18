@@ -40,6 +40,7 @@ function createElement() {
     querySelectorAll(selector) { return selector === '.demo-element' ? this.demoElements || [] : []; },
     appendChild(child) { this.lastChild = child; },
     removeChild() {},
+    getContext() { return { clearRect() {}, save() {}, restore() {}, translate() {}, rotate() {}, fillRect() {} }; },
     click() {},
     remove() { this.isConnected = false; },
     getBoundingClientRect() { return { left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 }; }
@@ -183,7 +184,8 @@ function loadAnimationRuntime(sourceMutation = source => source) {
     console,
     document,
     localStorage,
-    requestAnimationFrame(callback) { callback(); },
+    performance: { now() { return now; } },
+    requestAnimationFrame() { return 1; },
     setInterval() { return 1; },
     clearInterval() {},
     setTimeout(callback, delay) {
@@ -206,7 +208,9 @@ function loadAnimationRuntime(sourceMutation = source => source) {
       get currentTrainingMode() { return currentTrainingMode; },
       setTrainingMode(mode) { currentTrainingMode = mode; },
       get state() { return state; }, loadStep, goHome, startLevel,
-      handleStepSuccess, attachGestureListeners, STEP_STATE_KEYS,
+      handleStepSuccess, goNextStep, closeCelebration,
+      finishCurrentLevel: typeof finishCurrentLevel === 'undefined' ? undefined : finishCurrentLevel,
+      attachGestureListeners, STEP_STATE_KEYS,
       SkillSceneState, buildPersistentStateHTML, stepStageHTML, buildScene, LEVELS,
       applyPromptLevel, PROMPT_LEVELS
     };
@@ -452,6 +456,35 @@ test('the original startLevel clears before state assignment and loadStep', () =
     () => assertEarlyClear(withoutFirstClear),
     /original startLevel must clear the previous demonstration/
   );
+});
+
+test('each new level finishes once, preserves old records, and closes without a duplicate session end', () => {
+  const runtime = loadAnimationRuntime();
+  assert.equal(runtime.error, undefined, runtime.error?.message);
+  const { api, elements, localStorage } = runtime;
+  localStorage.setItem('researchRecords', JSON.stringify([{ taskId: 'brush', stepNumber: 1 }]));
+  assert.equal(typeof api.finishCurrentLevel, 'function');
+
+  for (const [index, level] of api.LEVELS.entries()) {
+    api.startLevel(index);
+    api.state.currentStep = 6;
+    api.handleStepSuccess(elements['interaction-area']);
+    api.goNextStep();
+
+    assert.equal(elements.celebration.classList.contains('active'), true);
+    assert.equal(elements['celebration-title'].textContent, `${level.icon} ${level.name}完成啦！`);
+    assert.equal(api.UnifiedDataManager.events.filter(event => event.event === 'session_end').length, 1);
+    const summaries = JSON.parse(localStorage.getItem('session_summaries'));
+    assert.equal(summaries.length, index + 1);
+
+    api.closeCelebration();
+    assert.equal(api.UnifiedDataManager.events.filter(event => event.event === 'session_end').length, 1);
+    assert.equal(JSON.parse(localStorage.getItem('session_summaries')).length, index + 1);
+  }
+
+  const records = JSON.parse(localStorage.getItem('researchRecords'));
+  assert.equal(records[0].taskId, 'brush');
+  assert.deepEqual(records.slice(1).map(record => record.taskId), ['laundry', 'fold-clothes', 'fold-umbrella']);
 });
 
 test('real ResearchMode.start initializes one unified session with the selected task on every initial event', () => {

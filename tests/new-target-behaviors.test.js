@@ -700,6 +700,30 @@ test('demonstration completes repeat progress before recording one assisted succ
   }
 });
 
+test('real repeated strokes record each completed substep without recording rejected strokes', () => {
+  const rejected = umbrellaGesture(4);
+  rejected.stroke(102, 90, 0, 60);
+  assert.equal(rejected.api.UnifiedDataManager.events.filter(event => event.event === 'substep_complete').length, 0);
+
+  const laundry = laundryGesture(4);
+  for (let index = 0; index < 3; index++) {
+    laundry.dispatch('start', 50, 50);
+    laundry.dispatch('move', 110, 50);
+    laundry.dispatch('end', 110, 50);
+  }
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(laundry.api.UnifiedDataManager.events.filter(event => event.event === 'substep_complete').map(event => [event.substepIndex, event.substepGoal, event.panelNumber]))),
+    [[1, 3, null], [2, 3, null], [3, 3, null]]
+  );
+
+  const umbrella = umbrellaGesture(4);
+  for (let index = 0; index < 6; index++) umbrella.stroke(50 + 52 * index, 90, 0, 60);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(umbrella.api.UnifiedDataManager.events.filter(event => event.event === 'substep_complete').map(event => [event.substepIndex, event.substepGoal, event.panelNumber]))),
+    [[1, 6, 1], [2, 6, 2], [3, 6, 3], [4, 6, 4], [5, 6, 5], [6, 6, 6]]
+  );
+});
+
 test('new intervention targets retain the approved state, task analysis, and voice contracts', () => {
   const { api } = loadRuntime();
   assert.deepEqual(JSON.parse(JSON.stringify(api.STEP_STATE_KEYS)), {
