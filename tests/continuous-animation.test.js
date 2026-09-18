@@ -870,56 +870,18 @@ test('prompt highlighting cannot reveal laundry sparkle before real completion',
   assert.equal(stage.classList.contains('laundry-complete'), true);
 });
 
-test('dressing scenes provide seven delayed, non-interactive demonstration markers', () => {
+test('new scenes provide seven delayed, non-interactive demonstration markers', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api } = runtime;
-  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-
-  for (let stepId = 1; stepId <= 7; stepId++) {
-    const scene = api.buildScene('dress', api.LEVELS[2].steps[stepId - 1]);
-    assert.match(scene, new RegExp(`demo-element demo-dress-${stepId}`));
-    assert.match(scene, /aria-hidden="true"/);
-    assert.match(source, new RegExp(`\\.step-stage\\.demo-running\\s+\\.demo-dress-${stepId}\\s*\\{`));
-    assert.doesNotMatch(scene, /class="[^"]*draggable-item[^"]*demo-element/);
+  for (const [levelId, level] of [['laundry', api.LEVELS[0]], ['fold-clothes', api.LEVELS[1]], ['fold-umbrella', api.LEVELS[2]]]) {
+    for (let stepId = 1; stepId <= 7; stepId++) {
+      const scene = api.buildScene(levelId, level.steps[stepId - 1]);
+      assert.match(scene, /demo-element/);
+      assert.match(scene, /aria-hidden="true"/);
+      assert.doesNotMatch(scene, /class="[^"]*interactive-target[^"]*demo-element/);
+    }
   }
-
-  for (const stepId of [3, 4, 5, 6, 7]) {
-    const scene = api.buildScene('dress', api.LEVELS[2].steps[stepId - 1]);
-    assert.match(scene, new RegExp(`demo-element demo-dress-${stepId} demo-ghost`));
-  }
-
-  for (const keyframe of [
-    'demoJacketPulse', 'demoJacketFront', 'demoLeftSleeve', 'demoRightSleeve',
-    'demoPullDown', 'demoZipUp', 'demoCollarAdjust'
-  ]) {
-    assert.match(source, new RegExp(`@keyframes ${keyframe}`));
-  }
-});
-
-test('dressing ghost hands reach their target before the directional demonstration', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
-  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const variables = stagePathVariables(runtime.api, 750, 380);
-  const assertArrivalThenAction = (keyframe, target, action) => {
-    const path = parsePixelKeyframePath(source, keyframe, variables);
-    const arrivalIndex = path.findIndex(stage =>
-      stage.translateX === target.translateX && stage.translateY === target.translateY && stage.opacity > 0
-    );
-    assert.notEqual(arrivalIndex, -1, `${keyframe} must visibly arrive at its target`);
-    const actionIndex = path.findIndex((stage, index) => index > arrivalIndex &&
-      stage.translateX === action.translateX && stage.translateY === action.translateY && stage.opacity > 0
-    );
-    assert.notEqual(actionIndex, -1, `${keyframe} needs its directional action after arriving`);
-    assert.ok(actionIndex > arrivalIndex, `${keyframe} must not act before reaching its target`);
-  };
-
-  assertArrivalThenAction('demoLeftSleeve', { translateX: -540, translateY: -99 }, { translateX: -585, translateY: -99 });
-  assertArrivalThenAction('demoRightSleeve', { translateX: 533, translateY: -99 }, { translateX: 578, translateY: -99 });
-  assertArrivalThenAction('demoPullDown', { translateX: 90, translateY: 152 }, { translateX: 90, translateY: 190 });
-  assertArrivalThenAction('demoZipUp', { translateX: 55, translateY: -160 }, { translateX: 55, translateY: -209 });
-  assertArrivalThenAction('demoCollarAdjust', { translateX: -240, translateY: -34 }, { translateX: -293, translateY: -34 });
 });
 
 test('umbrella continuity retains each completed action and fastens only on real completion', () => {
@@ -966,43 +928,4 @@ test('umbrella strap stays unfastened during passive demonstration and generic v
 
   api.handleStepSuccess(elements['interaction-area']);
   assert.equal(stage.classList.contains('umbrella-complete'), true);
-});
-
-test('zipper ghost reaches the unchanged zipper target with at least 35 percent overlap before moving up', () => {
-  const runtime = loadAnimationRuntime();
-  assert.equal(runtime.error, undefined, runtime.error?.message);
-  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const scene = runtime.api.buildScene('dress', runtime.api.LEVELS[2].steps[5]);
-  assert.match(scene, /top:38%;left:50%;transform:translateX\(-50%\);z-index:5;" class="drag-target invisible-target" data-target="zipper"/);
-  assert.match(scene, /bottom:5%;left:40%;z-index:10;" class="draggable-item interactive-target" data-item="hand"/);
-  const sceneWidth = 750;
-  const sceneHeight = 380;
-  const variables = stagePathVariables(runtime.api, sceneWidth, sceneHeight);
-  const ghost = { width: 72, height: 72 };
-  const target = {
-    left: sceneWidth * 0.5 - 20,
-    top: sceneHeight * 0.38,
-    width: 40,
-    height: 90
-  };
-  const zipperPath = parsePixelKeyframePath(source, 'demoZipUp', variables);
-  const arrival = zipperPath.find(stage => stage.percentage === 45);
-  const action = zipperPath.find(stage => stage.percentage === 62);
-  assert.notEqual(arrival, undefined, 'zipper ghost needs an arrival frame');
-  assert.notEqual(action, undefined, 'zipper ghost needs an upward action frame');
-  const ghostAtArrival = {
-    left: sceneWidth * 0.4 + arrival.translateX,
-    top: sceneHeight * 0.8 + arrival.translateY,
-    width: ghost.width,
-    height: ghost.height
-  };
-  const overlapWidth = Math.max(0, Math.min(ghostAtArrival.left + ghost.width, target.left + target.width) - Math.max(ghostAtArrival.left, target.left));
-  const overlapHeight = Math.max(0, Math.min(ghostAtArrival.top + ghost.height, target.top + target.height) - Math.max(ghostAtArrival.top, target.top));
-  const ratio = (overlapWidth * overlapHeight) / (ghost.width * ghost.height);
-  assert.ok(ratio >= 0.35, `zipper ghost overlap ${ratio} must meet the 35% threshold`);
-  assert.equal(action.translateX, arrival.translateX, 'zipper ghost must stay aligned while moving up');
-  assert.ok(action.translateY < arrival.translateY, 'zipper action must move upward after arrival');
-
-  const unshiftedRatio = (20 * ghost.height) / (ghost.width * ghost.height);
-  assert.ok(unshiftedRatio < 0.35, 'an unshifted center arrival must fail the overlap threshold');
 });

@@ -1165,11 +1165,6 @@ function svgHand(w, h) {
   return `<svg width="${w}" height="${h}" viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#624C3D" stroke-width="3"/></svg>`;
 }
 
-function svgJacket(w, h) {
-  w=w||160; h=h||175;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 140 175" aria-hidden="true"><path d="M40 32L70 58 100 32 118 42 136 118 108 118V150H32V118H4L22 42Z" fill="#FF9A66" stroke="#624C3D" stroke-width="4"/><path d="M40 32L70 58 100 32" fill="none" stroke="#FFF5EB" stroke-width="5"/><path d="M70 58V148" stroke="#C05020" stroke-width="3"/></svg>`;
-}
-
 /* ================================================================
    GAME DATA
    ================================================================ */
@@ -1714,35 +1709,7 @@ function buildPersistentStateHTML(levelId, stepId) {
   if (levelId === 'laundry') return buildLaundryPersistentState(stepId);
   if (levelId === 'fold-clothes') return buildClothesFoldingPersistentState(stepId);
   if (levelId === 'fold-umbrella') return buildUmbrellaPersistentState(stepId);
-  const stateHTML = (cls, content='') => `<div class="persistent-state ${cls}" aria-hidden="true">${content}</div>`;
-  const prior = (key, completedStep) => stepId > completedStep && SkillSceneState.has(levelId, key);
-  let html = '';
-
-  if (levelId === 'brush') {
-    if (stepId >= 2 && stepId <= 3 && prior('toothbrushFound', 1)) html += stateHTML('state-toothbrush-found');
-    if (stepId >= 3 && stepId <= 5 && prior('toothpasteApplied', 2)) html += stateHTML('state-paste-on-brush');
-    if (stepId >= 4 && stepId <= 5 && prior('toothbrushPickedUp', 3)) html += stateHTML('state-toothbrush-ready');
-    if (prior('rightBrushed', 5)) html += stateHTML('state-clean-both');
-    else if (prior('leftBrushed', 4)) html += stateHTML('state-clean-left');
-    if (stepId === 7 && prior('rinsed', 6)) html += stateHTML('state-mouth-rinsed');
-    if (stepId === 7) html += stateHTML('state-final-clean-mouth');
-  } else if (levelId === 'wash') {
-    if (stepId >= 2 && stepId <= 6 && prior('faucetOn', 1)) html += stateHTML('state-water-stream');
-    if (stepId === 3 && prior('waterCollected', 2)) html += stateHTML('state-hand-droplets');
-    if (stepId === 4 && prior('towelWet', 3)) html += stateHTML('state-wet-towel', svgTowel(220,155));
-    if (stepId === 5 && prior('towelWrung', 4)) html += stateHTML('state-reduced-droplets');
-    if (stepId === 6 && prior('faceWashed', 5)) html += stateHTML('state-clean-face');
-    if (stepId === 7 && prior('towelRinsed', 6)) html += stateHTML('state-clean-wet-towel', svgTowel(160,115));
-  } else if (levelId === 'dress') {
-    if (prior('jacketFound', 1)) html += stateHTML('state-jacket-found');
-    if (prior('frontIdentified', 2)) html += stateHTML('state-jacket-front', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M40,32 L70,58 L100,32 L94,32 L70,50 L46,32 Z"/></svg>');
-    if (prior('rightSleeveOn', 4)) html += stateHTML('state-both-sleeves', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z"/><path d="M116,42 Q132,50 136,80 Q138,100 130,118 Q126,96 122,80 Q120,60 114,52 Z"/></svg>');
-    else if (prior('leftSleeveOn', 3)) html += stateHTML('state-left-sleeve', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z"/></svg>');
-    if (prior('jacketPulledDown', 5)) html += stateHTML('state-jacket-flat', '<svg viewBox="0 0 140 175" aria-hidden="true"><line x1="24" y1="150" x2="116" y2="150"/></svg>');
-    if (prior('zipperClosed', 6)) html += stateHTML('state-zipper-closed', '<svg viewBox="0 0 140 175" aria-hidden="true"><line x1="70" y1="58" x2="70" y2="148"/></svg>');
-    if (prior('collarAdjusted', 7)) html += stateHTML('state-final-collar-sparkle', '<svg viewBox="0 0 140 175" aria-hidden="true"><text x="38" y="43" fill="#FFD93D" font-size="24">✦</text><text x="82" y="43" fill="#FFD93D" font-size="24">✦</text></svg>');
-  }
-  return html;
+  return '';
 }
 
 function stepStageHTML(objects, guide, levelId, stepId) {
@@ -1751,142 +1718,12 @@ function stepStageHTML(objects, guide, levelId, stepId) {
 }
 
 function buildScene(levelId, step) {
-  if (levelId === 'laundry') return buildLaundryScene(step);
-  if (levelId === 'fold-clothes') return buildClothesFoldingScene(step);
-  if (levelId === 'fold-umbrella') return buildUmbrellaFoldingScene(step);
-  const sid=step.id, arrow=step.arrow;
-  let objects='', guide='';
-
-  if (levelId==='brush') {
-    if (sid===1) {
-      objects = `<div class="interactive-target demo-brush-1" style="position:absolute;top:64%;left:72%;transform:translate(-50%,-50%);z-index:5;">${sampleToothbrush()}</div>`;
-      objects += `<div class="demo-element demo-brush-1" aria-hidden="true" style="display:none;"></div>`;
-      guide = arrowHTML(arrow, '54%', '70%', '点击牙刷');
-    } else if (sid===3) {
-      objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;">${sinkFaucetImg()}</div>`;
-      objects += `<div class="demo-element demo-brush-3 demo-ghost" aria-hidden="true" style="bottom:7%;left:50%;">${svgToothbrush(220,165)}</div>`;
-      guide = arrowHTML(arrow, '50%', '35%', '点击牙刷');
-    } else if (sid===2) {
-      objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;">
-      <div style="width:480px;height:160px;"><img src="assets/laundry/shirt-clean.png" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;" alt=""></div>
-      <div style="width:380px;height:250px;"><img src="assets/laundry/shirt-clean.png" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;" alt=""></div></div>`;
-      objects += `<div class="demo-element demo-brush-2" aria-hidden="true" style="top:48%;left:50%;width:160px;height:70px;"><img src="assets/laundry/shirt-clean.png" draggable="false" style="width:100%;height:100%;object-fit:contain;" alt=""></div>`;
-      guide = arrowHTML(arrow, '12%', '20%', '向下滑动挤牙膏');
-    } else if (sid===4) {
-      objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
-        <img src="assets/laundry/shirt-clean.png" width="240" height="280" draggable="false" style="object-fit:contain;" alt="">
-        <div class="drop-zone" style="left:28%;bottom:10%;width:70px;height:70px;transform:translateX(-50%);"></div>
-        <div class="drop-zone-label" style="left:28%;">👈 刷左边</div>
-      </div>
-      <div style="position:absolute;bottom:5%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(260,190)}</div>`;
-      objects += `<div class="demo-element demo-brush-4 demo-ghost" aria-hidden="true" style="bottom:5%;right:5%;">${svgToothbrush(260,190)}</div>`;
-      guide = arrowHTML('updown', '44%', '22%', '拖拽牙刷到左边上下刷');
-    } else if (sid===5) {
-      objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
-        <img src="assets/laundry/shirt-clean.png" width="240" height="280" draggable="false" style="object-fit:contain;" alt="">
-        <div class="drop-zone" style="left:72%;bottom:10%;width:70px;height:70px;transform:translateX(-50%);"></div>
-        <div class="drop-zone-label" style="left:72%;">👉 刷右边</div>
-      </div>
-      <div style="position:absolute;bottom:5%;left:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(260,190)}</div>`;
-      objects += `<div class="demo-element demo-brush-5 demo-ghost" aria-hidden="true" style="bottom:5%;left:5%;">${svgToothbrush(260,190)}</div>`;
-      guide = arrowHTML('updown', '44%', '58%', '拖拽牙刷到右边上下刷');
-    } else if (sid===6) {
-      objects = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;">${svgCup()}</div>`;
-      objects += `<div class="demo-element demo-brush-6" aria-hidden="true" style="top:50%;left:50%;">${svgCup()}</div>`;
-      guide = arrowHTML(arrow, '50%', '40%', '点击水杯');
-    } else if (sid===7) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="mouth">${svgFace(260,290)}</div>
-      <div style="position:absolute;bottom:8%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="towel">${svgTowel(180,130)}</div>`;
-      objects += `<div class="demo-element demo-brush-7 demo-ghost" aria-hidden="true" style="bottom:8%;right:5%;">${svgTowel(180,130)}</div>`;
-      guide = arrowHTML('leftright', '36%', '20%', '拖拽毛巾到嘴巴上擦一擦');
-    }
-    return stepStageHTML(objects, guide, levelId, sid);
-  }
-
-  if (levelId==='wash') {
-    if (sid===1) {
-      // Faucet is in the upper-center area of the photo background
-      objects = `<div style="position:absolute;top:28%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target invisible-target" data-target="faucet"
-        onselectstart="return false"><div style="width:100px;height:80px;border-radius:16px;"></div></div>
-      <div style="position:absolute;bottom:15%;left:40%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-wash-1 demo-ghost" aria-hidden="true" style="bottom:15%;left:40%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('up', '22%', '45%', '拖拽小手向上推水龙头');
-    } else if (sid===2||sid===6) {
-      objects = `<div style="position:absolute;top:34%;left:50%;transform:translateX(-50%);z-index:5;">
-        <div style="width:80px;height:80px;border-radius:50%;background:rgba(255,140,66,0.0);"></div></div>`;
-      if (sid===2) {
-        objects += `<div class="demo-element demo-wash-2 demo-ghost" aria-hidden="true" style="top:25%;left:50%;">${svgHand(72,72)}</div>
-        <div class="demo-element demo-water-flow" aria-hidden="true" style="top:31%;left:50%;"></div>`;
-      } else {
-        objects += `<div class="demo-element demo-wash-6 demo-ghost" aria-hidden="true" style="top:50%;left:50%;">${svgTowel(160,115)}</div>
-        <div class="demo-element demo-water-flow" aria-hidden="true" style="top:31%;left:50%;"></div>`;
-      }
-      guide = arrowHTML(arrow, '30%', '46%', sid===2?'点击水龙头接水':'点击水龙头冲洗');
-    } else if (sid===3||sid===4) {
-      objects = `<div style="position:absolute;top:35%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="towel">${svgTowel(220,155)}</div>
-      <div style="position:absolute;top:8%;right:8%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-wash-${sid} demo-ghost" aria-hidden="true" style="top:8%;right:8%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('updown', '28%', '32%', '拖拽小手到毛巾上搓一搓');
-    } else if (sid===5) {
-      objects = `<div style="position:absolute;top:15%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="face">${svgFace(220,240)}</div>
-      <div style="position:absolute;top:12%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-wash-5 demo-ghost" aria-hidden="true" style="top:20%;left:50%;">${svgTowel(160,115)}</div>`;
-      guide = arrowHTML('updown', '42%', '22%', '拖拽小手到脸上擦一擦');
-    } else if (sid===7) {
-      objects = `<div style="position:absolute;top:28%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target invisible-target" data-target="faucet">
-        <div style="width:100px;height:80px;border-radius:16px;"></div></div>
-      <div style="position:absolute;top:5%;left:38%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-wash-7 demo-ghost" aria-hidden="true" style="top:5%;left:38%;">${svgHand(72,72)}</div>
-      <div class="demo-element demo-water-fade" aria-hidden="true" style="top:31%;left:50%;"></div>`;
-      guide = arrowHTML('down', '22%', '45%', '拖拽小手向下推水龙头');
-    }
-    return stepStageHTML(objects, guide, levelId, sid);
-  }
-
-  if (levelId==='dress') {
-    if (sid===1) {
-      objects = `<div style="position:absolute;top:12%;left:50%;transform:translateX(-50%);z-index:5;">${svgJacket(240,250)}</div>`;
-      objects += `<div class="demo-element demo-dress-1" aria-hidden="true" style="top:12%;left:50%;">${svgJacket(240,250)}</div>`;
-      guide = arrowHTML(arrow, '62%', '36%', '点击衣服');
-    } else if (sid===2) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:5;">${svgJacket(255,265)}</div>`;
-      objects += `<div class="demo-element demo-dress-2" aria-hidden="true" style="top:8%;left:50%;">${svgJacket(255,265)}</div>`;
-      guide = arrowHTML(arrow, '50%', '38%', '点击正面');
-    } else if (sid===3) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:22%;left:14%;z-index:5;" class="drag-target invisible-target" data-target="sleeve-left"><div style="width:70px;height:90px;border-radius:14px;"></div></div>
-      <div style="position:absolute;top:48%;left:4%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-3 demo-ghost" aria-hidden="true" style="top:48%;left:86%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('left', '48%', '8%', '拖拽小手到左边袖口');
-    } else if (sid===4) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:22%;right:14%;z-index:5;" class="drag-target invisible-target" data-target="sleeve-right"><div style="width:70px;height:90px;border-radius:14px;"></div></div>
-      <div style="position:absolute;top:48%;right:4%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-4 demo-ghost" aria-hidden="true" style="top:48%;left:4%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('right', '48%', '62%', '拖拽小手到右边袖口');
-    } else if (sid===5) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:40%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="jacket-body"><div style="width:90px;height:70px;border-radius:14px;"></div></div>
-      <div style="position:absolute;top:0;left:38%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-5 demo-ghost" aria-hidden="true" style="top:0;left:38%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('down', '32%', '42%', '拖拽小手往下拉衣服');
-    } else if (sid===6) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:38%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="zipper"><div style="width:40px;height:90px;border-radius:14px;"></div></div>
-      <div style="position:absolute;bottom:5%;left:40%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-6 demo-ghost" aria-hidden="true" style="top:80%;left:40%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('up', '50%', '43%', '拖拽小手往上拉拉链');
-    } else if (sid===7) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="collar"><div style="width:100px;height:50px;border-radius:14px;"></div></div>
-      <div style="position:absolute;top:14%;right:8%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-7 demo-ghost" aria-hidden="true" style="top:14%;left:82%;">${svgHand(72,72)}</div>
-      <div class="persistent-state state-final-collar-sparkle" aria-hidden="true"><svg viewBox="0 0 140 175" aria-hidden="true"><text x="38" y="43" fill="#FFD93D" font-size="24">✦</text><text x="82" y="43" fill="#FFD93D" font-size="24">✦</text></svg></div>`;
-      guide = arrowHTML('leftright', '16%', '28%', '拖拽小手到领口整理');
-    }
-    return stepStageHTML(objects, guide, levelId, sid);
-  }
-  return '';
+  const builders = {
+    laundry: buildLaundryScene,
+    'fold-clothes': buildClothesFoldingScene,
+    'fold-umbrella': buildUmbrellaFoldingScene
+  };
+  return builders[levelId]?.(step) || '';
 }
 
 /* ================================================================
@@ -2386,14 +2223,6 @@ function handleStepSuccess(area) {
   SkillSceneState.complete(level.id, level.steps[state.currentStep].id);
   if (level.id === 'laundry') area.querySelector('.step-stage')?.classList.add('laundry-complete');
   if (level.id === 'fold-umbrella') area.querySelector('.step-stage')?.classList.add('umbrella-complete');
-  if (level.id === 'brush' && level.steps[state.currentStep].id === 7) {
-    const stage = area.querySelector('.step-stage');
-    if (stage) stage.classList.add('brush-final-clean');
-  }
-  if (level.id === 'dress' && level.steps[state.currentStep].id === 7) {
-    const stage = area.querySelector('.step-stage');
-    if (stage) stage.classList.add('dress-final-collar');
-  }
   area.classList.add('success'); playSuccessSound();
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
   speak(state.currentStep === 6 && level.id === 'laundry' ? '衣服洗干净啦' : state.currentStep === 6 && level.id === 'fold-umbrella' ? '雨伞整理得真整齐' : p[Math.floor(Math.random()*p.length)]);

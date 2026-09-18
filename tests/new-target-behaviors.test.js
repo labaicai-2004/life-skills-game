@@ -610,7 +610,7 @@ test('all new local artwork exists with contracted dimensions and alpha', () => 
   }
 });
 
-test('runtime uses only existing new artwork and has no legacy image reference', () => {
+test('three live scene builders and static page images use existing new artwork only', () => {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const legacyAssets = [
     'bathroom-bg.png', 'brush-boy.png', 'cartoon-bathroom-sample.png', 'cartoon-boy.png',
@@ -618,8 +618,32 @@ test('runtime uses only existing new artwork and has no legacy image reference',
     'hand.png', 'sink-faucet.png', 'toothbrush.png', 'toothpaste-original.png', 'toothpaste.png', 'towel.png'
   ];
   for (const asset of legacyAssets) assert.doesNotMatch(html, new RegExp(asset.replace('.', '\\.'), 'g'));
-  for (const [, source] of html.matchAll(/\bsrc="([^"$]+\.(?:png|jpg))"/g)) {
+  const { api } = loadRuntime();
+  const sceneMarkup = api.LEVELS.flatMap(level => level.steps.map(step => api.buildScene(level.id, step))).join('');
+  const sources = [
+    ...html.matchAll(/\bsrc\s*=\s*["']([^"'$]+\.(?:png|jpg))(?:\?[^"']*)?["']/gi),
+    ...sceneMarkup.matchAll(/\bsrc\s*=\s*["']([^"']+\.(?:png|jpg))(?:\?[^"']*)?["']/gi)
+  ].map(([, source]) => source);
+  assert.ok(sources.length > 0, 'the page and three scene builders must expose image sources');
+  for (const source of sources) {
     assert.equal(fs.existsSync(path.join(ROOT, source)), true, `${source} must exist`);
+    assert.match(source, /^assets\/(?:laundry|folding|umbrella)\//, `${source} must use a new asset directory`);
+  }
+  for (const background of BACKGROUND_ASSETS) assert.match(html, new RegExp(background.replaceAll('.', '\\.')));
+});
+
+test('buildScene routes only the three approved intervention levels', () => {
+  const { api } = loadRuntime();
+  for (const level of api.LEVELS) assert.match(api.buildScene(level.id, level.steps[0]), /step-stage/);
+  assert.equal(api.buildScene('brush', { id: 1 }), '');
+  assert.equal(api.buildScene('wash', { id: 1 }), '');
+  assert.equal(api.buildScene('dress', { id: 1 }), '');
+});
+
+test('retired scene builders and deleted image factories are absent from runtime source', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  for (const name of ['svgToothbrush', 'sampleToothbrush', 'sinkFaucetImg', 'svgCup', 'svgFace', 'svgTowel', 'svgJacket']) {
+    assert.doesNotMatch(html, new RegExp(`function ${name}\\b`));
   }
 });
 
