@@ -610,6 +610,19 @@ test('all new local artwork exists with contracted dimensions and alpha', () => 
   }
 });
 
+test('runtime uses only existing new artwork and has no legacy image reference', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const legacyAssets = [
+    'bathroom-bg.png', 'brush-boy.png', 'cartoon-bathroom-sample.png', 'cartoon-boy.png',
+    'cartoon-home-sample.png', 'cartoon-toothbrush-sample.png', 'child-photo.jpg', 'cup.png',
+    'hand.png', 'sink-faucet.png', 'toothbrush.png', 'toothpaste-original.png', 'toothpaste.png', 'towel.png'
+  ];
+  for (const asset of legacyAssets) assert.doesNotMatch(html, new RegExp(asset.replace('.', '\\.'), 'g'));
+  for (const [, source] of html.matchAll(/\bsrc="([^"$]+\.(?:png|jpg))"/g)) {
+    assert.equal(fs.existsSync(path.join(ROOT, source)), true, `${source} must exist`);
+  }
+});
+
 test('new intervention targets expose exactly three seven-step levels', () => {
   const { api } = loadRuntime();
   assert.deepEqual(Array.from(api.LEVELS, level => level.id), [

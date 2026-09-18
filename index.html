@@ -104,7 +104,7 @@ html, body {
 /* ===== START SCREEN ===== */
 .start-bg {
   position:absolute; inset:0;
-  background:#7DD7FF url('cartoon-home-sample.png') center/cover no-repeat; z-index:-1;
+  background:linear-gradient(180deg,#7DD7FF 0%,#AEE5F0 58%,#8FCB69 58%,#B6DE7A 100%); z-index:-1;
 }
 .title-area {
   text-align:center; margin:8px 0 0; padding:8px 26px 10px;
@@ -1160,96 +1160,14 @@ html, body {
    No <use> elements — fully Safari-compatible
    ================================================================ */
 
-function svgToothbrush(w, h) {
-  w=w||600; h=h||450;
-  return `<img src="toothbrush.png?v=2" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="牙刷">`;
-}
-
-function sampleToothbrush(w, h) {
-  w=w||330; h=h||165;
-  return `<img src="cartoon-toothbrush-sample.png?v=1" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 5px 5px rgba(92,61,46,0.2));-webkit-touch-callout:none;" alt="牙刷">`;
-}
-
-function svgToothpaste(w, h) {
-  w=w||320; h=h||550;
-  return `<img src="toothpaste.png?v=5" width="${w}" height="${h}" draggable="false" style="object-fit:contain;transform:rotate(-90deg);filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="牙膏">`;
-}
-
-// Real child photo — used as the character in all scenes
-function childPhoto(w, h, round) {
-  w=w||200; h=h||200;
-  const br = round ? 'border-radius:50%;' : 'border-radius:18px;';
-  return `<img src="cartoon-boy.png?v=2" width="${w}" height="${h}" class="char-photo" draggable="false" style="object-fit:cover;${br}border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="小朋友">`;
-}
-
-// Sink/faucet image for step 3
-function sinkFaucetImg(w, h) {
-  w=w||500; h=h||400;
-  return `<img src="sink-faucet.png?v=2" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="洗漱台">`;
-}
-
-// Face wrapper for backward compatibility
-function svgFace(w, h) { return childPhoto(w||200, h||200, true); }
-function svgFaceOpen(w, h) { return childPhoto(w||240, h||260, false); }
-
 function svgHand(w, h) {
   w=w||80; h=h||80;
-  return `<img src="hand.png?v=1" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.25));-webkit-touch-callout:none;" alt="小手">`;
-}
-
-function svgTowel(w, h) {
-  w=w||160; h=h||115;
-  return `<img src="towel.png?v=1" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="毛巾">`;
-}
-
-function svgCup(w, h) {
-  w=w||300; h=h||300;
-  return `<img src="cup.png?v=2" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="水杯">`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#624C3D" stroke-width="3"/></svg>`;
 }
 
 function svgJacket(w, h) {
   w=w||160; h=h||175;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 140 175">
-    <rect x="22" y="32" width="96" height="118" rx="14" fill="url(#g-jacket)"/>
-    <path d="M40,32 L70,58 L100,32" fill="#FFB07A"/>
-    <path d="M46,32 L70,50 L94,32" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
-    <path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z" fill="url(#g-jacket)"/>
-    <path d="M116,42 Q132,50 136,80 Q138,100 130,118 Q126,96 122,80 Q120,60 114,52 Z" fill="url(#g-jacket)"/>
-    <line x1="70" y1="58" x2="70" y2="148" stroke="#C05020" stroke-width="3"/>
-    <rect x="64" y="130" width="12" height="8" rx="2" fill="#D0D0D0"/>
-    <rect x="66" y="132" width="8" height="3" rx="1.5" fill="#E8E8E8"/>
-    <rect x="30" y="90" width="26" height="6" rx="3" fill="rgba(0,0,0,0.07)"/>
-    <rect x="84" y="90" width="26" height="6" rx="3" fill="rgba(0,0,0,0.07)"/>
-  </svg>`;
-}
-
-function svgMirror(w, h) {
-  w=w||280; h=h||190;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 260 180">
-    <rect x="0" y="0" width="260" height="180" rx="20" fill="url(#g-mirror)" stroke="#F0E8D8" stroke-width="8"/>
-    <rect x="12" y="10" width="236" height="160" rx="13" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-    <ellipse cx="130" cy="50" rx="70" ry="35" fill="rgba(255,255,255,0.18)"/>
-  </svg>`;
-}
-
-function svgFaucet(w, h) {
-  w=w||70; h=h||80;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 70 80">
-    <rect x="24" y="0" width="16" height="52" rx="8" fill="url(#g-metal)"/>
-    <rect x="2" y="0" width="60" height="22" rx="9" fill="url(#g-metal)"/>
-    <rect x="6" y="5" width="52" height="5" rx="2.5" fill="rgba(255,255,255,0.2)"/>
-    <rect x="20" y="10" width="30" height="8" rx="4" fill="rgba(0,0,0,0.08)"/>
-  </svg>`;
-}
-
-function svgSink(w, h) {
-  w=w||360; h=h||120;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 340 115">
-    <rect x="0" y="0" width="340" height="115" rx="18" fill="url(#g-sink)"/>
-    <ellipse cx="170" cy="18" rx="105" ry="32" fill="#E8E2DA"/>
-    <ellipse cx="170" cy="16" rx="100" ry="28" fill="#F2EDE6"/>
-    <ellipse cx="170" cy="16" rx="105" ry="32" fill="none" stroke="#D8D0C4" stroke-width="2.5"/>
-  </svg>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 140 175" aria-hidden="true"><path d="M40 32L70 58 100 32 118 42 136 118 108 118V150H32V118H4L22 42Z" fill="#FF9A66" stroke="#624C3D" stroke-width="4"/><path d="M40 32L70 58 100 32" fill="none" stroke="#FFF5EB" stroke-width="5"/><path d="M70 58V148" stroke="#C05020" stroke-width="3"/></svg>`;
 }
 
 /* ================================================================
@@ -1480,27 +1398,6 @@ function playCelebrationSound() {
    PRE-RECORDED VOICE MAP (Tingting female voice, Mac-generated)
    ================================================================ */
 const VOICE_MAP = {
-  '小朋友，我们先找到牙刷吧。看到发光的牙刷了吗？点一下它。': 'voice/v00.m4a',
-  '现在把牙膏挤到牙刷上。用手指在牙膏上面，从上往下滑。': 'voice/v01.m4a',
-  '牙膏挤好了，拿起牙刷准备刷牙吧。点一下牙刷。': 'voice/v02.m4a',
-  '先刷左边的牙齿。把牙刷拖到小朋友嘴边，上下刷一刷。': 'voice/v03.m4a',
-  '真棒！现在刷右边的牙齿。把牙刷拖到小朋友嘴边，继续上下刷。': 'voice/v04.m4a',
-  '刷好啦，用水杯漱漱口。点一下水杯。': 'voice/v05.m4a',
-  '最后一步，把毛巾拖到嘴巴上，擦擦嘴巴。': 'voice/v06.m4a',
-  '先打开水龙头。把小手拖到水龙头上，往上推一下。': 'voice/v07.m4a',
-  '水出来了！用手接一点水。点一下出水的地方。': 'voice/v08.m4a',
-  '把毛巾打湿。把小手拖到毛巾上，上下搓一搓。': 'voice/v09.m4a',
-  '把毛巾拧干一点。把小手拖到毛巾上，上下搓一搓。': 'voice/v10.m4a',
-  '现在用毛巾擦擦脸。把小手拖到脸上，上下擦一擦，把脸洗干净。': 'voice/v11.m4a',
-  '毛巾脏了，用水冲一冲。点一下出水的地方冲洗毛巾。': 'voice/v12.m4a',
-  '洗好了，关掉水龙头。把小手拖到水龙头上，往下推。': 'voice/v13.m4a',
-  '先找到要穿的衣服。看到发光的外套了吗？点一下它。': 'voice/v14.m4a',
-  '穿衣服之前要分清正面和反面。点一下衣服的正面。': 'voice/v15.m4a',
-  '先把左手伸进左边的袖子。把小手拖到左边袖口，向左滑。': 'voice/v16.m4a',
-  '再把右手伸进右边的袖子。把小手拖到右边袖口，向右滑。': 'voice/v17.m4a',
-  '把衣服往下拉好。把小手拖到衣服中间，往下拉。': 'voice/v18.m4a',
-  '现在拉上拉链。把小手拖到拉链上，往上拉。': 'voice/v19.m4a',
-  '最后整理一下衣领。把小手拖到领口，左右整理一下。衣服穿得整整齐齐。': 'voice/v20.m4a',
   '太棒了！做得真好！': 'voice/v21.m4a',
   '真厉害！继续加油！': 'voice/v22.m4a',
   '非常好！你真聪明！': 'voice/v23.m4a',
@@ -1510,9 +1407,6 @@ const VOICE_MAP = {
   '差一点点，再来一次吧！': 'voice/v27.m4a',
   '加油，你可以的！再试试看。': 'voice/v28.m4a',
   '慢慢来，不着急，再试一次。': 'voice/v29.m4a',
-  '太厉害了！你已经学会刷牙了！': 'voice/v30.m4a',
-  '太厉害了！你已经学会洗脸了！': 'voice/v31.m4a',
-  '太厉害了！你已经学会穿衣了！': 'voice/v32.m4a',
 };
 
 let currentAudio = null;
@@ -1640,17 +1534,12 @@ function loadStep(idx) {
   // Persistent background — set once per level
   if (!scene.dataset.levelId || scene.dataset.levelId !== level.id) {
     scene.dataset.levelId = level.id;
-    scene.innerHTML = level.id === 'laundry'
-      ? `<img class="scene-bg" src="assets/laundry/laundry-room.png" draggable="false" alt="">`
-      : level.id === 'fold-clothes'
-      ? `<img class="scene-bg" src="assets/folding/folding-table.png" draggable="false" alt="">`
-      : level.id === 'fold-umbrella'
-      ? `<img class="scene-bg" src="assets/umbrella/umbrella-room.png" draggable="false" alt="">`
-      : level.id === 'dress'
-      ? `<div class="scene-bg" style="background:linear-gradient(180deg,#FFF3E8 0%,#FFECD8 55%,#FFE4CC 100%);"></div>`
-      : level.id === 'brush'
-        ? `<img class="scene-bg" src="cartoon-bathroom-sample.png?v=1" draggable="false" style="object-fit:cover;-webkit-touch-callout:none;" alt="">`
-        : `<img class="scene-bg" src="bathroom-bg.png?v=2" draggable="false" style="object-fit:cover;-webkit-touch-callout:none;" alt="">`;
+    const backgrounds = {
+      laundry: 'assets/laundry/laundry-room.png',
+      'fold-clothes': 'assets/folding/folding-table.png',
+      'fold-umbrella': 'assets/umbrella/umbrella-room.png'
+    };
+    scene.innerHTML = `<img class="scene-bg" src="${backgrounds[level.id]}" draggable="false" alt="">`;
   }
 
   // Remove old stage with exit animation
@@ -1879,13 +1768,13 @@ function buildScene(levelId, step) {
       guide = arrowHTML(arrow, '50%', '35%', '点击牙刷');
     } else if (sid===2) {
       objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;">
-      <div style="width:480px;height:160px;transform:rotate(-90deg);filter:drop-shadow(0 12px 36px rgba(0,0,0,0.4));margin-bottom:-45px;margin-top:60px;"><img src="toothpaste.png?v=5" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;-webkit-touch-callout:none;" alt="牙膏"></div>
-      <div style="width:380px;height:250px;transform:rotate(-90deg);filter:drop-shadow(0 12px 36px rgba(0,0,0,0.4));"><img src="toothbrush.png?v=4" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;-webkit-touch-callout:none;" alt="牙刷"></div></div>`;
-      objects += `<div class="demo-element demo-brush-2" aria-hidden="true" style="top:48%;left:50%;width:160px;height:70px;"><img src="toothpaste.png?v=5" draggable="false" style="width:100%;height:100%;object-fit:contain;transform:rotate(-90deg);" alt=""><span class="demo-paste-drop" style="position:absolute;left:50%;bottom:-8px;width:20px;height:14px;border-radius:50%;background:#A9D9FF;"></span></div>`;
+      <div style="width:480px;height:160px;"><img src="assets/laundry/shirt-clean.png" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;" alt=""></div>
+      <div style="width:380px;height:250px;"><img src="assets/laundry/shirt-clean.png" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;" alt=""></div></div>`;
+      objects += `<div class="demo-element demo-brush-2" aria-hidden="true" style="top:48%;left:50%;width:160px;height:70px;"><img src="assets/laundry/shirt-clean.png" draggable="false" style="width:100%;height:100%;object-fit:contain;" alt=""></div>`;
       guide = arrowHTML(arrow, '12%', '20%', '向下滑动挤牙膏');
     } else if (sid===4) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
-        <img src="brush-boy.png?v=1" width="240" height="280" draggable="false" style="object-fit:cover;border-radius:18px;border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="刷牙">
+        <img src="assets/laundry/shirt-clean.png" width="240" height="280" draggable="false" style="object-fit:contain;" alt="">
         <div class="drop-zone" style="left:28%;bottom:10%;width:70px;height:70px;transform:translateX(-50%);"></div>
         <div class="drop-zone-label" style="left:28%;">👈 刷左边</div>
       </div>
@@ -1894,7 +1783,7 @@ function buildScene(levelId, step) {
       guide = arrowHTML('updown', '44%', '22%', '拖拽牙刷到左边上下刷');
     } else if (sid===5) {
       objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
-        <img src="brush-boy.png?v=1" width="240" height="280" draggable="false" style="object-fit:cover;border-radius:18px;border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="刷牙">
+        <img src="assets/laundry/shirt-clean.png" width="240" height="280" draggable="false" style="object-fit:contain;" alt="">
         <div class="drop-zone" style="left:72%;bottom:10%;width:70px;height:70px;transform:translateX(-50%);"></div>
         <div class="drop-zone-label" style="left:72%;">👉 刷右边</div>
       </div>
