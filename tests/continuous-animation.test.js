@@ -624,6 +624,7 @@ test('real ResearchMode.start initializes one unified session with the selected 
   api.ResearchMode.start();
 
   assert.equal(api.ResearchMode.active, true);
+  assert.equal(api.UnifiedDataManager.participantID, 'child-research-7');
   assert.equal(api.state.currentLevel, 1);
   assert.equal(api.UnifiedDataManager.active, true);
   assert.equal(api.UnifiedDataManager.taskId, 'fold-clothes');
@@ -657,6 +658,7 @@ test('selecting a research participant fills the existing child id input', () =>
 test('research records filter one child while the combined view keeps all children', () => {
   const {api,localStorage}=loadAnimationRuntime();
   localStorage.setItem('researchRecords', JSON.stringify([
+    {participantID:'',stepNumber:1},
     {participantID:'001',stepNumber:1},
     {participantID:'002',stepNumber:1},
     {participantID:'003',stepNumber:1},
@@ -665,6 +667,21 @@ test('research records filter one child while the combined view keeps all childr
   assert.equal(typeof api.getResearchRecords, 'function');
   assert.deepEqual(Array.from(api.getResearchRecords('002'), r => r.participantID), ['002','002']);
   assert.deepEqual(Array.from(api.getResearchRecords(), r => r.participantID), ['001','002','003','002']);
+});
+
+test('completed research sessions retain the child id and advance its suggested session number', () => {
+  const {api,elements,localStorage}=loadAnimationRuntime();
+  elements['research-child-id'].value = '001';
+  elements['research-session-num'].value = '1';
+  elements['research-date'].value = '2026-09-19';
+  elements['selected-phase'].dataset.phase = 'baseline';
+  elements['selected-skill'].dataset.skill = 'laundry';
+  api.ResearchMode.start();
+  api.UnifiedDataManager.endSession();
+  const summaries = JSON.parse(localStorage.getItem('session_summaries'));
+  assert.equal(summaries[0].participantID, '001');
+  api.selectResearchParticipant('001');
+  assert.equal(elements['research-session-num'].value, 2);
 });
 
 test('research CSV can export one child or all three with participant ids intact', () => {
@@ -694,6 +711,26 @@ test('opening the research dashboard closes the setup panel so the data is visib
   api.hideResearchDashboard();
   assert.equal(elements['records-overlay'].classList.contains('active'), false);
   assert.equal(elements['records-default-actions'].style.display, '');
+});
+
+test('research dashboard escapes restored record fields before inserting HTML', () => {
+  const {api,elements,localStorage}=loadAnimationRuntime();
+  localStorage.setItem('researchRecords', JSON.stringify([{
+    participantID:'<img src=x onerror=alert(1)>', skill:'<b>skill</b>', phase:'<svg onload=alert(1)>',
+    sessionNumber:'<i>1</i>', stepNumber:'<script>1</script>', completionStatus:true,
+    promptLevel:0, responseTimeMs:1000, errors:0
+  }]));
+  api.showDashboard();
+  const html = elements['records-list'].innerHTML;
+  assert.doesNotMatch(html, /<img|<b>|<svg|<i>|<script>/i);
+  assert.match(html, /&lt;img/);
+});
+
+test('research dashboard controls keep iPad-size touch targets and current-child wording', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(source, /\.records-panel\s*\{[^}]*max-height:\s*calc\(100vh - 32px\)[^}]*overflow-y:\s*auto/s);
+  assert.match(source, /\.records-btn\s*\{[^}]*min-height:\s*44px/s);
+  assert.match(source, /id="research-current-data-btn"[^>]*disabled[^>]*>\ud83d\udccb \u67e5\u770b当前儿童数据<\/button>/);
 });
 
 test('two passive demonstrations after real step initialization do not write events or research records', () => {

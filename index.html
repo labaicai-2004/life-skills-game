@@ -804,7 +804,8 @@ html, body {
   background: #FFFFFF; border-radius: 28px;
   padding: 36px 30px 24px; text-align: center;
   box-shadow: var(--shadow-lg); animation: slideInUp 0.45s ease;
-  max-width: 400px; width: 90%;
+  max-width: 400px; width: 90%; max-height: calc(100vh - 32px);
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .records-title { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
 .records-hint { font-size: 13px; color: var(--text-light); margin-bottom: 20px; }
@@ -824,7 +825,7 @@ html, body {
 .record-empty { padding: 24px; color: var(--text-light); font-size: 15px; }
 .records-btns { display: flex; gap: 10px; margin-top: 18px; justify-content: center; }
 .records-btn {
-  padding: 12px 28px; border-radius: 50px; border: none;
+  min-height: 44px; padding: 12px 28px; border-radius: 50px; border: none;
   font-size: 15px; font-weight: 700; cursor: pointer;
   transition: transform 0.15s cubic-bezier(0.68,-0.55,0.265,1.55);
 }
@@ -1159,7 +1160,7 @@ html, body {
       <input type="date" id="research-date">
     </div>
     <button class="research-start-btn" id="research-start-btn" disabled onclick="startResearchSession()">开始研究训练</button>
-    <button class="records-btn clear" style="margin-top:12px;width:100%;" onclick="showDashboard(document.getElementById('research-child-id').value.trim())">📋 查看当前Session记录</button>
+    <button class="records-btn clear" id="research-current-data-btn" disabled style="margin-top:12px;width:100%;" onclick="showDashboard(document.getElementById('research-child-id').value.trim())">📋 查看当前儿童数据</button>
     <button class="records-btn clear" style="margin-top:6px;width:100%;" onclick="showDashboard()">📊 查看全部研究数据</button>
   </div>
 </div>
@@ -3050,11 +3051,12 @@ const ResearchMode = {
   // Update start button state
   _updateStartBtn() {
     const btn = document.getElementById('research-start-btn');
-    if (!btn) return;
     const childId = document.getElementById('research-child-id')?.value?.trim();
     const phase = document.querySelector('.phase-btn.selected')?.dataset?.phase;
     const skill = document.querySelector('.skill-btn.selected')?.dataset?.skill;
-    btn.disabled = !(childId && phase && skill);
+    if (btn) btn.disabled = !(childId && phase && skill);
+    const currentDataBtn = document.getElementById('research-current-data-btn');
+    if (currentDataBtn) currentDataBtn.disabled = !childId;
   },
 
   // Start research session
@@ -3254,7 +3256,8 @@ function startResearchSession() { ResearchMode.start(); }
 function getResearchRecords(participantID = '') {
   let records = [];
   try { records = JSON.parse(localStorage.getItem('researchRecords') || '[]'); } catch(e) {}
-  return participantID ? records.filter(record => record.participantID === participantID) : records;
+  const researchOnly = Array.isArray(records) ? records.filter(record => record?.participantID) : [];
+  return participantID ? researchOnly.filter(record => record.participantID === participantID) : researchOnly;
 }
 
 function showDashboard(participantID = '') {
@@ -3284,15 +3287,15 @@ function showDashboard(participantID = '') {
   const indepRate = completed.length > 0 ? (independent.length / completed.length * 100).toFixed(1) + '%' : '0%';
 
   // Average prompt level
-  const promptLevels = completed.map(r => r.promptLevel).filter(l => l != null);
+  const promptLevels = completed.map(r => Number(r.promptLevel)).filter(Number.isFinite);
   const avgPrompt = promptLevels.length > 0 ? (promptLevels.reduce((a,b) => a+b, 0) / promptLevels.length).toFixed(2) : '—';
 
   // Average response time
-  const responseTimes = completed.map(r => r.responseTimeMs).filter(t => t > 0);
+  const responseTimes = completed.map(r => Number(r.responseTimeMs)).filter(t => t > 0);
   const avgRT = responseTimes.length > 0 ? Math.round(responseTimes.reduce((a,b) => a+b, 0) / responseTimes.length / 1000) + 's' : '—';
 
   // Total errors
-  const totalErrors = records.reduce((s, r) => s + (r.errors || 0), 0);
+  const totalErrors = records.reduce((sum, record) => sum + (Number(record.errors) || 0), 0);
 
   let html = `<div class="records-title">📊 Research Dashboard</div>
     <div class="records-hint">数据来源: researchRecords (localStorage) — 仅限研究者查看</div>
@@ -3308,7 +3311,7 @@ function showDashboard(participantID = '') {
       <div style="flex:1;min-width:60px;background:#F5F0FF;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:#7C5CBF;">${avgRT}</div><div style="font-size:10px;color:var(--text-light);">平均完成时间</div></div>
       <div style="flex:1;min-width:60px;background:#FFF0F0;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:#E05050;">${totalErrors}</div><div style="font-size:10px;color:var(--text-light);">错误次数</div></div>
     </div>
-    <div style="margin-bottom:8px;font-size:12px;color:var(--text-light);">👤 被试: ${pid} | 🎯 ${skill}</div>`;
+    <div style="margin-bottom:8px;font-size:12px;color:var(--text-light);">👤 被试: ${escapeResearchText(pid)} | 🎯 ${escapeResearchText(skill)}</div>`;
 
   // Recent records table
   if (records.length > 0) {
@@ -3316,10 +3319,10 @@ function showDashboard(participantID = '') {
       <tr style="background:#FAF8F5;"><th style="padding:3px;">PID</th><th>Skill</th><th>Phase</th><th>S#</th><th>Step</th><th>完成</th><th>PL</th><th>RT</th><th>Err</th></tr>`;
     for (const r of records.slice(-30).reverse()) {
       html += `<tr style="border-bottom:1px solid #F0EDE8;">
-        <td style="padding:3px;">${r.participantID||'-'}</td><td>${(r.skill||'').slice(0,10)}</td>
-        <td>${(r.phase||'').slice(0,6)}</td><td>${r.sessionNumber||''}</td>
-        <td>${r.stepNumber}</td><td>${r.completionStatus?'✅':'❌'}</td>
-        <td>L${r.promptLevel??'-'}</td><td>${r.responseTimeMs ? (r.responseTimeMs/1000).toFixed(1)+'s' : '-'}</td><td>${r.errors}</td></tr>`;
+        <td style="padding:3px;">${escapeResearchText(r.participantID||'-')}</td><td>${escapeResearchText((r.skill||'').slice(0,10))}</td>
+        <td>${escapeResearchText((r.phase||'').slice(0,6))}</td><td>${escapeResearchText(r.sessionNumber||'')}</td>
+        <td>${escapeResearchText(r.stepNumber)}</td><td>${r.completionStatus?'✅':'❌'}</td>
+        <td>L${escapeResearchText(r.promptLevel??'-')}</td><td>${Number(r.responseTimeMs) > 0 ? (Number(r.responseTimeMs)/1000).toFixed(1)+'s' : '-'}</td><td>${escapeResearchText(r.errors??0)}</td></tr>`;
     }
     html += `</table></div>`;
   } else {
@@ -3459,7 +3462,7 @@ const _originalStartLevel = startLevel;
 startLevel = function(idx) {
   initAudio();
   const taskId = LEVELS[idx].id;
-  UnifiedDataManager.startSession(taskId);
+  UnifiedDataManager.startSession(taskId, ResearchMode.active ? ResearchMode.childId : null);
   // 调用原始逻辑
   _originalStartLevel(idx);
 };
