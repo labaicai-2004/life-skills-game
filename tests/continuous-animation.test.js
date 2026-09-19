@@ -110,7 +110,7 @@ function stagePathVariables(api, width, height) {
   return Object.fromEntries(names.map(name => [name, stage.style.getPropertyValue(name)]));
 }
 
-function loadAnimationRuntime(sourceMutation = source => source) {
+function loadAnimationRuntime(sourceMutation = source => source, options = {}) {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = sourceMutation(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
   const timers = [];
@@ -199,7 +199,7 @@ function loadAnimationRuntime(sourceMutation = source => source) {
     window: {
       addEventListener() {},
       speechSynthesis: { cancel() {}, getVoices() {return [{lang:'zh-CN',name:'Tingting'}];}, speak(utterance) {spoken.push(utterance.text);} },
-      matchMedia() { return { matches: false }; }
+      matchMedia() { return { matches: options.reducedMotion === true }; }
     },
     URL: { createObjectURL() { return 'blob:test'; } }
   };
@@ -720,6 +720,53 @@ test('real mouse completion after demonstration pause adds one step-success even
   assert.equal(record.taskId, 'laundry');
   assert.equal(record.promptLevel,4,'viewing the passive demonstration is assistance');
   assert.equal(newEvents[0].independentCompletion,false);
+});
+
+for (const fixture of [
+  {name:'pending two-second delay',phase:'intervention',wait:1999},
+  {name:'baseline policy blocks demonstration',phase:'baseline',wait:2100},
+  {name:'reduced motion blocks demonstration',phase:'intervention',wait:2100,reducedMotion:true}
+]) {
+  test(`Level 4 ${fixture.name} retains the last actually delivered prompt in the completed record`, () => {
+    const r=loadAnimationRuntime(undefined,fixture),{api,elements,localStorage}=r;
+    api.ResearchMode.active=true;api.ResearchMode.phase=fixture.phase;
+    installLaundryDragSurface(elements);
+    api.startLevel(0);
+    r.advanceClock(200);r.runTimersThroughNow();
+    api.applyPromptLevel(3);
+    api.applyPromptLevel(4);
+    r.advanceClock(fixture.wait);r.runTimersThroughNow();
+    assert.equal(elements.scene.lastChild.classList.contains('demo-running'),false);
+    elements['interaction-area'].dispatch('mousedown',{clientX:20,clientY:20});
+    elements['interaction-area'].dispatch('mousemove',{clientX:220,clientY:20});
+    elements['interaction-area'].dispatch('mouseup',{clientX:220,clientY:20});
+    const records=JSON.parse(localStorage.getItem('researchRecords'));
+    assert.equal(records.length,1);
+    assert.equal(records[0].promptLevel,3,'scheduled or suppressed animation is not delivered L4 assistance');
+    r.advanceClock(3000);r.runTimersThroughNow();
+    assert.equal(elements.scene.lastChild.classList.contains('demo-running'),false,'completion cancels the pending demonstration');
+  });
+}
+
+test('Level 4 is recorded only when its scheduled demonstration really starts', () => {
+  const r=loadAnimationRuntime(),{api,elements,localStorage}=r;
+  api.ResearchMode.active=true;api.ResearchMode.phase='intervention';
+  installLaundryDragSurface(elements);
+  api.startLevel(0);
+  r.advanceClock(200);r.runTimersThroughNow();
+  api.applyPromptLevel(3);api.applyPromptLevel(4);
+  r.advanceClock(1999);r.runTimersThroughNow();
+  assert.equal(api.promptState.promptUsed,3);
+  r.advanceClock(1);r.runTimersThroughNow();
+  assert.equal(elements.scene.lastChild.classList.contains('demo-running'),true);
+  assert.equal(api.promptState.promptUsed,4);
+  assert.equal(api.UnifiedDataManager.events.filter(e=>e.event==='step_success'||e.event==='substep_complete').length,0);
+  elements['interaction-area'].dispatch('mousedown',{clientX:20,clientY:20});
+  elements['interaction-area'].dispatch('mousemove',{clientX:220,clientY:20});
+  elements['interaction-area'].dispatch('mouseup',{clientX:220,clientY:20});
+  const records=JSON.parse(localStorage.getItem('researchRecords'));
+  assert.equal(records.length,1);
+  assert.equal(records[0].promptLevel,4);
 });
 
 test('Level 4 offers demonstration without success and real completion pauses it before feedback', () => {

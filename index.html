@@ -2592,7 +2592,7 @@ function applyPromptLevel(level) {
       UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 4, promptName: 'Demonstration', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
       promptState.currentLevel = 4;
       AnimationController.schedule(stage);
-      break;
+      return;
   }
   promptState.promptUsed = Math.max(promptState.promptUsed, level);
 }
