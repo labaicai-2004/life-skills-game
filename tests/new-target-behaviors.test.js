@@ -32,8 +32,10 @@ function imageProperties(file) {
 }
 
 function createElement() {
+  const classes = new Set();
   return {
-    classList: { add() {}, remove() {}, contains() { return false; } },
+    classList: { add(...names) { names.forEach(n=>classes.add(n)); }, remove(...names) { names.forEach(n=>classes.delete(n)); }, contains(n) { return classes.has(n); }, toggle(n,on) { on?classes.add(n):classes.delete(n); } },
+    insertAdjacentHTML(position,markup) { this.insertedHTML = (this.insertedHTML || '') + markup; },
     dataset: {},
     style: { setProperty() {}, getPropertyValue() { return ''; } },
     addEventListener() {},
@@ -76,7 +78,7 @@ function loadRuntime() {
   const document = {
     addEventListener() {},
     body: createElement(),
-    createElement,
+    createElement() { const wrapper=createElement(); wrapper.firstElementChild=createElement(); return wrapper; },
     getElementById: getElement,
     querySelector(selector) {
       if (selector === '.phase-btn.selected') return selectedPhase;
@@ -146,19 +148,25 @@ function laundryGesture(stepId, kind = 'mouse') {
   return { ...runtime, item, partner, stage, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
 }
 
-function foldingGesture(stepId, kind = 'mouse') {
+function foldingGesture(stepId, kind = 'mouse', width = 750, height = 380) {
   const runtime = loadRuntime();
   const { api } = runtime;
   const listeners = new Map();
   const stage = createElement(), item = createElement(), target = createElement(), area = createElement();
   const geometry = api.FOLD_LAYOUT[stepId];
-  const px = (value, size) => value.endsWith('%') ? Number.parseFloat(value) / 100 * size : Number.parseFloat(value);
+  const touchCSS=fs.readFileSync(path.join(ROOT,'index.html'),'utf8').match(/\.folding-touch \{([^}]+)\}/)[1];
+  const px = (value, size) => {
+    const calc=value.match(/^calc\(([\d.]+)% ([+-]) ([\d.]+)px\)$/);
+    return calc ? Number(calc[1])/100*size+(calc[2]==='+'?1:-1)*Number(calc[3]) : value.endsWith('%') ? Number.parseFloat(value)/100*size : Number.parseFloat(value);
+  };
   const rect = (box, width, height) => {
-    const itemWidth = px(box.width, width), itemHeight = px(box.height, height);
+    const minimum=box===geometry.item && stepId>1;
+    const itemWidth = Math.max(px(box.width, width),minimum?Number(touchCSS.match(/min-width:(\d+)px/)[1]):0);
+    const itemHeight = Math.max(px(box.height, height),minimum?Number(touchCSS.match(/min-height:(\d+)px/)[1]):0);
     const left = box.left ? px(box.left, width) : width - px(box.right, width) - itemWidth;
     return { left, top:px(box.top, height), right:left + itemWidth, bottom:px(box.top, height) + itemHeight, width:itemWidth, height:itemHeight };
   };
-  const initial = rect(geometry.item, 750, 380), destination = rect(geometry.target, 750, 380);
+  const initial = rect(geometry.item, width, height), destination = rect(geometry.target, width, height);
   item.offsetWidth = initial.width; item.offsetHeight = initial.height;
   item.style.left = initial.left + 'px'; item.style.top = initial.top + 'px';
   item.getBoundingClientRect = () => {
@@ -166,7 +174,7 @@ function foldingGesture(stepId, kind = 'mouse') {
     return { left, top, right:left + initial.width, bottom:top + initial.height, width:initial.width, height:initial.height };
   };
   target.getBoundingClientRect = () => destination;
-  area.getBoundingClientRect = () => ({ left:0, top:0, right:750, bottom:380, width:750, height:380 });
+  area.getBoundingClientRect = () => ({ left:0, top:0, right:width, bottom:height, width, height });
   area.querySelector = selector => ({ '.step-stage':stage, '.interactive-target':item, '.draggable-item':item, '.drag-target':target })[selector] || null;
   area.addEventListener = (type, callback, options) => {
     listeners.set(type, callback);
@@ -179,8 +187,54 @@ function foldingGesture(stepId, kind = 'mouse') {
     const type = kind === 'mouse' ? { start:'mousedown', move:'mousemove', end:'mouseup' }[phase] : { start:'touchstart', move:'touchmove', end:'touchend' }[phase];
     listeners.get(type)?.({ clientX:x, clientY:y, touches:[{ clientX:x, clientY:y }], changedTouches:[{ clientX:x, clientY:y }], preventDefault() {} });
   };
-  return { ...runtime, item, target:destination, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
+  return { ...runtime, item, stage, target:destination, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
 }
+
+test('folding hit boxes overlap the visible sleeve and body on wide and narrow screens', () => {
+  const css=fs.readFileSync(path.join(ROOT,'index.html'),'utf8').match(/\.folding-garment \{([^}]+)\}/)[1];
+  const garmentWidth=Number(css.match(/width:(\d+)px/)[1]);
+  const garmentLeftPercent=Number(css.match(/left:([\d.]+)%/)[1])/100;
+  const garmentTopPercent=Number(css.match(/top:([\d.]+)%/)[1])/100;
+  for(const [width,height] of [[750,380],[360,600]]) for(const step of [3,4,5,6]) {
+    const r=foldingGesture(step,'mouse',width,height), hit=r.item.getBoundingClientRect();
+    const garmentLeft=width*garmentLeftPercent-garmentWidth/2, garmentTop=height*garmentTopPercent;
+    // Independently inspected artwork: sleeves occupy outer quarters, body middle half.
+    const [left,right]=({3:[10,75],4:[225,290],5:[75,130],6:[170,225]})[step];
+    assert.ok(hit.left>=garmentLeft+left-5 && hit.right<=garmentLeft+right+5,`step ${step}, width ${width}: hit must lie over its visible cloth`);
+    assert.ok(hit.top>=garmentTop+85 && hit.bottom<=garmentTop+235);
+    assert.ok(hit.width>=44 && hit.height>=44);
+    const overlap=Math.max(0,Math.min(hit.right,r.target.right)-Math.max(hit.left,r.target.left));
+    assert.equal(overlap,0,'start and destination are separated');
+  }
+});
+
+test('folding successful drags update the current scene and final picture immediately', () => {
+  for(const [step,name] of [[3,'left-sleeve'],[4,'right-sleeve'],[5,'left-body'],[6,'right-body'],[7,'hem-up']]) {
+    const r=foldingGesture(step),a=r.item.getBoundingClientRect(),b=r.target;
+    r.dispatch('start',a.left+a.width/2,a.top+a.height/2);
+    r.dispatch('move',b.left+b.width/2,b.top+b.height/2);
+    r.dispatch('end',b.left+b.width/2,b.top+b.height/2);
+    assert.equal(r.complete(),true);
+    assert.match(r.stage.insertedHTML || '',new RegExp(`state-fold-${name}`));
+    assert.equal(r.item.style.opacity,'0','completed handle is removed from the garment');
+    if(step===7) assert.equal(r.spoken.at(-1).text,'衣服叠得真整齐');
+  }
+});
+
+test('completed fold contours shrink on each side and final artwork replaces all flat layers', () => {
+  const css=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+  const names=['left-sleeve','right-sleeve','left-body','right-body'];
+  let previous=301;
+  for(const name of names) {
+    const rule=css.match(new RegExp(`\\.state-fold-${name} ~ \\.folding-garment \\{([^}]+)\\}`));
+    assert.ok(rule,`${name} must clip the entire garment, including the original silhouette`);
+    const inset=rule[1].match(/clip-path:inset\(0 ([\d.]+)% 0 ([\d.]+)%\)/);
+    assert.ok(inset);
+    const visibleWidth=300*(1-(Number(inset[1])+Number(inset[2]))/100);
+    assert.ok(visibleWidth<previous); previous=visibleWidth;
+  }
+  assert.match(css,/state-fold-hem-up ~ \.folding-garment \.folding-layer:not\(\.folding-final\)[^{]*\{[^}]*opacity:0/);
+});
 
 function umbrellaPanelMarkup(api) {
   const scene=api.buildScene('fold-umbrella',api.LEVELS[2].steps[3]);
@@ -188,6 +242,35 @@ function umbrellaPanelMarkup(api) {
     number:Number(match[2]), style:Object.fromEntries([...match[3].matchAll(/([\w-]+):([\d.]+)px/g)].map(([,key,value])=>[key,Number(value)])),
     viewBox:match[4].split(' ').map(Number),svg:match[5]
   }));
+}
+
+for (const kind of ['mouse','touch']) {
+  test(`laundry ${kind} retry records an error but cancellation does not`, () => {
+    const r=laundryGesture(4,kind);
+    r.api.UnifiedDataManager.startSession('laundry');
+    r.api.UnifiedDataManager.onStepStart();
+    r.dispatch('start',50,50); r.dispatch('move',50,100); r.dispatch('cancel',50,100);
+    assert.equal(r.api.UnifiedDataManager._stepErrors,0);
+    r.dispatch('start',50,50); r.dispatch('move',50,100); r.dispatch('end',50,100);
+    assert.equal(r.api.UnifiedDataManager._stepErrors,1);
+    for(let i=0;i<3;i++) { r.dispatch('start',50,50); r.dispatch('move',110,50); r.dispatch('end',110,50); }
+    assert.equal(r.complete(),true);
+    assert.equal(r.api.UnifiedDataManager.events.filter(e=>e.event==='step_error').length,1);
+    assert.equal(r.api.UnifiedDataManager._sessionRecords[0].errors,1);
+  });
+  test(`umbrella ${kind} retry records an error but cancellation does not`, () => {
+    const r=umbrellaGesture(3,kind);
+    r.api.UnifiedDataManager.startSession('fold-umbrella');
+    r.api.UnifiedDataManager.onStepStart();
+    r.dispatch('start',180,120);r.dispatch('move',180,180);r.dispatch('cancel',180,180);
+    assert.equal(r.api.UnifiedDataManager._stepErrors,0);
+    r.stroke(180,120,0,60);
+    assert.equal(r.api.UnifiedDataManager._stepErrors,1);
+    r.stroke(180,120,60,0);r.advance(600);
+    assert.equal(r.complete(),true);
+    assert.equal(r.api.UnifiedDataManager.events.filter(e=>e.event==='step_error').length,1);
+    assert.equal(r.api.UnifiedDataManager._sessionRecords[0].errors,1);
+  });
 }
 
 function umbrellaGesture(stepId, kind = 'mouse') {
@@ -724,16 +807,16 @@ test('attachGestureListeners routes touch and mouse inward gestures to the expli
   }
 });
 
-test('demonstration completes repeat progress before recording one assisted success', () => {
+test('offering a demonstration never completes repeated actions or writes success', () => {
   for (const [levelIndex, stepIndex, goal] of [[0, 3, 3], [2, 3, 6]]) {
     const { api } = loadRuntime();
     api.state.currentLevel = levelIndex;
     api.state.currentStep = stepIndex;
     api.StepProgress.reset(api.LEVELS[levelIndex].steps[stepIndex]);
     api.applyPromptLevel(api.PROMPT_LEVELS.DEMONSTRATION.level);
-    assert.equal(api.StepProgress.current, goal);
+    assert.equal(api.StepProgress.current, 0);
     assert.equal(api.StepProgress.goal, goal);
-    assert.equal(api.UnifiedDataManager.events.filter(event => event.event === 'step_success').length, 1);
+    assert.equal(api.UnifiedDataManager.events.filter(event => event.event === 'step_success' || event.event === 'substep_complete').length, 0);
   }
 });
 

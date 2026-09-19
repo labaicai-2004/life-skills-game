@@ -33,7 +33,7 @@
 
 ## 检查清单
 
-- [x] `node --test tests/new-target-behaviors.test.js tests/continuous-animation.test.js`：95 项通过。
+- [x] `node --test tests/new-target-behaviors.test.js tests/continuous-animation.test.js`：最终修复后 111 项通过，涵盖提示隔离、退出计时器、折衣即时图层与历史摘要保留。
 - [x] 图片存在、尺寸、透明通道、三关实际生成页面与静态页面的图片路径、运行时旧图片引用均有自动检查。
 - [ ] 桌面浏览器按首页入口完整走完三关 21 步。
 - [ ] 在 iPad Safari 上走完三关，重点确认拖放、重复揉洗、六片伞布、卷伞与扣带触控。

@@ -368,7 +368,13 @@ html, body {
 .state-fold-right-body ~ .folding-garment .folding-right-body { opacity:1; clip-path:polygon(50% 36%,82% 36%,82% 98%,50% 98%); transform:translateX(-63px); }
 .state-fold-hem-up ~ .folding-garment .folding-final { opacity:1; }
 .state-fold-hem-up ~ .folding-garment .folding-base { opacity:0; }
-.folding-touch { position:absolute; z-index:9; min-width:88px; min-height:88px; border-radius:20px; background:rgba(255,217,61,.14); border:3px solid rgba(255,217,61,.65); box-shadow:0 0 18px rgba(255,217,61,.68); }
+.state-fold-left-sleeve ~ .folding-garment { clip-path:inset(0 0% 0 24%); }
+.state-fold-right-sleeve ~ .folding-garment { clip-path:inset(0 24% 0 24%); }
+.state-fold-left-body ~ .folding-garment { clip-path:inset(0 24% 0 42%); }
+.state-fold-right-body ~ .folding-garment { clip-path:inset(0 42% 0 42%); }
+.state-fold-hem-up ~ .folding-garment { clip-path:none; }
+.state-fold-hem-up ~ .folding-garment .folding-layer:not(.folding-final) { opacity:0; }
+.folding-touch { position:absolute; z-index:9; min-width:44px; min-height:44px; border-radius:20px; background:rgba(255,217,61,.14); border:3px solid rgba(255,217,61,.65); box-shadow:0 0 18px rgba(255,217,61,.68); }
 .folding-touch::after { content:''; position:absolute; inset:-7px; border:3px dashed rgba(255,217,61,.78); border-radius:24px; animation:targetPulse 1s ease-in-out infinite; }
 .folding-target { position:absolute; left:22%; top:10%; width:56%; height:78%; z-index:4; }
 .folding-target::after { inset:18% 20%; }
@@ -389,6 +395,25 @@ html, body {
 .step-stage.demo-running .demo-fold-clothes-5 { animation:demoFoldLeftBody 2.2s ease-in-out infinite; }
 .step-stage.demo-running .demo-fold-clothes-6 { animation:demoFoldRightBody 2.2s ease-in-out infinite; }
 .step-stage.demo-running .demo-fold-clothes-7 { animation:demoFoldHemUp 2.2s ease-in-out infinite; }
+.step-stage[data-prompt-level="0"] .laundry-guide,
+.step-stage[data-prompt-level="0"] .folding-guide,
+.step-stage[data-prompt-level="0"] .umbrella-guide,
+.step-stage[data-prompt-level="1"] .laundry-guide,
+.step-stage[data-prompt-level="1"] .folding-guide,
+.step-stage[data-prompt-level="1"] .umbrella-guide { opacity:0; }
+.step-stage[data-prompt-level="0"] .folding-touch,
+.step-stage[data-prompt-level="0"] .umbrella-touch:not([data-item="umbrella-slider"]):not([data-item="umbrella-strap"]) { border-color:transparent; background:transparent; box-shadow:none; }
+.step-stage[data-prompt-level="0"] .umbrella-touch { box-shadow:none; }
+.step-stage[data-prompt-level="0"] .umbrella-panel.active { filter:none; }
+.step-stage[data-prompt-level="0"] .folding-target,
+.step-stage[data-prompt-level="0"] .umbrella-drop,
+.step-stage[data-prompt-level="0"] .drag-target::after,
+.step-stage[data-prompt-level="0"] .folding-touch::after,
+.step-stage[data-prompt-level="0"] .umbrella-panel.active::after,
+.step-stage[data-prompt-level="1"] .umbrella-panel.active::after,
+.step-stage[data-prompt-level="0"] .umbrella-touch[data-item="umbrella-slider"]::after,
+.step-stage[data-prompt-level="1"] .umbrella-touch[data-item="umbrella-slider"]::after { opacity:0; }
+.step-stage:not([data-prompt-level="4"]) .demo-element { visibility:hidden; }
 
 @keyframes demoFindPulse {
   0%,45%,100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
@@ -1216,8 +1241,25 @@ let state = {
   currentLevel:-1, currentStep:0, muted:false,
   gestureStartX:0, gestureStartY:0, gesturePoints:[],
   isGestureActive:false, stepCompleted:new Set(), audioCtx:null,
-  stepAbortController:null
+  stepAbortController:null, sceneVersion:0, sceneTimers:new Set()
 };
+
+function clearSceneTimers() {
+  state.sceneVersion++;
+  state.sceneTimers.forEach(timer => clearTimeout(timer));
+  state.sceneTimers.clear();
+  resetPromptState();
+}
+
+function sceneTimeout(callback, delay) {
+  const version = state.sceneVersion, level = state.currentLevel, step = state.currentStep;
+  const timer = setTimeout(() => {
+    state.sceneTimers.delete(timer);
+    if (version === state.sceneVersion && level === state.currentLevel && step === state.currentStep) callback();
+  }, delay);
+  state.sceneTimers.add(timer);
+  return timer;
+}
 
 const STEP_STATE_KEYS = {
   laundry: ['shirtInBasin','shirtWet','detergentAdded','frontRubbed','backRubbed','shirtRinsed','shirtWrung'],
@@ -1227,12 +1269,12 @@ const STEP_STATE_KEYS = {
 
 const FOLD_LAYOUT = {
   1: { item:{left:'0%', top:'12%', width:'300px', height:'270px', transform:'none'}, target:{left:'30%', top:'10%', width:'40%', height:'78%'} },
-  2: { item:{left:'46%', top:'16%', width:'92px', height:'170px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
-  3: { item:{left:'8%', top:'28%', width:'100px', height:'120px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
-  4: { item:{right:'8%', top:'28%', width:'100px', height:'120px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
-  5: { item:{left:'10%', top:'40%', width:'100px', height:'130px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
-  6: { item:{right:'10%', top:'40%', width:'100px', height:'130px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
-  7: { item:{left:'42%', top:'66%', width:'120px', height:'98px'}, target:{left:'40%', top:'18%', width:'20%', height:'24%'} }
+  2: { item:{left:'calc(50% - 46px)', top:'calc(12% + 60px)', width:'92px', height:'150px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
+  3: { item:{left:'calc(50% - 140px)', top:'calc(12% + 130px)', width:'60px', height:'70px'}, target:{left:'calc(50% - 10px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
+  4: { item:{left:'calc(50% + 80px)', top:'calc(12% + 130px)', width:'60px', height:'70px'}, target:{left:'calc(50% - 50px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
+  5: { item:{left:'calc(50% - 75px)', top:'calc(12% + 120px)', width:'50px', height:'90px'}, target:{left:'calc(50% - 10px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
+  6: { item:{left:'calc(50% + 25px)', top:'calc(12% + 120px)', width:'50px', height:'90px'}, target:{left:'calc(50% - 60px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
+  7: { item:{left:'calc(50% - 24px)', top:'calc(12% + 190px)', width:'48px', height:'54px'}, target:{left:'calc(50% - 24px)', top:'calc(12% + 80px)', width:'48px', height:'60px'} }
 };
 
 const SkillSceneState = {
@@ -1274,9 +1316,10 @@ const StepProgress = {
 
 const AnimationPolicy = {
   isEnabled() {
+    if (currentTrainingMode.id === 'assessment') return false;
     if (!ResearchMode.active) return true;
     return ResearchMode.phase === 'intervention' &&
-      currentTrainingMode.id === 'teaching';
+      (currentTrainingMode.id === 'teaching' || currentTrainingMode.id === 'practice');
   }
 };
 
@@ -1328,8 +1371,11 @@ const AnimationController = {
     this.configureStagePaths(stage);
     if (!stage || !AnimationPolicy.isEnabled() ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (state.currentLevel >= 0 && promptState.enabled && promptState.currentLevel < 4) return;
     this.timer = setTimeout(() => {
       if (this.currentStage === stage && stage.isConnected) {
+        stage.dataset.promptLevel = '4';
+        promptState.promptUsed = Math.max(promptState.promptUsed, 4);
         stage.classList.add('demo-running');
       }
       this.timer = null;
@@ -1480,6 +1526,7 @@ function showScreen(id) {
   const el=document.getElementById(id); if(el) el.classList.add('active');
 }
 function goHome() {
+  clearSceneTimers();
   if (state.stepAbortController) { state.stepAbortController.abort(); state.stepAbortController = null; }
   AnimationController.clear();
   if(currentAudio) { currentAudio.pause(); currentAudio = null; }
@@ -1511,7 +1558,9 @@ function renderProgressDots() {
    LOAD STEP
    ================================================================ */
 function loadStep(idx) {
+  clearSceneTimers();
   state.currentStep=idx;
+  const version = state.sceneVersion;
   // Abort previous step's gesture listeners immediately
   if (state.stepAbortController) { state.stepAbortController.abort(); state.stepAbortController=null; }
   // Hide next-step button
@@ -1543,11 +1592,18 @@ function loadStep(idx) {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = newHTML;
   const newStage = wrapper.firstElementChild;
+  newStage.dataset.promptLevel = !promptState.enabled && currentTrainingMode.id !== 'assessment' ? '2' : '0';
+  if (newStage.dataset.promptLevel === '2') promptState.promptUsed = Math.max(promptState.promptUsed, 2);
 
+  let swapped = false;
   function swapStage() {
+    if (swapped || version !== state.sceneVersion || state.currentLevel < 0) return;
+    swapped = true;
+    if (promptState.enabled) newStage.dataset.promptLevel = String(promptState.currentLevel);
     if (oldStage) oldStage.remove();
     scene.appendChild(newStage);
     requestAnimationFrame(() => {
+      if (version !== state.sceneVersion) return;
       newStage.classList.add('enter');
       newStage.addEventListener('animationend', function h() {
         newStage.removeEventListener('animationend', h);
@@ -1569,7 +1625,10 @@ function loadStep(idx) {
     swapStage();
   }
 
-  setTimeout(()=>speak(step.voice), 350);
+  if (!promptState.enabled && currentTrainingMode.id !== 'assessment') sceneTimeout(() => {
+    promptState.promptUsed = Math.max(promptState.promptUsed, 3);
+    speak(step.voice);
+  }, 350);
 }
 
 /* ================================================================
@@ -2082,7 +2141,7 @@ function attachLaundryGesture(step, area, signal) {
           if (shirt) shirt.src = 'assets/laundry/shirt-clean.png';
         }
       }
-    } else speak('我们再试一次');
+    } else handleStepWrong(area);
   };
   const cancel = () => { start = null; clearDwell(); if (!finished) resetPosition(); };
   signal.addEventListener('abort', () => { clearTimeout(actionTimer); cancel(); });
@@ -2155,7 +2214,7 @@ function attachUmbrellaGesture(step, area, signal) {
     } else if (sid===4) valid=dy>=40 && dy>=Math.abs(dx);
     else valid=Math.abs(dx)>=40 && Math.abs(dx)>=Math.abs(dy) && (sid!==6 || dx>0);
     start=null;
-    if (!valid) { reset(); speak('我们再试一次'); return; }
+    if (!valid) { reset(); handleStepWrong(area); return; }
     if (sid===3 || sid===6) {
       busy=true;
       stage?.classList.add(sid===6?'umbrella-rolling':'umbrella-turning');
@@ -2221,11 +2280,16 @@ function handleStepSuccess(area) {
   const level=LEVELS[state.currentLevel];
   state.stepCompleted.add(state.currentStep);
   SkillSceneState.complete(level.id, level.steps[state.currentStep].id);
+  if (level.id === 'fold-clothes') {
+    area.querySelector('.step-stage')?.insertAdjacentHTML('afterbegin', buildClothesFoldingPersistentState(state.currentStep + 2));
+    const touch = area.querySelector('.interactive-target');
+    if (touch && state.currentStep > 0) touch.style.opacity = '0';
+  }
   if (level.id === 'laundry') area.querySelector('.step-stage')?.classList.add('laundry-complete');
   if (level.id === 'fold-umbrella') area.querySelector('.step-stage')?.classList.add('umbrella-complete');
   area.classList.add('success'); playSuccessSound();
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
-  speak(state.currentStep === 6 && level.id === 'laundry' ? '衣服洗干净啦' : state.currentStep === 6 && level.id === 'fold-umbrella' ? '雨伞整理得真整齐' : p[Math.floor(Math.random()*p.length)]);
+  speak(state.currentStep === 6 && level.id === 'laundry' ? '衣服洗干净啦' : state.currentStep === 6 && level.id === 'fold-umbrella' ? '雨伞整理得真整齐' : state.currentStep === 6 && level.id === 'fold-clothes' ? '衣服叠得真整齐' : p[Math.floor(Math.random()*p.length)]);
   spawnParticles(8); renderProgressDots();
   // Show "next step" button instead of auto-advancing
   const btn = document.getElementById('next-step-btn');
@@ -2265,7 +2329,7 @@ function handleStepWrong(area) {
   setTimeout(()=>bubble.remove(), 800);
   const e=['没关系，再试一次哦！','差一点点，再来一次吧！','加油，你可以的！再试试看。','慢慢来，不着急，再试一次。'];
   speak(e[Math.floor(Math.random()*e.length)]);
-  setTimeout(()=>area.classList.remove('wrong'), 600);
+  sceneTimeout(()=>area.classList.remove('wrong'), 600);
 }
 
 function finishCurrentLevel() {
@@ -2325,7 +2389,7 @@ function spawnCanvasConfetti() {
   const ctx = canvas.getContext('2d');
   const colors = ['#FFD93D','#FF6B9D','#4D96FF','#6BCB77','#FF9DC4','#80B8FF','#FFE88C'];
   const particles = [];
-  for (let i=0; i<120; i++) {
+  for (let i=0; i<50; i++) {
     particles.push({
       x: Math.random()*canvas.width,
       y: Math.random()*canvas.height - canvas.height,
@@ -2496,8 +2560,12 @@ function resetPromptState() {
 }
 
 function applyPromptLevel(level) {
-  const step = LEVELS[state.currentLevel].steps[state.currentStep];
+  const step = LEVELS[state.currentLevel]?.steps[state.currentStep];
+  if (!step) return;
+  if (currentTrainingMode.id === 'assessment') level = 0;
   const area = document.getElementById('interaction-area');
+  const stage = document.getElementById('scene')?.querySelector('.step-stage') || AnimationController.currentStage;
+  if (stage) stage.dataset.promptLevel = String(level);
 
   switch(level) {
     case PROMPT_LEVELS.INDEPENDENT.level:
@@ -2506,7 +2574,7 @@ function applyPromptLevel(level) {
       break;
     case PROMPT_LEVELS.VISUAL.level:
       // Level 1: Visual Prompt — 目标区域高亮
-      if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1000); }
+      if (area) { area.classList.add('success'); sceneTimeout(()=>area.classList.remove('success'), 1000); }
       UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 1, promptName: 'Visual', promptDescription:'视觉提示-目标高亮', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
       break;
     case PROMPT_LEVELS.GESTURAL.level:
@@ -2516,25 +2584,24 @@ function applyPromptLevel(level) {
       break;
     case PROMPT_LEVELS.VERBAL.level:
       // 目标区域高亮 + 重复语音
-      if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1500); }
+      if (area) { area.classList.add('success'); sceneTimeout(()=>area.classList.remove('success'), 1500); }
       speak(step.voice);
       UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 3, promptName: 'Verbal', promptDescription:'语音提示-播放指令', stepId: step.id, proceduralFidelity: true, escalationSequence: 3 });
       break;
     case PROMPT_LEVELS.DEMONSTRATION.level:
-      // 自动完成（记录为全辅助）
       UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 4, promptName: 'Demonstration', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
-      promptState.promptUsed = 4;
-      StepProgress.advance(StepProgress.goal - StepProgress.current);
-      StepProgress.render(area);
-      handleStepSuccess(area);
-      return;
+      promptState.currentLevel = 4;
+      AnimationController.schedule(stage);
+      break;
   }
-  promptState.promptUsed = level;
+  promptState.promptUsed = Math.max(promptState.promptUsed, level);
 }
 
 function hideAllArrows() {
   const scene = document.getElementById('scene');
   if (!scene) return;
+  const stage = scene.querySelector('.step-stage') || AnimationController.currentStage;
+  if (stage) stage.dataset.promptLevel = '0';
   const arrows = scene.querySelectorAll('.arrow-badge, .tap-ring, [class*="anim-"]');
   arrows.forEach(a => { a.style.opacity = '0'; a.style.transition = 'opacity 0.3s'; });
   // Also hide labels
@@ -2545,6 +2612,9 @@ function hideAllArrows() {
 function showAllArrows() {
   const scene = document.getElementById('scene');
   if (!scene) return;
+  const stage = scene.querySelector('.step-stage') || AnimationController.currentStage;
+  if (stage) stage.dataset.promptLevel = String(Math.max(2, promptState.currentLevel));
+  promptState.promptUsed = Math.max(2, promptState.promptUsed);
   const arrows = scene.querySelectorAll('.arrow-badge, .tap-ring, [class*="anim-"]');
   arrows.forEach(a => { a.style.opacity = ''; });
   const labels = scene.querySelectorAll('.arrow-label');
@@ -2600,10 +2670,9 @@ function applyTrainingMode(mode) {
 }
 
 function startPromptEscalation() {
+  if (currentTrainingMode.id === 'assessment') { resetPromptState(); applyPromptLevel(0); return; }
   if (!promptState.enabled) {
-    const step = LEVELS[state.currentLevel].steps[state.currentStep];
     showAllArrows();
-    setTimeout(() => speak(step.voice), 350);
     return;
   }
 
@@ -2644,7 +2713,7 @@ function scheduleNextPrompt() {
   if (nextLevel > currentTrainingMode.maxLevel) return; // 已达训练模式上限
 
   const delay = Object.values(PROMPT_LEVELS)[nextLevel].delay;
-  promptState.escalationTimer = setTimeout(() => {
+  promptState.escalationTimer = sceneTimeout(() => {
     promptState.currentLevel = nextLevel;
     applyPromptLevel(nextLevel);
     scheduleNextPrompt();
@@ -2713,7 +2782,6 @@ const UnifiedDataManager = {
         totalErrors: summary.totalErrors, avgPromptLevel: summary.avgPromptLevel,
         participantID: summary.participantID
       });
-      if (summaries.length > 50) summaries.splice(0, summaries.length - 50);
       localStorage.setItem(key, JSON.stringify(summaries));
     } catch(e) {}
 
@@ -3319,7 +3387,7 @@ handleStepSuccess = function(area) {
   // Procedural fidelity: was this success at the correct prompt level?
   UnifiedDataManager.events[UnifiedDataManager.events.length - 1].proceduralFidelity =
     promptState.promptUsed <= PROMPT_LEVELS.DEMONSTRATION.level;
-  resetPromptState();
+  clearSceneTimers();
   _originalHandleStepSuccess(area);
 };
 
@@ -3355,7 +3423,7 @@ loadStep = function(idx) {
     promptProtocol: 'Least-to-Most',
     startingLevel: promptState.currentLevel
   });
-  setTimeout(() => startPromptEscalation(), 200);
+  sceneTimeout(() => startPromptEscalation(), 200);
 };
 
 // 包装原始 goHome，确保 session 正确结束

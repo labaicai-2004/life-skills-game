@@ -39,6 +39,7 @@ function createElement() {
     querySelector(selector) { return selector === '.demo-element' ? this.demoElements?.[0] || null : null; },
     querySelectorAll(selector) { return selector === '.demo-element' ? this.demoElements || [] : []; },
     appendChild(child) { this.lastChild = child; },
+    insertAdjacentHTML(position,markup) { this.insertedHTML=(this.insertedHTML || '')+markup; },
     removeChild() {},
     getContext() { return { clearRect() {}, save() {}, restore() {}, translate() {}, rotate() {}, fillRect() {} }; },
     click() {},
@@ -114,6 +115,7 @@ function loadAnimationRuntime(sourceMutation = source => source) {
   const script = sourceMutation(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
   const timers = [];
   const storage = new Map();
+  const spoken = [];
   let now = 1_750_000_000_000;
   class ControlledDate extends Date {
     constructor(...args) { super(...(args.length ? args : [now])); }
@@ -181,6 +183,7 @@ function loadAnimationRuntime(sourceMutation = source => source) {
     Date: ControlledDate,
     JSON,
     Math,
+    SpeechSynthesisUtterance: class { constructor(text) {this.text=text;} },
     console,
     document,
     localStorage,
@@ -195,6 +198,7 @@ function loadAnimationRuntime(sourceMutation = source => source) {
     clearTimeout(id) { if (timers[id - 1]) timers[id - 1].cleared = true; },
     window: {
       addEventListener() {},
+      speechSynthesis: { cancel() {}, getVoices() {return [{lang:'zh-CN',name:'Tingting'}];}, speak(utterance) {spoken.push(utterance.text);} },
       matchMedia() { return { matches: false }; }
     },
     URL: { createObjectURL() { return 'blob:test'; } }
@@ -213,6 +217,7 @@ function loadAnimationRuntime(sourceMutation = source => source) {
       attachGestureListeners, STEP_STATE_KEYS,
       SkillSceneState, buildPersistentStateHTML, stepStageHTML, buildScene, LEVELS,
       applyPromptLevel, PROMPT_LEVELS
+      , hideAllArrows
     };
   `;
   try {
@@ -224,6 +229,7 @@ function loadAnimationRuntime(sourceMutation = source => source) {
     api: context.__animationApi,
     elements,
     timers,
+    spoken,
     localStorage,
     advanceClock(milliseconds) { now += milliseconds; },
     runTimersThroughNow() {
@@ -243,6 +249,44 @@ function loadAnimationRuntime(sourceMutation = source => source) {
   };
 }
 
+test('research teaching at 2.1 seconds has no unrecorded demonstration or early voice', () => {
+  const r=loadAnimationRuntime(),{api}=r;
+  api.ResearchMode.active=true;api.ResearchMode.phase='intervention';
+  api.setTrainingMode(api.TrainingModes.TEACHING);api.startLevel(0);
+  r.advanceClock(200);r.runTimersThroughNow();
+  r.advanceClock(1900);r.runTimersThroughNow();
+  const stage=r.elements.scene.lastChild;
+  assert.equal(stage.classList.contains('demo-running'),false);
+  assert.equal(stage.dataset.promptLevel,'0');
+  assert.deepEqual(r.spoken,[]);
+  assert.equal(api.promptState.promptUsed,0);
+});
+
+test('assessment suppresses all new guides and demonstration even with prompting disabled', () => {
+  const r=loadAnimationRuntime(),{api}=r;
+  api.ResearchMode.active=true;api.ResearchMode.phase='intervention';
+  api.setTrainingMode(api.TrainingModes.ASSESSMENT);api.promptState.enabled=false;api.startLevel(2);
+  r.advanceClock(2100);r.runTimersThroughNow();
+  assert.equal(r.elements.scene.lastChild.dataset.promptLevel,'0');
+  assert.equal(r.elements.scene.lastChild.classList.contains('demo-running'),false);
+  assert.deepEqual(r.spoken,[]);
+  assert.equal(api.promptState.promptUsed,0);
+});
+
+test('new scene hint levels and hideAllArrows share the same scene visibility state', () => {
+  const r=loadAnimationRuntime(),{api,elements}=r;
+  api.startLevel(1);
+  elements['interaction-area'].querySelector=selector=>selector==='.step-stage'?elements.scene.lastChild:null;
+  elements.scene.querySelector=selector=>selector==='.step-stage'?elements.scene.lastChild:null;
+  for(const level of [0,1,2,3,4]) {
+    api.applyPromptLevel(level);
+    assert.equal(elements.scene.lastChild.dataset.promptLevel,String(level));
+    assert.equal(api.state.stepCompleted.size,0,'offering a demonstration cannot complete a task');
+  }
+  api.hideAllArrows();
+  assert.equal(elements.scene.lastChild.dataset.promptLevel,'0');
+});
+
 test('AnimationPolicy follows the full inactive, intervention, baseline, and maintenance matrix', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
@@ -252,7 +296,7 @@ test('AnimationPolicy follows the full inactive, intervention, baseline, and mai
   for (const mode of modes) {
     api.ResearchMode.active = false;
     api.setTrainingMode(mode);
-    assert.equal(api.AnimationPolicy.isEnabled(), true, `inactive ${mode.id}`);
+    assert.equal(api.AnimationPolicy.isEnabled(), mode.id !== 'assessment', `inactive ${mode.id}`);
   }
 
   for (const phase of ['intervention', 'baseline', 'maintenance']) {
@@ -262,7 +306,7 @@ test('AnimationPolicy follows the full inactive, intervention, baseline, and mai
       api.setTrainingMode(mode);
       assert.equal(
         api.AnimationPolicy.isEnabled(),
-        phase === 'intervention' && mode.id === 'teaching',
+        phase === 'intervention' && mode.id !== 'assessment',
         `${phase} ${mode.id}`
       );
     }
@@ -458,6 +502,77 @@ test('the original startLevel clears before state assignment and loadStep', () =
   );
 });
 
+test('leaving within 100ms cancels prompt initialization and old instruction speech', () => {
+  const r=loadAnimationRuntime();
+  r.api.startLevel(0);
+  r.advanceClock(100);r.api.goHome();
+  const events=r.api.UnifiedDataManager.events.length;
+  r.advanceClock(10000);
+  assert.doesNotThrow(()=>r.runTimersThroughNow());
+  assert.deepEqual(r.spoken,[]);
+  assert.equal(r.api.UnifiedDataManager.events.length,events);
+});
+
+test('rapid level switch leaves only one prompt chain and no prior instruction', () => {
+  const r=loadAnimationRuntime();
+  r.api.promptState.enabled=false;
+  r.api.startLevel(0);r.advanceClock(100);r.api.startLevel(1);
+  r.advanceClock(400);r.runTimersThroughNow();
+  r.advanceClock(400);r.runTimersThroughNow();
+  assert.ok(r.spoken.length>0);
+  assert.ok(r.spoken.every(text=>text==='把衣服平平地放在桌上。'));
+  assert.equal(r.spoken.length,1,'one initialized scene schedules one voice');
+});
+
+test('stale exit animation cannot attach a previous stage after returning home', () => {
+  const r=loadAnimationRuntime();
+  r.api.startLevel(0);
+  const old=r.elements.scene.lastChild;
+  r.elements.scene.querySelector=selector=>selector==='.step-stage'?old:null;
+  r.api.loadStep(1);
+  r.api.goHome();
+  old.dispatch('animationend');
+  assert.equal(r.api.AnimationController.currentStage,null);
+  assert.equal(r.api.state.stepAbortController,null);
+});
+
+test('completion before delayed prompt initialization cannot restart prompting', () => {
+  const r=loadAnimationRuntime(),{api,elements}=r;
+  api.startLevel(0);
+  api.handleStepSuccess(elements['interaction-area']);
+  const events=api.UnifiedDataManager.events.length, voices=r.spoken.length;
+  r.advanceClock(200);r.runTimersThroughNow();
+  r.advanceClock(5000);r.runTimersThroughNow();
+  assert.equal(api.UnifiedDataManager.events.length,events);
+  assert.equal(r.spoken.length,voices);
+  assert.equal(api.promptState.escalationTimer,null);
+});
+
+test('practice prompt remains visible when the new stage enters after 250ms exit', () => {
+  const r=loadAnimationRuntime(),{api,elements}=r;
+  api.setTrainingMode(api.TrainingModes.PRACTICE);
+  api.startLevel(1);
+  const old=elements.scene.lastChild;
+  elements.scene.querySelector=selector=>selector==='.step-stage'?elements.scene.lastChild:null;
+  api.loadStep(1);
+  r.advanceClock(200);r.runTimersThroughNow();
+  r.advanceClock(50);old.dispatch('animationend');
+  assert.notEqual(elements.scene.lastChild,old);
+  assert.equal(elements.scene.lastChild.dataset.promptLevel,'1');
+});
+
+test('new session preserves all 55 historical summaries and research records', () => {
+  const {api, localStorage} = loadAnimationRuntime();
+  const old = Array.from({length:55}, (_,id) => ({sessionId:`old-${id}`, taskId:'brush'}));
+  localStorage.setItem('session_summaries', JSON.stringify(old));
+  localStorage.setItem('researchRecords', JSON.stringify(old));
+  api.UnifiedDataManager.startSession('laundry');
+  api.UnifiedDataManager.endSession();
+  assert.deepEqual(JSON.parse(localStorage.getItem('session_summaries')).slice(0,55), old);
+  assert.equal(JSON.parse(localStorage.getItem('session_summaries')).length,56);
+  assert.deepEqual(JSON.parse(localStorage.getItem('researchRecords')),old);
+});
+
 test('each new level finishes once, preserves old records, and closes without a duplicate session end', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
@@ -603,9 +718,11 @@ test('real mouse completion after demonstration pause adds one step-success even
     'responseTimeMs', 'errors', 'timestamp'
   ].sort());
   assert.equal(record.taskId, 'laundry');
+  assert.equal(record.promptLevel,4,'viewing the passive demonstration is assistance');
+  assert.equal(newEvents[0].independentCompletion,false);
 });
 
-test('Level 4 prompt auto-completion pauses the running demonstration before success feedback', () => {
+test('Level 4 offers demonstration without success and real completion pauses it before feedback', () => {
   const runtime = loadAnimationRuntime();
   assert.equal(runtime.error, undefined, runtime.error?.message);
   const { api, elements } = runtime;
@@ -628,7 +745,9 @@ test('Level 4 prompt auto-completion pauses the running demonstration before suc
   };
 
   api.applyPromptLevel(api.PROMPT_LEVELS.DEMONSTRATION.level);
-
+  assert.equal(api.state.stepCompleted.size,0);
+  assert.equal(api.UnifiedDataManager.events.filter(e=>e.event==='step_success').length,0);
+  api.handleStepSuccess(area);
   assert.equal(pausedWhenFeedbackStarted, true);
   assert.equal(stage.classList.contains('demo-paused'), true);
 });
