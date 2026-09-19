@@ -49,6 +49,8 @@
 
 新研究技能值为 `clothes washing`、`clothes folding`、`folding umbrella`。步骤记录包含任务、关卡、步骤、时间、用时和提示等级；重复动作增加 `substep_complete`、当前次数、目标次数，伞布步骤增加片号。旧 `researchRecords`、`session_summaries` 和旧任务数据不改写；结束关卡只通过统一完成流程结束一次会话。
 
+`ResearchParticipants` 将已使用的儿童编号保存在 `researchParticipants`，并与 `researchRecords`、`session_summaries`、最近 `researchSession` 中的旧编号合并去重，因此升级后旧数据会自动出现为快捷选择。`getResearchRecords(participantID)` 仅在看板和导出时筛选，不改写原始记录；`buildResearchCSV(records)` 共用原字段顺序，可生成单一儿童或全部儿童的 CSV。
+
 ## 关键浏览器 API
 
 | API | 用途 | iPad Safari |
@@ -70,4 +72,4 @@ python3 -m http.server 8080
 
 同一 Wi-Fi 下，iPad 访问 `http://<Mac-IP>:8080/index.html`。发布前先运行两份 Node 自动检查，再用桌面浏览器和 iPad Safari 完整走查三关 21 步。
 
-*文档版本：v2.0 | 更新日期：2026-09-18*
+*文档版本：v2.1 | 更新日期：2026-09-19*

@@ -876,6 +876,15 @@ html, body {
   font-size: 16px; font-family: inherit; outline: none; transition: border-color 0.2s;
 }
 .research-field input:focus { border-color: var(--blue); }
+.participant-shortcuts { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.participant-chip {
+  min-width:64px; min-height:44px; padding:8px 14px; border:2px solid #E8E0D5;
+  border-radius:16px; background:#FFF; color:var(--text); font-family:inherit; font-size:14px; font-weight:700; cursor:pointer;
+}
+.participant-chip.selected { color:#FFF; background:var(--blue); border-color:var(--blue); }
+.participant-empty { font-size:12px; color:var(--text-light); padding:5px 0; }
+.research-filter { width:100%; min-height:44px; margin:0 0 12px; padding:8px 12px;
+  border:2px solid #E8E0D5; border-radius:14px; background:#FFF; font-family:inherit; font-size:14px; font-weight:700; }
 .phase-btns, .skill-btns {
   display: flex; gap: 8px; flex-wrap: wrap;
 }
@@ -1096,7 +1105,7 @@ html, body {
     <div class="records-title">📋 学习记录</div>
     <div class="records-hint">孩子每次完成关卡都会自动记录</div>
     <div id="records-list"></div>
-    <div class="records-btns">
+    <div class="records-btns" id="records-default-actions">
       <button class="records-btn clear" onclick="clearRecords()">清空记录</button>
       <button class="records-btn close" onclick="hideRecords()">关闭</button>
     </div>
@@ -1110,7 +1119,8 @@ html, body {
     <div class="rp-subtitle">单被试实验设计 · Single Subject Design</div>
     <div class="research-field">
       <label>👤 被试编号 (Child ID)</label>
-      <input type="text" id="research-child-id" placeholder="例如：P001" autocomplete="off">
+      <input type="text" id="research-child-id" placeholder="例如：001" autocomplete="off">
+      <div class="participant-shortcuts" id="research-participant-shortcuts"></div>
     </div>
     <div class="research-field">
       <label>📊 实验阶段 (Experimental Phase)</label>
@@ -1149,7 +1159,7 @@ html, body {
       <input type="date" id="research-date">
     </div>
     <button class="research-start-btn" id="research-start-btn" disabled onclick="startResearchSession()">开始研究训练</button>
-    <button class="records-btn clear" style="margin-top:12px;width:100%;" onclick="viewSessionRecords()">📋 查看当前Session记录</button>
+    <button class="records-btn clear" style="margin-top:12px;width:100%;" onclick="showDashboard(document.getElementById('research-child-id').value.trim())">📋 查看当前Session记录</button>
     <button class="records-btn clear" style="margin-top:6px;width:100%;" onclick="showDashboard()">📊 查看全部研究数据</button>
   </div>
 </div>
@@ -3013,6 +3023,7 @@ const ResearchMode = {
     if (overlay) overlay.classList.add('active');
     const dateInput = document.getElementById('research-date');
     if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    renderResearchParticipantShortcuts();
     // Auto-suggest session number
     this._suggestSessionNum();
     this._updateStartBtn();
@@ -3054,6 +3065,8 @@ const ResearchMode = {
     this.skillId = document.querySelector('.skill-btn.selected').dataset.skill;
     this.sessionNum = parseInt(document.getElementById('research-session-num').value) || 1;
     this.date = document.getElementById('research-date').value || new Date().toISOString().split('T')[0];
+    ResearchParticipants.remember(this.childId);
+    renderResearchParticipantShortcuts();
 
     // Save researchSession to localStorage (V2.1 spec)
     const researchSession = {
@@ -3118,6 +3131,63 @@ const ResearchMode = {
   }
 };
 
+const ResearchParticipants = {
+  key: 'researchParticipants',
+  list() {
+    const ids = new Set();
+    for (const key of [this.key, 'researchRecords', 'session_summaries']) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        for (const item of data) {
+          const id = typeof item === 'string' ? item : item?.participantID;
+          if (id) ids.add(String(id).trim());
+        }
+      } catch(e) {}
+    }
+    try {
+      const current = JSON.parse(localStorage.getItem('researchSession') || 'null');
+      if (current?.participantID) ids.add(String(current.participantID).trim());
+    } catch(e) {}
+    return [...ids].filter(Boolean).sort((a,b) => a.localeCompare(b, 'zh-CN', {numeric:true}));
+  },
+  remember(id) {
+    const clean = String(id || '').trim();
+    if (!clean) return;
+    const ids = this.list();
+    if (!ids.includes(clean)) ids.push(clean);
+    ids.sort((a,b) => a.localeCompare(b, 'zh-CN', {numeric:true}));
+    try { localStorage.setItem(this.key, JSON.stringify(ids)); } catch(e) {}
+  }
+};
+
+function escapeResearchText(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+
+function selectResearchParticipant(id) {
+  const input = document.getElementById('research-child-id');
+  if (!input) return;
+  input.value = String(id || '').trim();
+  const sessionInput = document.getElementById('research-session-num');
+  if (sessionInput) delete sessionInput.dataset.manual;
+  ResearchMode._suggestSessionNum();
+  ResearchMode._updateStartBtn();
+  renderResearchParticipantShortcuts();
+}
+
+function renderResearchParticipantShortcuts() {
+  const host = document.getElementById('research-participant-shortcuts');
+  if (!host) return;
+  const selected = document.getElementById('research-child-id')?.value?.trim();
+  const ids = ResearchParticipants.list();
+  host.innerHTML = ids.length
+    ? ids.map(id => `<button type="button" class="participant-chip${id === selected ? ' selected' : ''}" data-participant="${escapeResearchText(id)}">${escapeResearchText(id)}</button>`).join('')
+    : '<span class="participant-empty">输入编号并开始一次训练后，会出现快捷选择</span>';
+  host.querySelectorAll('.participant-chip').forEach(button => {
+    button.addEventListener('click', () => selectResearchParticipant(button.dataset.participant));
+  });
+}
+
 // 5-tap detection on title icon for hidden research entry
 (function setupResearchEntry() {
   const icon = document.querySelector('.title-icon');
@@ -3165,6 +3235,7 @@ const ResearchMode = {
     childIdInput.addEventListener('input', () => {
       ResearchMode._suggestSessionNum();
       ResearchMode._updateStartBtn();
+      renderResearchParticipantShortcuts();
     });
   }
   // Session number manual edit flag
@@ -3180,14 +3251,23 @@ function startResearchSession() { ResearchMode.start(); }
 /* ================================================================
    RESEARCH DASHBOARD — 研究数据仪表盘
    ================================================================ */
-function showDashboard() {
-  // Read from researchRecords (BehaviorTracker data)
+function getResearchRecords(participantID = '') {
   let records = [];
   try { records = JSON.parse(localStorage.getItem('researchRecords') || '[]'); } catch(e) {}
+  return participantID ? records.filter(record => record.participantID === participantID) : records;
+}
+
+function showDashboard(participantID = '') {
+  ResearchMode.closeSetup();
+  const defaultActions = document.getElementById('records-default-actions');
+  if (defaultActions) defaultActions.style.display = 'none';
+  const allRecords = getResearchRecords();
+  const records = getResearchRecords(participantID);
 
   // Extract unique participants
-  const participants = [...new Set(records.map(r => r.participantID).filter(Boolean))];
-  const pid = participants.length > 0 ? participants.join(', ') : '—';
+  const participants = [...new Set(allRecords.map(r => r.participantID).filter(Boolean))];
+  const visibleParticipants = [...new Set(records.map(r => r.participantID).filter(Boolean))];
+  const pid = visibleParticipants.length > 0 ? visibleParticipants.join(', ') : '—';
   const skills = [...new Set(records.map(r => r.skill).filter(Boolean))];
   const skill = skills.length > 0 ? skills.join(', ') : '—';
 
@@ -3216,6 +3296,10 @@ function showDashboard() {
 
   let html = `<div class="records-title">📊 Research Dashboard</div>
     <div class="records-hint">数据来源: researchRecords (localStorage) — 仅限研究者查看</div>
+    <select class="research-filter" aria-label="按儿童编号筛选" onchange="showDashboard(this.value)">
+      <option value="">全部儿童</option>
+      ${participants.map(id => `<option value="${escapeResearchText(id)}"${id === participantID ? ' selected' : ''}>${escapeResearchText(id)}</option>`).join('')}
+    </select>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
       <div style="flex:1;min-width:60px;background:#F0F6FF;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:var(--blue);">${totalSessions}</div><div style="font-size:10px;color:var(--text-light);">Session数</div></div>
       <div style="flex:1;min-width:60px;background:#FFF9F3;border-radius:16px;padding:10px;"><div style="font-size:20px;font-weight:800;color:var(--yellow);">${totalCompleted}</div><div style="font-size:10px;color:var(--text-light);">完成步骤</div></div>
@@ -3243,20 +3327,24 @@ function showDashboard() {
   }
 
   html += `<div class="records-btns" style="flex-wrap:wrap;">
-    <button class="records-btn clear" onclick="exportResearchCSV()">📥 CSV</button>
+    ${participantID ? `<button class="records-btn clear" onclick="exportResearchCSV(document.querySelector('.research-filter')?.value || '')">📥 导出 ${escapeResearchText(participantID)}</button>` : ''}
+    <button class="records-btn clear" onclick="exportResearchCSV()">📥 导出全部儿童</button>
     <button class="records-btn clear" onclick="backupData()">💾 备份</button>
     <button class="records-btn clear" onclick="restoreData()">📂 恢复</button>
     <button class="records-btn clear" onclick="toggleObserver()" id="obs-toggle-btn">🔍 Observer</button>
-    <button class="records-btn close" onclick="hideRecords()">关闭</button></div>`;
+    <button class="records-btn close" onclick="hideResearchDashboard()">关闭</button></div>`;
 
   document.getElementById('records-list').innerHTML = html;
   document.getElementById('records-overlay').classList.add('active');
 }
 
-function exportResearchCSV() {
-  let records = [];
-  try { records = JSON.parse(localStorage.getItem('researchRecords') || '[]'); } catch(e) {}
+function hideResearchDashboard() {
+  document.getElementById('records-overlay')?.classList.remove('active');
+  const defaultActions = document.getElementById('records-default-actions');
+  if (defaultActions) defaultActions.style.display = '';
+}
 
+function buildResearchCSV(records) {
   const rows = [['participantID','skill','phase','session','step','completion','promptLevel','responseTimeMs','errors','timestamp']];
   for (const r of records) {
     rows.push([
@@ -3265,11 +3353,16 @@ function exportResearchCSV() {
       r.responseTimeMs||'', r.errors||0, r.timestamp||''
     ]);
   }
-  const csv = rows.map(r => r.map(c => '\"' + String(c).replace(/\"/g,'\"\"') + '\"').join(',')).join('\n');
+  return rows.map(r => r.map(c => '\"' + String(c).replace(/\"/g,'\"\"') + '\"').join(',')).join('\n');
+}
+
+function exportResearchCSV(participantID = '') {
+  const csv = buildResearchCSV(getResearchRecords(participantID));
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `research_records_${new Date().toISOString().split('T')[0]}.csv`;
+  const scope = participantID ? participantID.replace(/[^A-Za-z0-9_-]/g, '_') : 'all';
+  a.download = `research_records_${scope}_${new Date().toISOString().split('T')[0]}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 

@@ -217,7 +217,14 @@ function loadAnimationRuntime(sourceMutation = source => source, options = {}) {
       attachGestureListeners, STEP_STATE_KEYS,
       SkillSceneState, buildPersistentStateHTML, stepStageHTML, buildScene, LEVELS,
       applyPromptLevel, PROMPT_LEVELS
-      , hideAllArrows
+      , hideAllArrows,
+      ResearchParticipants: typeof ResearchParticipants === 'undefined' ? undefined : ResearchParticipants,
+      getResearchRecords: typeof getResearchRecords === 'undefined' ? undefined : getResearchRecords,
+      buildResearchCSV: typeof buildResearchCSV === 'undefined' ? undefined : buildResearchCSV,
+      showDashboard: typeof showDashboard === 'undefined' ? undefined : showDashboard,
+      hideResearchDashboard: typeof hideResearchDashboard === 'undefined' ? undefined : hideResearchDashboard,
+      selectResearchParticipant: typeof selectResearchParticipant === 'undefined' ? undefined : selectResearchParticipant,
+      renderResearchParticipantShortcuts: typeof renderResearchParticipantShortcuts === 'undefined' ? undefined : renderResearchParticipantShortcuts
     };
   `;
   try {
@@ -625,6 +632,68 @@ test('real ResearchMode.start initializes one unified session with the selected 
   ]);
   assert.equal(api.UnifiedDataManager.events.filter(event => event.event === 'session_start').length, 1);
   assert.ok(api.UnifiedDataManager.events.every(event => event.taskId === 'fold-clothes'));
+});
+
+test('research participant shortcuts remember three child ids without duplicates', () => {
+  const {api,localStorage}=loadAnimationRuntime();
+  assert.ok(api.ResearchParticipants, 'research participant store should exist');
+  api.ResearchParticipants.remember('001');
+  api.ResearchParticipants.remember('002');
+  api.ResearchParticipants.remember('003');
+  api.ResearchParticipants.remember('002');
+  assert.deepEqual(Array.from(api.ResearchParticipants.list()), ['001','002','003']);
+  assert.equal(localStorage.getItem('researchParticipants'), '["001","002","003"]');
+});
+
+test('selecting a research participant fills the existing child id input', () => {
+  const {api,elements}=loadAnimationRuntime();
+  assert.equal(typeof api.selectResearchParticipant, 'function');
+  api.ResearchParticipants.remember('001');
+  api.ResearchParticipants.remember('002');
+  api.selectResearchParticipant('002');
+  assert.equal(elements['research-child-id'].value, '002');
+});
+
+test('research records filter one child while the combined view keeps all children', () => {
+  const {api,localStorage}=loadAnimationRuntime();
+  localStorage.setItem('researchRecords', JSON.stringify([
+    {participantID:'001',stepNumber:1},
+    {participantID:'002',stepNumber:1},
+    {participantID:'003',stepNumber:1},
+    {participantID:'002',stepNumber:2}
+  ]));
+  assert.equal(typeof api.getResearchRecords, 'function');
+  assert.deepEqual(Array.from(api.getResearchRecords('002'), r => r.participantID), ['002','002']);
+  assert.deepEqual(Array.from(api.getResearchRecords(), r => r.participantID), ['001','002','003','002']);
+});
+
+test('research CSV can export one child or all three with participant ids intact', () => {
+  const {api}=loadAnimationRuntime();
+  const records = [
+    {participantID:'001',skill:'laundry',stepNumber:1,completionStatus:true},
+    {participantID:'002',skill:'fold-clothes',stepNumber:1,completionStatus:true},
+    {participantID:'003',skill:'fold-umbrella',stepNumber:1,completionStatus:true}
+  ];
+  assert.equal(typeof api.buildResearchCSV, 'function');
+  const allCSV = api.buildResearchCSV(records);
+  assert.match(allCSV, /"001"/);
+  assert.match(allCSV, /"002"/);
+  assert.match(allCSV, /"003"/);
+  const childCSV = api.buildResearchCSV(records.filter(r => r.participantID === '002'));
+  assert.doesNotMatch(childCSV, /"001"|"003"/);
+  assert.match(childCSV, /"002"/);
+});
+
+test('opening the research dashboard closes the setup panel so the data is visible', () => {
+  const {api,elements}=loadAnimationRuntime();
+  elements['research-overlay'].classList.add('active');
+  api.showDashboard();
+  assert.equal(elements['research-overlay'].classList.contains('active'), false);
+  assert.equal(elements['records-overlay'].classList.contains('active'), true);
+  assert.equal(elements['records-default-actions'].style.display, 'none');
+  api.hideResearchDashboard();
+  assert.equal(elements['records-overlay'].classList.contains('active'), false);
+  assert.equal(elements['records-default-actions'].style.display, '');
 });
 
 test('two passive demonstrations after real step initialization do not write events or research records', () => {
