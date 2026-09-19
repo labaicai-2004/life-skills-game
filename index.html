@@ -104,7 +104,7 @@ html, body {
 /* ===== START SCREEN ===== */
 .start-bg {
   position:absolute; inset:0;
-  background:#7DD7FF url('cartoon-home-sample.png') center/cover no-repeat; z-index:-1;
+  background:linear-gradient(180deg,#7DD7FF 0%,#AEE5F0 58%,#8FCB69 58%,#B6DE7A 100%); z-index:-1;
 }
 .title-area {
   text-align:center; margin:8px 0 0; padding:8px 26px 10px;
@@ -233,6 +233,187 @@ html, body {
 }
 .demo-element { position:absolute; z-index:6; }
 .demo-ghost { opacity:0; }
+
+.step-stage[data-level="laundry"] { --laundry-arrive-x:0px; --laundry-arrive-y:0px; }
+.laundry-object { position:absolute; z-index:4; min-width:44px; min-height:44px; }
+.laundry-object img, .laundry-shirt img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.laundry-basin { left:35%; top:36%; width:48%; height:55%; }
+.laundry-shirt { position:absolute; left:46%; top:39%; width:26%; height:40%; z-index:5; }
+.laundry-shirt-start { left:5%; top:18%; }
+.laundry-faucet { left:56%; top:18%; width:88px; height:88px; }
+.laundry-detergent { left:9%; top:32%; width:110px; height:145px; }
+.laundry-hand { left:44%; top:48%; width:88px; height:88px; z-index:9; }
+.laundry-partner-hand { left:66%; top:48%; width:88px; height:88px; z-index:8; pointer-events:none; }
+.laundry-hand svg, .laundry-partner-hand svg { width:100%; height:100%; }
+.laundry-water-target { left:48%; top:27%; width:30%; height:50%; z-index:3; }
+.laundry-water { position:absolute; left:58%; top:26%; width:11%; height:44%; border-radius:30px; background:repeating-linear-gradient(90deg,#B5ECFFB0 0 10px,#70CEF2B0 12px 16px); pointer-events:none; opacity:0; z-index:4; }
+.laundry-bubbles { position:absolute; left:44%; top:43%; width:30%; height:25%; z-index:7; pointer-events:none; opacity:0; border-radius:50%; background:radial-gradient(circle at 15% 50%,#fff 0 12px,transparent 14px),radial-gradient(circle at 45% 65%,#fff 0 16px,transparent 18px),radial-gradient(circle at 70% 40%,#fff 0 13px,transparent 15px),radial-gradient(circle at 90% 75%,#fff 0 10px,transparent 12px); }
+.state-laundry-wet ~ .laundry-shirt { filter:brightness(.88) saturate(1.08); }
+.state-laundry-soapy ~ .laundry-bubbles { opacity:.9; }
+.state-laundry-rinsed ~ .laundry-bubbles { opacity:0; }
+.laundry-filling .laundry-water, .laundry-rinse-stream { opacity:.8; }
+.laundry-filling .laundry-shirt { transition:filter 1.2s; filter:brightness(.88); }
+.laundry-soaping .laundry-bubbles { animation:laundryFoamIn 1.2s ease-out forwards; }
+.laundry-rinsing .laundry-bubbles { animation:laundryFoamOut 2s linear forwards; }
+.laundry-complete[data-step="6"] .laundry-bubbles { opacity:0; }
+.laundry-auto-flip .laundry-shirt img { animation:laundryFlip .9s ease-in-out; }
+.laundry-complete[data-step="7"] .laundry-shirt { transform:scaleX(.78) rotate(-6deg); transition:transform .6s; }
+.laundry-sparkle { position:absolute; top:34%; left:51%; color:#FFC83D; font-size:44px; opacity:0; z-index:10; pointer-events:none; }
+.laundry-complete[data-step="7"] .laundry-sparkle { opacity:1; }
+.laundry-drops { position:absolute; top:74%; left:51%; color:#66BFE4; font-size:30px; pointer-events:none; }
+.laundry-complete[data-step="7"] .laundry-drops { opacity:0; transition:opacity .8s; }
+.laundry-count { position:absolute; bottom:3%; left:43%; display:flex; gap:14px; z-index:10; pointer-events:none; }
+.laundry-count span { width:24px; height:24px; border:3px solid #D9AD55; border-radius:50%; background:#fff; }
+.laundry-count .done { background:#87CDB2; border-color:#579D80; }
+.laundry-guide { position:absolute; left:39%; top:3%; font-size:32px; color:#8B5E35; background:#FFFFFFE8; border-radius:22px; padding:8px 18px; z-index:11; pointer-events:none; }
+@keyframes laundryFlip { 0% { transform:rotateY(0); } 50% { transform:rotateY(90deg); } 100% { transform:rotateY(180deg); } }
+@keyframes laundryFoamIn { from { opacity:0; transform:scale(.7); } to { opacity:.9; transform:scale(1); } }
+@keyframes laundryFoamOut { from { opacity:.9; } to { opacity:0; } }
+@keyframes demoLaundryPlace { 0%,10%,100% { transform:translate(0,0); opacity:0; } 20% { transform:translate(0,0); opacity:.8; } 60%,85% { transform:translate(var(--laundry-arrive-x),var(--laundry-arrive-y)); opacity:.8; } }
+@keyframes demoLaundryTap { 0%,100% { transform:scale(1); opacity:0; } 30%,70% { transform:scale(.88); opacity:.85; } }
+@keyframes demoLaundryRub { 0%,100% { transform:translateX(0); opacity:0; } 20%,65% { transform:translateX(-35px); opacity:.85; } 40%,85% { transform:translateX(35px); opacity:.85; } }
+@keyframes demoLaundryRinse { 0%,100% { transform:translate(0,0); opacity:0; } 10% { transform:translate(0,0); opacity:.8; } 30%,90% { transform:translate(var(--laundry-arrive-x),var(--laundry-arrive-y)); opacity:.8; } }
+@keyframes demoLaundryWring { 0%,100% { transform:translateX(0) rotate(0); opacity:0; } 35%,80% { transform:translateX(45px) rotate(24deg); opacity:.85; } }
+@keyframes demoLaundryPartner { 0%,100% { transform:translateX(0) rotate(0); } 35%,80% { transform:translateX(-45px) rotate(-24deg); } }
+.step-stage.demo-running .demo-laundry-1 { animation:demoLaundryPlace 2.4s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-2 { animation:demoLaundryTap 2s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-3 { animation:demoLaundryTap 2s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-4 { animation:demoLaundryRub 2.4s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-5 { animation:demoLaundryRub 2.4s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-6 { animation:demoLaundryRinse 3.6s ease-in-out infinite; }
+.step-stage.demo-running .demo-laundry-7 { animation:demoLaundryWring 2.4s ease-in-out infinite; }
+.step-stage.demo-running:not(.demo-paused)[data-step="7"] .laundry-partner-hand { animation:demoLaundryPartner 2.4s ease-in-out infinite; }
+
+.umbrella-object { position:absolute; width:360px; height:320px; left:50%; top:4%; transform:translateX(-50%); }
+.umbrella-picture { position:absolute; left:20px; top:0; width:320px; height:320px; object-fit:contain; pointer-events:none; transition:opacity .6s ease,transform .6s ease; }
+.umbrella-closed-top { clip-path:inset(0 0 38% 0); opacity:0; }
+.umbrella-closed-bottom { clip-path:inset(62% 0 0 0); opacity:0; }
+.umbrella-final { opacity:0; }
+.state-umbrella-closed ~ .umbrella-object .umbrella-open,
+.step-stage[data-step="1"].umbrella-complete .umbrella-open { opacity:0; }
+.state-umbrella-closed ~ .umbrella-object .umbrella-closed-top,
+.state-umbrella-closed ~ .umbrella-object .umbrella-closed-bottom,
+.step-stage[data-step="1"].umbrella-complete .umbrella-closed-top,
+.step-stage[data-step="1"].umbrella-complete .umbrella-closed-bottom { opacity:1; }
+.state-umbrella-short ~ .umbrella-object .umbrella-closed-bottom,
+.step-stage[data-step="2"].umbrella-complete .umbrella-closed-bottom { transform:translateY(-54px); }
+.umbrella-panel-fan { position:absolute; inset:0; opacity:0; pointer-events:none; transform-origin:180px 30px; transition:transform .7s ease,opacity .6s ease; }
+.state-umbrella-strap-front ~ .umbrella-object .umbrella-panel-fan,
+.step-stage[data-step="3"].umbrella-complete .umbrella-panel-fan { opacity:1; }
+.state-umbrella-strap-front ~ .umbrella-object .umbrella-closed-top,
+.step-stage[data-step="3"].umbrella-complete .umbrella-closed-top { clip-path:inset(0 0 84% 0); }
+.umbrella-panel-neck { position:absolute; left:0; top:0; width:360px; height:60px; pointer-events:none; }
+.umbrella-panel { position:absolute; }
+.umbrella-panel svg { display:block; width:100%; height:100%; overflow:hidden; }
+.umbrella-panel .panel-crease { opacity:.7; transition:opacity .35s ease; }
+.umbrella-panel.smoothed .panel-crease,.state-umbrella-smooth ~ .umbrella-object .panel-crease { opacity:0; }
+.umbrella-panel.active { filter:drop-shadow(0 0 8px #FFD93D); }
+.umbrella-panel.active::after { content:'↓'; position:absolute; top:38px; left:7px; width:38px; height:55px; text-align:center; color:#FFF8BA; font-size:48px; animation:umbrellaPanelArrow 1.8s ease-in-out infinite; }
+.state-umbrella-gathered ~ .umbrella-object .umbrella-panel-fan,
+.step-stage[data-step="5"].umbrella-complete .umbrella-panel-fan { transform:scaleX(.25); }
+.state-umbrella-rolled ~ .umbrella-object .umbrella-panel-fan,
+.step-stage[data-step="6"].umbrella-complete .umbrella-panel-fan { transform:scaleX(.19); }
+.umbrella-wrap-lines { position:absolute; left:151px; top:72px; width:59px; height:126px; border-radius:18px; background:repeating-linear-gradient(155deg,transparent 0 25px,#253F70 27px 31px,transparent 33px 45px); opacity:0; pointer-events:none; }
+.state-umbrella-rolled ~ .umbrella-object .umbrella-wrap-lines,
+.step-stage[data-step="6"].umbrella-complete .umbrella-wrap-lines { opacity:1; }
+.umbrella-strap { position:absolute; left:198px; top:124px; width:96px; height:44px; background:#2F7EE0; border:4px solid #624C3D; border-radius:10px; opacity:0; transform-origin:left center; pointer-events:none; }
+.umbrella-strap::after { content:''; position:absolute; right:6px; top:7px; width:21px; height:21px; background:#FFD15B; border:3px solid #624C3D; border-radius:50%; }
+.state-umbrella-strap-front ~ .umbrella-object .umbrella-strap,
+.step-stage[data-step="3"].umbrella-complete .umbrella-strap { opacity:1; }
+.umbrella-touch,.umbrella-drop { position:absolute; min-width:44px; min-height:44px; border-radius:14px; }
+.umbrella-touch { z-index:10; border:3px solid #FFD15B; background:#FFD15B33; box-shadow:0 0 15px #FFD15B99; touch-action:none; }
+.umbrella-stabilizing-hand { position:absolute; left:149px; top:2px; width:64px; height:64px; z-index:7; pointer-events:none; transform:rotate(90deg); }
+.umbrella-stabilizing-hand svg,.umbrella-touch svg { width:100%; height:100%; pointer-events:none; }
+.umbrella-touch[data-item="umbrella-slider"] { background:#FFC553; border:4px solid #624C3D; }
+.umbrella-touch[data-item="umbrella-slider"]::after { content:'↓'; display:block; text-align:center; font-size:34px; color:#624C3D; }
+.umbrella-touch[data-item="umbrella-strap"] { background:#2F7EE0; border:4px solid #624C3D; }
+.umbrella-touch[data-item="umbrella-strap"]::after { content:'●'; color:#FFD15B; font-size:32px; position:absolute; right:6px; top:-3px; }
+.umbrella-drop { pointer-events:none; border:3px dashed #E0AC36; background:#FFF4BF44; z-index:8; }
+.umbrella-guide { position:absolute; bottom:2%; left:50%; transform:translateX(-50%); border-radius:20px; padding:6px 15px; color:#624C3D; background:#FFFFFFE8; font-size:22px; white-space:nowrap; pointer-events:none; }
+.umbrella-stars { position:absolute; left:50%; bottom:13%; transform:translateX(-50%); display:flex; gap:9px; }
+.umbrella-stars span { font-size:27px; color:#D9CEC0; text-shadow:0 1px #FFF; }
+.umbrella-stars span.done { color:#E9AC24; }
+.umbrella-demo { position:absolute; width:64px; height:64px; opacity:0; pointer-events:none; }
+.umbrella-demo svg { width:100%; height:100%; }
+.step-stage.demo-running .demo-umbrella-1 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-2 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-3 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-4 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-5 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-6 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-umbrella-7 { animation:demoUmbrellaAction 3.2s ease-in-out infinite; }
+.umbrella-turning .umbrella-closed-top { animation:umbrellaTurn .6s ease-in-out; }
+.umbrella-rolling .umbrella-panel-fan { animation:umbrellaRoll 1.5s ease-in-out forwards; }
+.step-stage.umbrella-complete .umbrella-touch,.step-stage.umbrella-complete .umbrella-drop { opacity:0; pointer-events:none; }
+.step-stage[data-step="7"].umbrella-complete .umbrella-final,
+.state-umbrella-fastened ~ .umbrella-object .umbrella-final { opacity:1; transform:translateY(-12px) scale(.82); }
+.step-stage[data-step="7"].umbrella-complete .umbrella-closed-top,
+.step-stage[data-step="7"].umbrella-complete .umbrella-closed-bottom,
+.step-stage[data-step="7"].umbrella-complete .umbrella-panel-fan,
+.step-stage[data-step="7"].umbrella-complete .umbrella-strap,
+.step-stage[data-step="7"].umbrella-complete .umbrella-wrap-lines { opacity:0; }
+@keyframes demoUmbrellaAction { 0%,15% { opacity:0; transform:translate(0,0); } 25%,35% { opacity:.8; transform:translate(0,0); } 70%,85% { opacity:.8; transform:translate(var(--umbrella-demo-x,0px),var(--umbrella-demo-y,70px)); } 100% { opacity:0; transform:translate(var(--umbrella-demo-x,0px),var(--umbrella-demo-y,70px)); } }
+@keyframes umbrellaPanelArrow { 0%,30%,100% { transform:translateY(0); } 70% { transform:translateY(25px); } }
+@keyframes umbrellaTurn { 0% { transform:rotateY(0deg); } 50% { transform:rotateY(90deg); } 100% { transform:rotateY(180deg); } }
+@keyframes umbrellaRoll { 0% { transform:scaleX(.25) rotateY(0deg); } 100% { transform:scaleX(.19) rotateY(540deg); } }
+.folding-table { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+.folding-garment { position:absolute; left:50%; top:12%; width:300px; height:270px; transform:translateX(-50%); z-index:5; }
+.folding-garment img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+.folding-base { transition:opacity .35s ease; }
+.folding-layer { position:absolute; inset:0; opacity:0; pointer-events:none; transform-origin:center; }
+.state-fold-smooth ~ .folding-garment .folding-smooth { opacity:.22; filter:brightness(1.18); }
+.state-fold-left-sleeve ~ .folding-garment .folding-left-sleeve { opacity:1; clip-path:polygon(0 18%,38% 18%,48% 72%,12% 72%); transform:translateX(74px) rotate(8deg); }
+.state-fold-right-sleeve ~ .folding-garment .folding-right-sleeve { opacity:1; clip-path:polygon(62% 18%,100% 18%,88% 72%,52% 72%); transform:translateX(-74px) rotate(-8deg); }
+.state-fold-left-body ~ .folding-garment .folding-left-body { opacity:1; clip-path:polygon(18% 36%,50% 36%,50% 98%,18% 98%); transform:translateX(63px); }
+.state-fold-right-body ~ .folding-garment .folding-right-body { opacity:1; clip-path:polygon(50% 36%,82% 36%,82% 98%,50% 98%); transform:translateX(-63px); }
+.state-fold-hem-up ~ .folding-garment .folding-final { opacity:1; }
+.state-fold-hem-up ~ .folding-garment .folding-base { opacity:0; }
+.state-fold-left-sleeve ~ .folding-garment { clip-path:inset(0 0% 0 24%); }
+.state-fold-right-sleeve ~ .folding-garment { clip-path:inset(0 24% 0 24%); }
+.state-fold-left-body ~ .folding-garment { clip-path:inset(0 24% 0 42%); }
+.state-fold-right-body ~ .folding-garment { clip-path:inset(0 42% 0 42%); }
+.state-fold-hem-up ~ .folding-garment { clip-path:none; }
+.state-fold-hem-up ~ .folding-garment .folding-layer:not(.folding-final) { opacity:0; }
+.folding-touch { position:absolute; z-index:9; min-width:44px; min-height:44px; border-radius:20px; background:rgba(255,217,61,.14); border:3px solid rgba(255,217,61,.65); box-shadow:0 0 18px rgba(255,217,61,.68); }
+.folding-touch::after { content:''; position:absolute; inset:-7px; border:3px dashed rgba(255,217,61,.78); border-radius:24px; animation:targetPulse 1s ease-in-out infinite; }
+.folding-target { position:absolute; left:22%; top:10%; width:56%; height:78%; z-index:4; }
+.folding-target::after { inset:18% 20%; }
+.folding-guide { position:absolute; left:50%; top:3%; transform:translateX(-50%); font-size:28px; color:#8B5E35; background:#FFFFFFE8; border-radius:22px; padding:8px 18px; z-index:11; pointer-events:none; white-space:nowrap; }
+.demo-fold-clothes-1 { left:12%; top:20%; width:230px; height:205px; }
+.demo-fold-clothes-2, .demo-fold-clothes-3, .demo-fold-clothes-4, .demo-fold-clothes-5, .demo-fold-clothes-6, .demo-fold-clothes-7 { left:50%; top:16%; width:88px; height:88px; }
+@keyframes demoFoldPlace { 0%,100% { transform:translate(0,0); opacity:0; } 20%,70% { transform:translate(170px,12px); opacity:.8; } }
+@keyframes demoFoldSmooth { 0%,100% { transform:translate(-50%,0); opacity:0; } 25%,75% { transform:translate(-50%,135px); opacity:.85; } }
+@keyframes demoFoldLeftSleeve { 0%,100% { transform:translate(-115px,75px); opacity:0; } 25%,75% { transform:translate(15px,75px); opacity:.85; } }
+@keyframes demoFoldRightSleeve { 0%,100% { transform:translate(25px,75px); opacity:0; } 25%,75% { transform:translate(-105px,75px); opacity:.85; } }
+@keyframes demoFoldLeftBody { 0%,100% { transform:translate(-118px,120px); opacity:0; } 25%,75% { transform:translate(-18px,120px); opacity:.85; } }
+@keyframes demoFoldRightBody { 0%,100% { transform:translate(28px,120px); opacity:0; } 25%,75% { transform:translate(-72px,120px); opacity:.85; } }
+@keyframes demoFoldHemUp { 0%,100% { transform:translate(-50%,155px); opacity:0; } 25%,75% { transform:translate(-50%,35px); opacity:.85; } }
+.step-stage.demo-running .demo-fold-clothes-1 { animation:demoFoldPlace 2.4s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-2 { animation:demoFoldSmooth 2.1s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-3 { animation:demoFoldLeftSleeve 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-4 { animation:demoFoldRightSleeve 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-5 { animation:demoFoldLeftBody 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-6 { animation:demoFoldRightBody 2.2s ease-in-out infinite; }
+.step-stage.demo-running .demo-fold-clothes-7 { animation:demoFoldHemUp 2.2s ease-in-out infinite; }
+.step-stage[data-prompt-level="0"] .laundry-guide,
+.step-stage[data-prompt-level="0"] .folding-guide,
+.step-stage[data-prompt-level="0"] .umbrella-guide,
+.step-stage[data-prompt-level="1"] .laundry-guide,
+.step-stage[data-prompt-level="1"] .folding-guide,
+.step-stage[data-prompt-level="1"] .umbrella-guide { opacity:0; }
+.step-stage[data-prompt-level="0"] .folding-touch,
+.step-stage[data-prompt-level="0"] .umbrella-touch:not([data-item="umbrella-slider"]):not([data-item="umbrella-strap"]) { border-color:transparent; background:transparent; box-shadow:none; }
+.step-stage[data-prompt-level="0"] .umbrella-touch { box-shadow:none; }
+.step-stage[data-prompt-level="0"] .umbrella-panel.active { filter:none; }
+.step-stage[data-prompt-level="0"] .folding-target,
+.step-stage[data-prompt-level="0"] .umbrella-drop,
+.step-stage[data-prompt-level="0"] .drag-target::after,
+.step-stage[data-prompt-level="0"] .folding-touch::after,
+.step-stage[data-prompt-level="0"] .umbrella-panel.active::after,
+.step-stage[data-prompt-level="1"] .umbrella-panel.active::after,
+.step-stage[data-prompt-level="0"] .umbrella-touch[data-item="umbrella-slider"]::after,
+.step-stage[data-prompt-level="1"] .umbrella-touch[data-item="umbrella-slider"]::after { opacity:0; }
+.step-stage:not([data-prompt-level="4"]) .demo-element { visibility:hidden; }
 
 @keyframes demoFindPulse {
   0%,45%,100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
@@ -875,16 +1056,16 @@ html, body {
   </div>
   <div class="level-cards">
     <div class="level-card" data-level="0" onclick="startLevel(0)">
-      <div class="card-top"></div><span class="card-icon">🪥</span>
-      <div class="card-title">刷牙</div><div class="card-hint">学习正确刷牙</div>
+      <div class="card-top"></div><span class="card-icon">🧺</span>
+      <div class="card-title">清洗衣服</div><div class="card-hint">学习把衣服洗干净</div>
     </div>
     <div class="level-card" data-level="1" onclick="startLevel(1)">
-      <div class="card-top"></div><span class="card-icon">💧</span>
-      <div class="card-title">洗脸</div><div class="card-hint">学习正确洗脸</div>
+      <div class="card-top"></div><span class="card-icon">👕</span>
+      <div class="card-title">折叠衣服</div><div class="card-hint">学习把衣服叠整齐</div>
     </div>
     <div class="level-card" data-level="2" onclick="startLevel(2)">
-      <div class="card-top"></div><span class="card-icon">👕</span>
-      <div class="card-title">穿衣</div><div class="card-hint">学习自己穿衣</div>
+      <div class="card-top"></div><span class="card-icon">☂️</span>
+      <div class="card-title">收整折叠伞</div><div class="card-hint">学习把雨伞收整齐</div>
     </div>
   </div>
   <div class="parent-entry" onclick="showRecords()" title="学习记录">📋</div>
@@ -942,9 +1123,9 @@ html, body {
     <div class="research-field">
       <label>🎯 训练技能 (Skill)</label>
       <div class="skill-btns" id="research-skill-btns">
-        <div class="skill-btn" data-skill="brush">🪥 刷牙</div>
-        <div class="skill-btn" data-skill="wash">💧 洗脸</div>
-        <div class="skill-btn" data-skill="dress">👕 穿衣</div>
+        <div class="skill-btn" data-skill="laundry">🧺 清洗衣服</div>
+        <div class="skill-btn" data-skill="fold-clothes">👕 折叠衣服</div>
+        <div class="skill-btn" data-skill="fold-umbrella">☂️ 收整折叠伞</div>
       </div>
     </div>
     <div class="research-field">
@@ -1004,157 +1185,51 @@ html, body {
    No <use> elements — fully Safari-compatible
    ================================================================ */
 
-function svgToothbrush(w, h) {
-  w=w||600; h=h||450;
-  return `<img src="toothbrush.png?v=2" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="牙刷">`;
-}
-
-function sampleToothbrush(w, h) {
-  w=w||330; h=h||165;
-  return `<img src="cartoon-toothbrush-sample.png?v=1" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 5px 5px rgba(92,61,46,0.2));-webkit-touch-callout:none;" alt="牙刷">`;
-}
-
-function svgToothpaste(w, h) {
-  w=w||320; h=h||550;
-  return `<img src="toothpaste.png?v=5" width="${w}" height="${h}" draggable="false" style="object-fit:contain;transform:rotate(-90deg);filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="牙膏">`;
-}
-
-// Real child photo — used as the character in all scenes
-function childPhoto(w, h, round) {
-  w=w||200; h=h||200;
-  const br = round ? 'border-radius:50%;' : 'border-radius:18px;';
-  return `<img src="cartoon-boy.png?v=2" width="${w}" height="${h}" class="char-photo" draggable="false" style="object-fit:cover;${br}border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="小朋友">`;
-}
-
-// Sink/faucet image for step 3
-function sinkFaucetImg(w, h) {
-  w=w||500; h=h||400;
-  return `<img src="sink-faucet.png?v=2" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="洗漱台">`;
-}
-
-// Face wrapper for backward compatibility
-function svgFace(w, h) { return childPhoto(w||200, h||200, true); }
-function svgFaceOpen(w, h) { return childPhoto(w||240, h||260, false); }
-
 function svgHand(w, h) {
   w=w||80; h=h||80;
-  return `<img src="hand.png?v=1" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.25));-webkit-touch-callout:none;" alt="小手">`;
-}
-
-function svgTowel(w, h) {
-  w=w||160; h=h||115;
-  return `<img src="towel.png?v=1" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="毛巾">`;
-}
-
-function svgCup(w, h) {
-  w=w||300; h=h||300;
-  return `<img src="cup.png?v=2" width="${w}" height="${h}" draggable="false" style="object-fit:contain;filter:drop-shadow(0 6px 20px rgba(0,0,0,0.3));-webkit-touch-callout:none;" alt="水杯">`;
-}
-
-function svgJacket(w, h) {
-  w=w||160; h=h||175;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 140 175">
-    <rect x="22" y="32" width="96" height="118" rx="14" fill="url(#g-jacket)"/>
-    <path d="M40,32 L70,58 L100,32" fill="#FFB07A"/>
-    <path d="M46,32 L70,50 L94,32" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
-    <path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z" fill="url(#g-jacket)"/>
-    <path d="M116,42 Q132,50 136,80 Q138,100 130,118 Q126,96 122,80 Q120,60 114,52 Z" fill="url(#g-jacket)"/>
-    <line x1="70" y1="58" x2="70" y2="148" stroke="#C05020" stroke-width="3"/>
-    <rect x="64" y="130" width="12" height="8" rx="2" fill="#D0D0D0"/>
-    <rect x="66" y="132" width="8" height="3" rx="1.5" fill="#E8E8E8"/>
-    <rect x="30" y="90" width="26" height="6" rx="3" fill="rgba(0,0,0,0.07)"/>
-    <rect x="84" y="90" width="26" height="6" rx="3" fill="rgba(0,0,0,0.07)"/>
-  </svg>`;
-}
-
-function svgMirror(w, h) {
-  w=w||280; h=h||190;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 260 180">
-    <rect x="0" y="0" width="260" height="180" rx="20" fill="url(#g-mirror)" stroke="#F0E8D8" stroke-width="8"/>
-    <rect x="12" y="10" width="236" height="160" rx="13" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-    <ellipse cx="130" cy="50" rx="70" ry="35" fill="rgba(255,255,255,0.18)"/>
-  </svg>`;
-}
-
-function svgFaucet(w, h) {
-  w=w||70; h=h||80;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 70 80">
-    <rect x="24" y="0" width="16" height="52" rx="8" fill="url(#g-metal)"/>
-    <rect x="2" y="0" width="60" height="22" rx="9" fill="url(#g-metal)"/>
-    <rect x="6" y="5" width="52" height="5" rx="2.5" fill="rgba(255,255,255,0.2)"/>
-    <rect x="20" y="10" width="30" height="8" rx="4" fill="rgba(0,0,0,0.08)"/>
-  </svg>`;
-}
-
-function svgSink(w, h) {
-  w=w||360; h=h||120;
-  return `<svg width="${w}" height="${h}" viewBox="0 0 340 115">
-    <rect x="0" y="0" width="340" height="115" rx="18" fill="url(#g-sink)"/>
-    <ellipse cx="170" cy="18" rx="105" ry="32" fill="#E8E2DA"/>
-    <ellipse cx="170" cy="16" rx="100" ry="28" fill="#F2EDE6"/>
-    <ellipse cx="170" cy="16" rx="105" ry="32" fill="none" stroke="#D8D0C4" stroke-width="2.5"/>
-  </svg>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#624C3D" stroke-width="3"/></svg>`;
 }
 
 /* ================================================================
    GAME DATA
    ================================================================ */
+const NEW_LEVEL_IDS = ['laundry', 'fold-clothes', 'fold-umbrella'];
+
 const LEVELS = [
   {
-    id:'brush', name:'刷牙', icon:'🪥',
+    id:'laundry', name:'清洗衣服', icon:'🧺',
     steps:[
-      {id:1,instruction:'找到牙刷',gesture:'tap',target:'toothbrush',arrow:'tap',
-       voice:'小朋友，我们先找到牙刷吧。看到发光的牙刷了吗？点一下它。'},
-      {id:2,instruction:'挤牙膏',gesture:'swipe-down',target:'toothpaste',arrow:'down',
-       voice:'现在把牙膏挤到牙刷上。用手指在牙膏上面，从上往下滑。'},
-      {id:3,instruction:'拿起牙刷',gesture:'tap',target:'toothbrush',arrow:'tap',
-       voice:'牙膏挤好了，拿起牙刷准备刷牙吧。点一下牙刷。'},
-      {id:4,instruction:'刷左边牙齿',gesture:'drag',target:'mouth',dragTarget:'mouth',arrow:'updown',
-       voice:'先刷左边的牙齿。把牙刷拖到小朋友嘴边，上下刷一刷。'},
-      {id:5,instruction:'刷右边牙齿',gesture:'drag',target:'mouth',dragTarget:'mouth',arrow:'updown',
-       voice:'真棒！现在刷右边的牙齿。把牙刷拖到小朋友嘴边，继续上下刷。'},
-      {id:6,instruction:'漱口',gesture:'tap',target:'cup',arrow:'tap',
-       voice:'刷好啦，用水杯漱漱口。点一下水杯。'},
-      {id:7,instruction:'擦嘴巴',gesture:'drag',target:'mouth',dragTarget:'mouth',dragFrom:'right',arrow:'leftright',
-       voice:'最后一步，把毛巾拖到嘴巴上，擦擦嘴巴。'}
+      {id:1,instruction:'放进水盆',gesture:'drag',target:'shirt',dragTarget:'basin',arrow:'down',voice:'把脏衣服放进水盆里。'},
+      {id:2,instruction:'浸湿衣服',gesture:'tap',target:'faucet',arrow:'tap',voice:'打开水龙头，把衣服弄湿。'},
+      {id:3,instruction:'加入洗衣液',gesture:'tap',target:'detergent',arrow:'tap',voice:'按一下，加入洗衣液。'},
+      {id:4,instruction:'揉洗正面',gesture:'swipe-lr',target:'shirt',arrow:'leftright',repeatGoal:3,voice:'用小手来回揉一揉。'},
+      {id:5,instruction:'揉洗背面',gesture:'swipe-lr',target:'shirt',arrow:'leftright',repeatGoal:3,voice:'翻过来，再揉一揉。'},
+      {id:6,instruction:'冲洗衣服',gesture:'drag',target:'shirt',dragTarget:'water',arrow:'down',voice:'用清水把泡泡冲干净。'},
+      {id:7,instruction:'拧干衣服',gesture:'push-inward',target:'hand',arrow:'leftright',voice:'两只手轻轻拧一拧。'}
     ]
   },
   {
-    id:'wash', name:'洗脸', icon:'💧',
+    id:'fold-clothes', name:'折叠衣服', icon:'👕',
     steps:[
-      {id:1,instruction:'打开水龙头',gesture:'drag',target:'faucet',dragTarget:'faucet',arrow:'up',
-       voice:'先打开水龙头。把小手拖到水龙头上，往上推一下。'},
-      {id:2,instruction:'接水',gesture:'tap',target:'water',arrow:'tap',
-       voice:'水出来了！用手接一点水。点一下出水的地方。'},
-      {id:3,instruction:'打湿毛巾',gesture:'drag',target:'towel',dragTarget:'towel',arrow:'updown',
-       voice:'把毛巾打湿。把小手拖到毛巾上，上下搓一搓。'},
-      {id:4,instruction:'拧干毛巾',gesture:'drag',target:'towel',dragTarget:'towel',arrow:'updown',
-       voice:'把毛巾拧干一点。把小手拖到毛巾上，上下搓一搓。'},
-      {id:5,instruction:'擦脸',gesture:'drag',target:'face',dragTarget:'face',arrow:'updown',
-       voice:'现在用毛巾擦擦脸。把小手拖到脸上，上下擦一擦，把脸洗干净。'},
-      {id:6,instruction:'冲洗毛巾',gesture:'tap',target:'water',arrow:'tap',
-       voice:'毛巾脏了，用水冲一冲。点一下出水的地方冲洗毛巾。'},
-      {id:7,instruction:'关水龙头',gesture:'drag',target:'faucet',dragTarget:'faucet',arrow:'down',
-       voice:'洗好了，关掉水龙头。把小手拖到水龙头上，往下推。'}
+      {id:1,instruction:'平铺衣服',gesture:'drag',target:'shirt',dragTarget:'table',arrow:'down',voice:'把衣服平平地放在桌上。'},
+      {id:2,instruction:'抚平衣服',gesture:'swipe-down',target:'shirt',arrow:'down',voice:'用小手把衣服抚平。'},
+      {id:3,instruction:'折进这边袖子',gesture:'drag',target:'left-sleeve',dragTarget:'shirt-center',arrow:'right',voice:'把这边的袖子折进来。'},
+      {id:4,instruction:'折进另一边袖子',gesture:'drag',target:'right-sleeve',dragTarget:'shirt-center',arrow:'left',voice:'再把另一边的袖子折进来。'},
+      {id:5,instruction:'折叠这边衣身',gesture:'drag',target:'left-body',dragTarget:'shirt-center',arrow:'right',voice:'把衣服这边折到中间。'},
+      {id:6,instruction:'折叠另一边衣身',gesture:'drag',target:'right-body',dragTarget:'shirt-center',arrow:'left',voice:'再把另一边折到中间。'},
+      {id:7,instruction:'向上折好',gesture:'drag',target:'shirt-hem',dragTarget:'shirt-top',arrow:'up',voice:'把衣服下面向上折，叠好啦。'}
     ]
   },
   {
-    id:'dress', name:'穿衣', icon:'👕',
+    id:'fold-umbrella', name:'收整折叠伞', icon:'☂️',
     steps:[
-      {id:1,instruction:'找到衣服',gesture:'tap',target:'jacket',arrow:'tap',
-       voice:'先找到要穿的衣服。看到发光的外套了吗？点一下它。'},
-      {id:2,instruction:'分清正反面',gesture:'tap',target:'jacket-front',arrow:'tap',
-       voice:'穿衣服之前要分清正面和反面。点一下衣服的正面。'},
-      {id:3,instruction:'伸左手进袖子',gesture:'drag',target:'sleeve-left',dragTarget:'sleeve-left',arrow:'left',
-       voice:'先把左手伸进左边的袖子。把小手拖到左边袖口，向左滑。'},
-      {id:4,instruction:'伸右手进袖子',gesture:'drag',target:'sleeve-right',dragTarget:'sleeve-right',arrow:'right',
-       voice:'再把右手伸进右边的袖子。把小手拖到右边袖口，向右滑。'},
-      {id:5,instruction:'拉好衣服',gesture:'drag',target:'jacket-body',dragTarget:'jacket-body',arrow:'down',
-       voice:'把衣服往下拉好。把小手拖到衣服中间，往下拉。'},
-      {id:6,instruction:'拉上拉链',gesture:'drag',target:'zipper',dragTarget:'zipper',arrow:'up',
-       voice:'现在拉上拉链。把小手拖到拉链上，往上拉。'},
-      {id:7,instruction:'整理衣领',gesture:'drag',target:'collar',dragTarget:'collar',arrow:'leftright',
-       voice:'最后整理一下衣领。把小手拖到领口，左右整理一下。衣服穿得整整齐齐。'}
+      {id:1,instruction:'收拢伞架',gesture:'drag',target:'umbrella-slider',dragTarget:'close-position',arrow:'down',voice:'把小滑块慢慢拉下来。'},
+      {id:2,instruction:'缩短伞杆',gesture:'drag',target:'umbrella-shaft',dragTarget:'short-position',arrow:'inward',voice:'两只手拿稳，把伞杆轻轻收短。'},
+      {id:3,instruction:'让扣带朝外',gesture:'rotate',target:'umbrella',arrow:'rotate',voice:'转一转，找到雨伞的小带子。'},
+      {id:4,instruction:'理顺伞布',gesture:'swipe-down',target:'umbrella-panel',arrow:'down',repeatGoal:6,voice:'顺着伞骨，一片一片理整齐。'},
+      {id:5,instruction:'合拢伞片',gesture:'drag',target:'umbrella-panels',dragTarget:'umbrella-shaft',arrow:'inward',voice:'把理好的伞布靠在一起。'},
+      {id:6,instruction:'卷好伞布',gesture:'roll',target:'umbrella-canopy',arrow:'rotate',voice:'朝一个方向，慢慢卷起来。'},
+      {id:7,instruction:'扣好伞带',gesture:'drag',target:'umbrella-strap',dragTarget:'velcro',arrow:'leftright',voice:'把小带子绕过来，扣好。'}
     ]
   }
 ];
@@ -1166,24 +1241,49 @@ let state = {
   currentLevel:-1, currentStep:0, muted:false,
   gestureStartX:0, gestureStartY:0, gesturePoints:[],
   isGestureActive:false, stepCompleted:new Set(), audioCtx:null,
-  stepAbortController:null
+  stepAbortController:null, sceneVersion:0, sceneTimers:new Set()
 };
 
+function clearSceneTimers() {
+  state.sceneVersion++;
+  state.sceneTimers.forEach(timer => clearTimeout(timer));
+  state.sceneTimers.clear();
+  resetPromptState();
+}
+
+function sceneTimeout(callback, delay) {
+  const version = state.sceneVersion, level = state.currentLevel, step = state.currentStep;
+  const timer = setTimeout(() => {
+    state.sceneTimers.delete(timer);
+    if (version === state.sceneVersion && level === state.currentLevel && step === state.currentStep) callback();
+  }, delay);
+  state.sceneTimers.add(timer);
+  return timer;
+}
+
 const STEP_STATE_KEYS = {
-  brush: ['toothbrushFound','toothpasteApplied','toothbrushPickedUp','leftBrushed','rightBrushed','rinsed','mouthWiped'],
-  wash: ['faucetOn','waterCollected','towelWet','towelWrung','faceWashed','towelRinsed','faucetOff'],
-  dress: ['jacketFound','frontIdentified','leftSleeveOn','rightSleeveOn','jacketPulledDown','zipperClosed','collarAdjusted']
+  laundry: ['shirtInBasin','shirtWet','detergentAdded','frontRubbed','backRubbed','shirtRinsed','shirtWrung'],
+  'fold-clothes': ['shirtPlaced','shirtSmoothed','leftSleeveFolded','rightSleeveFolded','leftBodyFolded','rightBodyFolded','shirtFolded'],
+  'fold-umbrella': ['frameClosed','shaftShortened','strapFacingOut','panelsSmoothed','panelsGathered','canopyRolled','strapFastened']
+};
+
+const FOLD_LAYOUT = {
+  1: { item:{left:'0%', top:'12%', width:'300px', height:'270px', transform:'none'}, target:{left:'30%', top:'10%', width:'40%', height:'78%'} },
+  2: { item:{left:'calc(50% - 46px)', top:'calc(12% + 60px)', width:'92px', height:'150px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
+  3: { item:{left:'calc(50% - 140px)', top:'calc(12% + 130px)', width:'60px', height:'70px'}, target:{left:'calc(50% - 10px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
+  4: { item:{left:'calc(50% + 80px)', top:'calc(12% + 130px)', width:'60px', height:'70px'}, target:{left:'calc(50% - 50px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
+  5: { item:{left:'calc(50% - 75px)', top:'calc(12% + 120px)', width:'50px', height:'90px'}, target:{left:'calc(50% - 10px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
+  6: { item:{left:'calc(50% + 25px)', top:'calc(12% + 120px)', width:'50px', height:'90px'}, target:{left:'calc(50% - 60px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
+  7: { item:{left:'calc(50% - 24px)', top:'calc(12% + 190px)', width:'48px', height:'54px'}, target:{left:'calc(50% - 24px)', top:'calc(12% + 80px)', width:'48px', height:'60px'} }
 };
 
 const SkillSceneState = {
   values: {},
 
   reset() {
-    this.values = {
-      brush: Object.fromEntries(STEP_STATE_KEYS.brush.map(k => [k, false])),
-      wash: Object.fromEntries(STEP_STATE_KEYS.wash.map(k => [k, false])),
-      dress: Object.fromEntries(STEP_STATE_KEYS.dress.map(k => [k, false]))
-    };
+    this.values = Object.fromEntries(NEW_LEVEL_IDS.map(levelId => [
+      levelId, Object.fromEntries(STEP_STATE_KEYS[levelId].map(key => [key, false]))
+    ]));
   },
 
   complete(levelId, stepId) {
@@ -1197,11 +1297,29 @@ const SkillSceneState = {
 };
 SkillSceneState.reset();
 
+const StepProgress = {
+  current: 0,
+  goal: 1,
+  reset(step) {
+    this.current = 0;
+    this.goal = Math.max(1, Number(step?.repeatGoal) || 1);
+  },
+  advance(amount = 1) {
+    this.current = Math.min(this.goal, this.current + amount);
+    return { current: this.current, goal: this.goal, complete: this.current >= this.goal };
+  },
+  render(container) {
+    const dots = container?.querySelectorAll('[data-substep]') || [];
+    dots.forEach((dot, index) => dot.classList.toggle('done', index < this.current));
+  }
+};
+
 const AnimationPolicy = {
   isEnabled() {
+    if (currentTrainingMode.id === 'assessment') return false;
     if (!ResearchMode.active) return true;
     return ResearchMode.phase === 'intervention' &&
-      currentTrainingMode.id === 'teaching';
+      (currentTrainingMode.id === 'teaching' || currentTrainingMode.id === 'practice');
   }
 };
 
@@ -1212,6 +1330,13 @@ const AnimationController = {
   configureStagePaths(stage) {
     if (!stage) return;
     const { width, height } = stage.getBoundingClientRect();
+    const laundryItem = stage.querySelector('.laundry-shirt-start');
+    const laundryTarget = stage.querySelector('.drag-target');
+    if (laundryItem && laundryTarget) {
+      const item = laundryItem.getBoundingClientRect(), target = laundryTarget.getBoundingClientRect();
+      stage.style.setProperty('--laundry-arrive-x', `${target.left + (target.width - item.width) / 2 - item.left}px`);
+      stage.style.setProperty('--laundry-arrive-y', `${target.top + (target.height - item.height) / 2 - item.top}px`);
+    }
     const px = value => `${Math.sign(value) * Math.round(Math.abs(value))}px`;
     const brushArrivalY = -0.9 * height + 372;
     const offsets = {
@@ -1246,8 +1371,11 @@ const AnimationController = {
     this.configureStagePaths(stage);
     if (!stage || !AnimationPolicy.isEnabled() ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (state.currentLevel >= 0 && promptState.enabled && promptState.currentLevel < 4) return;
     this.timer = setTimeout(() => {
       if (this.currentStage === stage && stage.isConnected) {
+        stage.dataset.promptLevel = '4';
+        promptState.promptUsed = Math.max(promptState.promptUsed, 4);
         stage.classList.add('demo-running');
       }
       this.timer = null;
@@ -1311,27 +1439,6 @@ function playCelebrationSound() {
    PRE-RECORDED VOICE MAP (Tingting female voice, Mac-generated)
    ================================================================ */
 const VOICE_MAP = {
-  '小朋友，我们先找到牙刷吧。看到发光的牙刷了吗？点一下它。': 'voice/v00.m4a',
-  '现在把牙膏挤到牙刷上。用手指在牙膏上面，从上往下滑。': 'voice/v01.m4a',
-  '牙膏挤好了，拿起牙刷准备刷牙吧。点一下牙刷。': 'voice/v02.m4a',
-  '先刷左边的牙齿。把牙刷拖到小朋友嘴边，上下刷一刷。': 'voice/v03.m4a',
-  '真棒！现在刷右边的牙齿。把牙刷拖到小朋友嘴边，继续上下刷。': 'voice/v04.m4a',
-  '刷好啦，用水杯漱漱口。点一下水杯。': 'voice/v05.m4a',
-  '最后一步，把毛巾拖到嘴巴上，擦擦嘴巴。': 'voice/v06.m4a',
-  '先打开水龙头。把小手拖到水龙头上，往上推一下。': 'voice/v07.m4a',
-  '水出来了！用手接一点水。点一下出水的地方。': 'voice/v08.m4a',
-  '把毛巾打湿。把小手拖到毛巾上，上下搓一搓。': 'voice/v09.m4a',
-  '把毛巾拧干一点。把小手拖到毛巾上，上下搓一搓。': 'voice/v10.m4a',
-  '现在用毛巾擦擦脸。把小手拖到脸上，上下擦一擦，把脸洗干净。': 'voice/v11.m4a',
-  '毛巾脏了，用水冲一冲。点一下出水的地方冲洗毛巾。': 'voice/v12.m4a',
-  '洗好了，关掉水龙头。把小手拖到水龙头上，往下推。': 'voice/v13.m4a',
-  '先找到要穿的衣服。看到发光的外套了吗？点一下它。': 'voice/v14.m4a',
-  '穿衣服之前要分清正面和反面。点一下衣服的正面。': 'voice/v15.m4a',
-  '先把左手伸进左边的袖子。把小手拖到左边袖口，向左滑。': 'voice/v16.m4a',
-  '再把右手伸进右边的袖子。把小手拖到右边袖口，向右滑。': 'voice/v17.m4a',
-  '把衣服往下拉好。把小手拖到衣服中间，往下拉。': 'voice/v18.m4a',
-  '现在拉上拉链。把小手拖到拉链上，往上拉。': 'voice/v19.m4a',
-  '最后整理一下衣领。把小手拖到领口，左右整理一下。衣服穿得整整齐齐。': 'voice/v20.m4a',
   '太棒了！做得真好！': 'voice/v21.m4a',
   '真厉害！继续加油！': 'voice/v22.m4a',
   '非常好！你真聪明！': 'voice/v23.m4a',
@@ -1341,17 +1448,50 @@ const VOICE_MAP = {
   '差一点点，再来一次吧！': 'voice/v27.m4a',
   '加油，你可以的！再试试看。': 'voice/v28.m4a',
   '慢慢来，不着急，再试一次。': 'voice/v29.m4a',
-  '太厉害了！你已经学会刷牙了！': 'voice/v30.m4a',
-  '太厉害了！你已经学会洗脸了！': 'voice/v31.m4a',
-  '太厉害了！你已经学会穿衣了！': 'voice/v32.m4a',
 };
 
 let currentAudio = null;
+let currentSpeech = null;
+
+function getBestVoice() {
+  const voices = window.speechSynthesis?.getVoices?.() || [];
+  return voices.find(voice => /Tingting|Meijia|Sin-ji|Lili/i.test(voice.name)) ||
+    voices.find(voice => voice.lang?.toLowerCase().startsWith('zh')) || null;
+}
+
+function speakWithSynthesis(text, onEnd) {
+  const synthesis = window.speechSynthesis;
+  if (!synthesis || typeof SpeechSynthesisUtterance !== 'function') {
+    if (onEnd) onEnd();
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'zh-CN';
+  utterance.rate = 0.75;
+  utterance.pitch = 1;
+  const voice = getBestVoice();
+  if (voice) utterance.voice = voice;
+  const finish = () => {
+    if (currentSpeech === utterance) currentSpeech = null;
+    if (onEnd) onEnd();
+  };
+  utterance.onend = finish;
+  utterance.onerror = finish;
+  currentSpeech = utterance;
+  try {
+    synthesis.cancel();
+    synthesis.speak(utterance);
+  } catch(e) {
+    currentSpeech = null;
+    if (onEnd) onEnd();
+  }
+}
 
 function speak(text, onEnd) {
   if (state.muted) { if(onEnd) onEnd(); return; }
   // Stop any currently playing audio
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (currentSpeech) { window.speechSynthesis?.cancel(); currentSpeech = null; }
 
   const file = VOICE_MAP[text];
   if (file) {
@@ -1361,8 +1501,7 @@ function speak(text, onEnd) {
     audio.onerror = () => { currentAudio = null; if (onEnd) onEnd(); };
     audio.play().catch(() => { currentAudio = null; if (onEnd) onEnd(); });
   } else {
-    // Fallback: text not in VOICE_MAP — do nothing
-    if (onEnd) onEnd();
+    speakWithSynthesis(text, onEnd);
   }
 }
 
@@ -1370,6 +1509,7 @@ function toggleMute() {
   state.muted = !state.muted;
   document.getElementById('volume-btn').textContent = state.muted?'🔇':'🔊';
   if (state.muted && currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (state.muted && currentSpeech) { window.speechSynthesis?.cancel(); currentSpeech = null; }
 }
 
 function replayVoice() {
@@ -1386,8 +1526,11 @@ function showScreen(id) {
   const el=document.getElementById(id); if(el) el.classList.add('active');
 }
 function goHome() {
+  clearSceneTimers();
+  if (state.stepAbortController) { state.stepAbortController.abort(); state.stepAbortController = null; }
   AnimationController.clear();
   if(currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if(currentSpeech) { window.speechSynthesis?.cancel(); currentSpeech = null; }
   state.currentLevel=-1; state.currentStep=0; state.stepCompleted=new Set();
   SkillSceneState.reset();
   showScreen('start-screen');
@@ -1415,13 +1558,16 @@ function renderProgressDots() {
    LOAD STEP
    ================================================================ */
 function loadStep(idx) {
+  clearSceneTimers();
   state.currentStep=idx;
+  const version = state.sceneVersion;
   // Abort previous step's gesture listeners immediately
   if (state.stepAbortController) { state.stepAbortController.abort(); state.stepAbortController=null; }
   // Hide next-step button
   const nextBtn = document.getElementById('next-step-btn');
   if (nextBtn) nextBtn.classList.remove('show');
   const level=LEVELS[state.currentLevel], step=level.steps[idx];
+  StepProgress.reset(step);
   document.getElementById('step-number-label').textContent=`第 ${step.id} 步 / 共 7 步`;
   document.getElementById('step-instruction').textContent=step.instruction;
   renderProgressDots();
@@ -1432,11 +1578,12 @@ function loadStep(idx) {
   // Persistent background — set once per level
   if (!scene.dataset.levelId || scene.dataset.levelId !== level.id) {
     scene.dataset.levelId = level.id;
-    scene.innerHTML = level.id === 'dress'
-      ? `<div class="scene-bg" style="background:linear-gradient(180deg,#FFF3E8 0%,#FFECD8 55%,#FFE4CC 100%);"></div>`
-      : level.id === 'brush'
-        ? `<img class="scene-bg" src="cartoon-bathroom-sample.png?v=1" draggable="false" style="object-fit:cover;-webkit-touch-callout:none;" alt="">`
-        : `<img class="scene-bg" src="bathroom-bg.png?v=2" draggable="false" style="object-fit:cover;-webkit-touch-callout:none;" alt="">`;
+    const backgrounds = {
+      laundry: 'assets/laundry/laundry-room.png',
+      'fold-clothes': 'assets/folding/folding-table.png',
+      'fold-umbrella': 'assets/umbrella/umbrella-room.png'
+    };
+    scene.innerHTML = `<img class="scene-bg" src="${backgrounds[level.id]}" draggable="false" alt="">`;
   }
 
   // Remove old stage with exit animation
@@ -1445,11 +1592,18 @@ function loadStep(idx) {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = newHTML;
   const newStage = wrapper.firstElementChild;
+  newStage.dataset.promptLevel = !promptState.enabled && currentTrainingMode.id !== 'assessment' ? '2' : '0';
+  if (newStage.dataset.promptLevel === '2') promptState.promptUsed = Math.max(promptState.promptUsed, 2);
 
+  let swapped = false;
   function swapStage() {
+    if (swapped || version !== state.sceneVersion || state.currentLevel < 0) return;
+    swapped = true;
+    if (promptState.enabled) newStage.dataset.promptLevel = String(promptState.currentLevel);
     if (oldStage) oldStage.remove();
     scene.appendChild(newStage);
     requestAnimationFrame(() => {
+      if (version !== state.sceneVersion) return;
       newStage.classList.add('enter');
       newStage.addEventListener('animationend', function h() {
         newStage.removeEventListener('animationend', h);
@@ -1471,7 +1625,10 @@ function loadStep(idx) {
     swapStage();
   }
 
-  setTimeout(()=>speak(step.voice), 350);
+  if (!promptState.enabled && currentTrainingMode.id !== 'assessment') sceneTimeout(() => {
+    promptState.promptUsed = Math.max(promptState.promptUsed, 3);
+    speak(step.voice);
+  }, 350);
 }
 
 /* ================================================================
@@ -1530,36 +1687,88 @@ function arrLeftRight(){
 /* ================================================================
    SCENE BUILDERS — compose SVG objects + arrow guidance
    ================================================================ */
-function buildPersistentStateHTML(levelId, stepId) {
-  const stateHTML = (cls, content='') => `<div class="persistent-state ${cls}" aria-hidden="true">${content}</div>`;
-  const prior = (key, completedStep) => stepId > completedStep && SkillSceneState.has(levelId, key);
-  let html = '';
+function buildLaundryPersistentState(stepId) {
+  const names = ['in-basin','wet','soapy','front-clean','back-clean','rinsed','wrung'];
+  return STEP_STATE_KEYS.laundry.map((key, index) => {
+    if (stepId <= index + 1 || !SkillSceneState.has('laundry', key)) return '';
+    if (key === 'detergentAdded' && stepId > 6 && SkillSceneState.has('laundry', 'shirtRinsed')) return '';
+    return `<span class="persistent-state state-laundry-${names[index]}" aria-hidden="true"></span>`;
+  }).join('');
+}
 
-  if (levelId === 'brush') {
-    if (stepId >= 2 && stepId <= 3 && prior('toothbrushFound', 1)) html += stateHTML('state-toothbrush-found');
-    if (stepId >= 3 && stepId <= 5 && prior('toothpasteApplied', 2)) html += stateHTML('state-paste-on-brush');
-    if (stepId >= 4 && stepId <= 5 && prior('toothbrushPickedUp', 3)) html += stateHTML('state-toothbrush-ready');
-    if (prior('rightBrushed', 5)) html += stateHTML('state-clean-both');
-    else if (prior('leftBrushed', 4)) html += stateHTML('state-clean-left');
-    if (stepId === 7 && prior('rinsed', 6)) html += stateHTML('state-mouth-rinsed');
-    if (stepId === 7) html += stateHTML('state-final-clean-mouth');
-  } else if (levelId === 'wash') {
-    if (stepId >= 2 && stepId <= 6 && prior('faucetOn', 1)) html += stateHTML('state-water-stream');
-    if (stepId === 3 && prior('waterCollected', 2)) html += stateHTML('state-hand-droplets');
-    if (stepId === 4 && prior('towelWet', 3)) html += stateHTML('state-wet-towel', svgTowel(220,155));
-    if (stepId === 5 && prior('towelWrung', 4)) html += stateHTML('state-reduced-droplets');
-    if (stepId === 6 && prior('faceWashed', 5)) html += stateHTML('state-clean-face');
-    if (stepId === 7 && prior('towelRinsed', 6)) html += stateHTML('state-clean-wet-towel', svgTowel(160,115));
-  } else if (levelId === 'dress') {
-    if (prior('jacketFound', 1)) html += stateHTML('state-jacket-found');
-    if (prior('frontIdentified', 2)) html += stateHTML('state-jacket-front', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M40,32 L70,58 L100,32 L94,32 L70,50 L46,32 Z"/></svg>');
-    if (prior('rightSleeveOn', 4)) html += stateHTML('state-both-sleeves', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z"/><path d="M116,42 Q132,50 136,80 Q138,100 130,118 Q126,96 122,80 Q120,60 114,52 Z"/></svg>');
-    else if (prior('leftSleeveOn', 3)) html += stateHTML('state-left-sleeve', '<svg viewBox="0 0 140 175" aria-hidden="true"><path d="M24,42 Q8,50 4,80 Q2,100 10,118 Q14,96 18,80 Q20,60 26,52 Z"/></svg>');
-    if (prior('jacketPulledDown', 5)) html += stateHTML('state-jacket-flat', '<svg viewBox="0 0 140 175" aria-hidden="true"><line x1="24" y1="150" x2="116" y2="150"/></svg>');
-    if (prior('zipperClosed', 6)) html += stateHTML('state-zipper-closed', '<svg viewBox="0 0 140 175" aria-hidden="true"><line x1="70" y1="58" x2="70" y2="148"/></svg>');
-    if (prior('collarAdjusted', 7)) html += stateHTML('state-final-collar-sparkle', '<svg viewBox="0 0 140 175" aria-hidden="true"><text x="38" y="43" fill="#FFD93D" font-size="24">✦</text><text x="82" y="43" fill="#FFD93D" font-size="24">✦</text></svg>');
-  }
-  return html;
+function buildLaundryScene(step) {
+  const sid = step.id;
+  const image = (file, alt = '') => `<img src="assets/laundry/${file}.png" alt="${alt}" draggable="false">`;
+  const hand = `<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#A77454" stroke-width="3"/></svg>`;
+  const faucet = `<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M12 76V39Q12 20 32 20H54Q76 20 76 41V55H59V41Q59 36 53 36H34Q28 36 28 43V76Z" fill="#A7CBD0" stroke="#624C3D" stroke-width="4" stroke-linejoin="round"/><path d="M22 20V10M9 10H37M9 78H32M59 55H77" fill="none" stroke="#624C3D" stroke-width="6" stroke-linecap="round"/><path d="M9 8H37" stroke="#E8B76A" stroke-width="7" stroke-linecap="round"/></svg>`;
+  const clean = SkillSceneState.has('laundry', 'backRubbed');
+  const shirt = image(clean ? 'shirt-clean' : 'shirt-dirty', '长袖上衣');
+  const isDrag = sid === 1 || sid === 6;
+  let objects = `<div class="laundry-object laundry-basin ${sid === 1 ? 'drag-target' : ''}" ${sid === 1 ? 'data-target="basin"' : 'aria-hidden="true"'}>${image('wash-basin')}</div>`;
+  objects += `<div class="laundry-shirt ${isDrag ? 'laundry-shirt-start draggable-item interactive-target' : ''}" ${isDrag ? 'data-item="shirt"' : 'aria-hidden="true"'}>${shirt}</div>`;
+  objects += `<div class="laundry-object laundry-faucet ${sid === 2 ? 'interactive-target' : ''}" ${sid === 2 ? 'data-item="faucet"' : 'aria-hidden="true"'}>${faucet}</div>`;
+  if (sid === 3) objects += `<div class="laundry-object laundry-detergent interactive-target" data-item="detergent">${image('detergent','洗衣液')}</div>`;
+  objects += `<div class="laundry-water ${sid === 6 ? 'laundry-rinse-stream' : ''}" aria-hidden="true"></div><div class="laundry-bubbles" aria-hidden="true"></div>`;
+  if (sid === 4 || sid === 5 || sid === 7) objects += `<div class="laundry-object laundry-hand interactive-target" data-item="hand">${hand}</div>`;
+  if (sid === 6) objects += '<div class="laundry-object laundry-water-target drag-target" data-target="water" aria-hidden="true"></div>';
+  if (sid === 7) objects += `<div class="laundry-object laundry-partner-hand" aria-hidden="true">${hand}</div><div class="laundry-object" data-gesture-target style="left:63%;top:45%;width:44px;height:88px;pointer-events:none;" aria-hidden="true"></div><div class="laundry-drops" aria-hidden="true">💧 💧</div><div class="laundry-sparkle" aria-hidden="true">✦ ✦</div>`;
+  const demoClass = isDrag ? 'laundry-shirt laundry-shirt-start' : sid === 2 ? 'laundry-faucet' : sid === 3 ? 'laundry-detergent' : 'laundry-hand';
+  const demo = `<div class="demo-element demo-laundry-${sid} demo-ghost laundry-object ${demoClass}" aria-hidden="true">${isDrag ? shirt : hand}</div>`;
+  const labels = ['拖进水盆 ↓','点一下水龙头','按一下洗衣液','← 揉一揉 →','← 再揉一揉 →','放在水流下，等一等','向中间轻轻拧 →'];
+  const dots = step.repeatGoal ? `<div class="laundry-count" aria-hidden="true">${Array.from({length:step.repeatGoal}, () => '<span data-substep></span>').join('')}</div>` : '';
+  return `<div class="step-stage ${sid === 5 ? 'laundry-auto-flip' : ''}" data-level="laundry" data-step="${sid}">${buildLaundryPersistentState(sid)}${objects}${demo}<div class="laundry-guide" aria-hidden="true">${labels[sid-1]}</div>${dots}</div>`;
+}
+
+function buildClothesFoldingPersistentState(stepId) {
+  const names = ['flat', 'smooth', 'left-sleeve', 'right-sleeve', 'left-body', 'right-body', 'hem-up'];
+  return STEP_STATE_KEYS['fold-clothes'].map((key, index) =>
+    stepId > index + 1 && SkillSceneState.has('fold-clothes', key)
+      ? `<span class="persistent-state state-fold-${names[index]}" aria-hidden="true"></span>` : ''
+  ).join('');
+}
+
+function buildClothesFoldingScene(step) {
+  const sid = step.id;
+  const actions = ['flat', 'smooth', 'left-sleeve', 'right-sleeve', 'left-body', 'right-body', 'hem-up'];
+  const style = box => Object.entries(box).map(([key, value]) => `${key}:${value}`).join(';') + ';';
+  const layout = FOLD_LAYOUT[sid];
+  const labels = ['拖到桌子中间', '从上往下抚平', '把这边袖子折进来', '把另一边袖子折进来', '把衣服这边折到中间', '把另一边折到中间', '把衣服下面向上折'];
+  const garment = `<div class="folding-garment ${sid === 1 ? 'draggable-item interactive-target' : ''}" data-garment="whole-sweatshirt" data-fold-action="${actions[sid - 1]}" ${sid === 1 ? `data-item="shirt" style="${style(layout.item)}"` : 'aria-hidden="true"'}><img class="folding-base" src="assets/folding/sweatshirt-flat.png" draggable="false" alt="长袖卫衣"><img class="folding-layer folding-smooth" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-final" src="assets/folding/sweatshirt-folded.png" draggable="false" alt=""></div>`;
+  const target = `<div class="folding-target drag-target" data-target="shirt-center" style="${style(layout.target)}" aria-hidden="true"></div>`;
+  const touch = sid === 1 ? '' : `<div class="folding-touch draggable-item interactive-target" data-item="${step.target}" data-fold-action="${actions[sid - 1]}" style="${style(layout.item)}"></div>`;
+  const demoContent = sid === 1 ? '<img src="assets/folding/sweatshirt-flat.png" draggable="false" alt="">' : svgHand(88,88);
+  const demo = `<div class="demo-element demo-fold-clothes-${sid} demo-ghost" aria-hidden="true">${demoContent}</div>`;
+  return `<div class="step-stage" data-level="fold-clothes" data-step="${sid}">${buildClothesFoldingPersistentState(sid)}<img class="folding-table" src="assets/folding/folding-table.png" draggable="false" alt="">${garment}${target}${touch}${demo}<div class="folding-guide" aria-hidden="true">${labels[sid - 1]}</div></div>`;
+}
+
+function buildUmbrellaPersistentState(stepId) {
+  const names = ['closed','short','strap-front','smooth','gathered','rolled','fastened'];
+  return STEP_STATE_KEYS['fold-umbrella'].map((key,index) => stepId > index + 1 && SkillSceneState.has('fold-umbrella',key)
+    ? `<span class="persistent-state state-umbrella-${names[index]}" aria-hidden="true"></span>` : '').join('');
+}
+
+function buildUmbrellaFoldingScene(step) {
+  const sid = step.id;
+  const items = [[154,162,52,52],[154,254,64,60],[145,90,90,100],[24,60,52,144],[24,76,70,140],[146,80,74,128],[218,124,76,48]];
+  const targets = {1:[154,242,64,60],2:[154,194,64,60],5:[145,76,70,140],7:[146,124,76,48]};
+  const box = ([x,y,w,h]) => `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+  const image = (name,cls) => `<img class="umbrella-picture ${cls}" src="assets/umbrella/umbrella-${name}.png" alt="" draggable="false">`;
+  const hand = '<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#624C3D" stroke-width="3"/></svg>';
+  const neck = '<svg class="umbrella-panel-neck" viewBox="0 0 360 60" aria-hidden="true"><path d="M180 25 L24 60 H336 Z" fill="#3689E0" stroke="#624C3D" stroke-width="3"/></svg>';
+  const panels = Array.from({length:6},(_,i) => `<div class="umbrella-panel ${sid===4&&i===0?'active interactive-target':''}" data-umbrella-panel="${i+1}" style="${box([24+52*i,60,52,144])}"><svg viewBox="0 0 52 144" aria-hidden="true"><rect class="panel-cloth" x="0" y="0" width="52" height="144" fill="${i%2?'#3689E0':'#4B99E9'}" stroke="#624C3D" stroke-width="3"/><path class="panel-rib" d="M26 8 V132" fill="none" stroke="#624C3D" stroke-width="3"/><path class="panel-crease" d="M15 38 L35 56 L16 85 L34 115" fill="none" stroke="#285DA0" stroke-width="3"/><circle cx="26" cy="136" r="6" fill="#FFD15B" stroke="#624C3D" stroke-width="3"/></svg></div>`).join('');
+  const touch = sid===4 ? '' : `<div class="umbrella-touch interactive-target ${targets[sid]?'draggable-item':''}" data-item="${step.target}" style="${box(items[sid-1])}">${sid===2?hand:''}</div>`;
+  const target = targets[sid] ? `<div class="umbrella-drop drag-target" data-target="${step.dragTarget}" style="${box(targets[sid])}" aria-hidden="true"></div>` : '';
+  const delta = targets[sid] ? [targets[sid][0]-items[sid-1][0],targets[sid][1]-items[sid-1][1]] : sid===4 ? [0,70] : [65,0];
+  const demo = `<div class="demo-element demo-umbrella-${sid} demo-ghost umbrella-demo" style="left:${items[sid-1][0]-(sid===4?6:0)}px;top:${items[sid-1][1]+(sid===4?10:0)}px;--umbrella-demo-x:${delta[0]}px;--umbrella-demo-y:${delta[1]}px;" aria-hidden="true">${hand}</div>`;
+  const labels = ['拉小滑块 ↓','拿稳伞头，伞柄向上推 ↑','轻轻转一转 →','顺着发光伞片往下理 ↓','把伞布拢到中间 →','向右轻轻卷一卷 →','把小带子绕过来 ←'];
+  return `<div class="step-stage" data-level="fold-umbrella" data-step="${sid}">${buildUmbrellaPersistentState(sid)}<div class="umbrella-object" data-umbrella="whole">${image('open','umbrella-open')}${image('closed','umbrella-closed-top')}${image('closed','umbrella-closed-bottom')}<div class="umbrella-panel-fan">${neck}${panels}</div><div class="umbrella-wrap-lines" aria-hidden="true"></div><div class="umbrella-strap" aria-hidden="true"></div>${image('folded','umbrella-final')}${sid===2?`<div class="umbrella-stabilizing-hand" aria-hidden="true">${hand}</div>`:''}${target}${touch}${demo}</div>${sid===4?'<div class="umbrella-stars" aria-hidden="true">'+Array.from({length:6},()=>'<span data-substep>★</span>').join('')+'</div>':''}<div class="umbrella-guide" aria-hidden="true">${labels[sid-1]}</div></div>`;
+}
+
+function buildPersistentStateHTML(levelId, stepId) {
+  if (levelId === 'laundry') return buildLaundryPersistentState(stepId);
+  if (levelId === 'fold-clothes') return buildClothesFoldingPersistentState(stepId);
+  if (levelId === 'fold-umbrella') return buildUmbrellaPersistentState(stepId);
+  return '';
 }
 
 function stepStageHTML(objects, guide, levelId, stepId) {
@@ -1568,139 +1777,12 @@ function stepStageHTML(objects, guide, levelId, stepId) {
 }
 
 function buildScene(levelId, step) {
-  const sid=step.id, arrow=step.arrow;
-  let objects='', guide='';
-
-  if (levelId==='brush') {
-    if (sid===1) {
-      objects = `<div class="interactive-target demo-brush-1" style="position:absolute;top:64%;left:72%;transform:translate(-50%,-50%);z-index:5;">${sampleToothbrush()}</div>`;
-      objects += `<div class="demo-element demo-brush-1" aria-hidden="true" style="display:none;"></div>`;
-      guide = arrowHTML(arrow, '54%', '70%', '点击牙刷');
-    } else if (sid===3) {
-      objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;">${sinkFaucetImg()}</div>`;
-      objects += `<div class="demo-element demo-brush-3 demo-ghost" aria-hidden="true" style="bottom:7%;left:50%;">${svgToothbrush(220,165)}</div>`;
-      guide = arrowHTML(arrow, '50%', '35%', '点击牙刷');
-    } else if (sid===2) {
-      objects = `<div style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;">
-      <div style="width:480px;height:160px;transform:rotate(-90deg);filter:drop-shadow(0 12px 36px rgba(0,0,0,0.4));margin-bottom:-45px;margin-top:60px;"><img src="toothpaste.png?v=5" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;-webkit-touch-callout:none;" alt="牙膏"></div>
-      <div style="width:380px;height:250px;transform:rotate(-90deg);filter:drop-shadow(0 12px 36px rgba(0,0,0,0.4));"><img src="toothbrush.png?v=4" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;-webkit-touch-callout:none;" alt="牙刷"></div></div>`;
-      objects += `<div class="demo-element demo-brush-2" aria-hidden="true" style="top:48%;left:50%;width:160px;height:70px;"><img src="toothpaste.png?v=5" draggable="false" style="width:100%;height:100%;object-fit:contain;transform:rotate(-90deg);" alt=""><span class="demo-paste-drop" style="position:absolute;left:50%;bottom:-8px;width:20px;height:14px;border-radius:50%;background:#A9D9FF;"></span></div>`;
-      guide = arrowHTML(arrow, '12%', '20%', '向下滑动挤牙膏');
-    } else if (sid===4) {
-      objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
-        <img src="brush-boy.png?v=1" width="240" height="280" draggable="false" style="object-fit:cover;border-radius:18px;border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="刷牙">
-        <div class="drop-zone" style="left:28%;bottom:10%;width:70px;height:70px;transform:translateX(-50%);"></div>
-        <div class="drop-zone-label" style="left:28%;">👈 刷左边</div>
-      </div>
-      <div style="position:absolute;bottom:5%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(260,190)}</div>`;
-      objects += `<div class="demo-element demo-brush-4 demo-ghost" aria-hidden="true" style="bottom:5%;right:5%;">${svgToothbrush(260,190)}</div>`;
-      guide = arrowHTML('updown', '44%', '22%', '拖拽牙刷到左边上下刷');
-    } else if (sid===5) {
-      objects = `<div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:2;" class="drag-target" data-target="mouth">
-        <img src="brush-boy.png?v=1" width="240" height="280" draggable="false" style="object-fit:cover;border-radius:18px;border:6px solid white;box-shadow:0 6px 24px rgba(0,0,0,0.15);-webkit-touch-callout:none;" alt="刷牙">
-        <div class="drop-zone" style="left:72%;bottom:10%;width:70px;height:70px;transform:translateX(-50%);"></div>
-        <div class="drop-zone-label" style="left:72%;">👉 刷右边</div>
-      </div>
-      <div style="position:absolute;bottom:5%;left:5%;z-index:10;" class="draggable-item interactive-target" data-item="toothbrush">${svgToothbrush(260,190)}</div>`;
-      objects += `<div class="demo-element demo-brush-5 demo-ghost" aria-hidden="true" style="bottom:5%;left:5%;">${svgToothbrush(260,190)}</div>`;
-      guide = arrowHTML('updown', '44%', '58%', '拖拽牙刷到右边上下刷');
-    } else if (sid===6) {
-      objects = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;">${svgCup()}</div>`;
-      objects += `<div class="demo-element demo-brush-6" aria-hidden="true" style="top:50%;left:50%;">${svgCup()}</div>`;
-      guide = arrowHTML(arrow, '50%', '40%', '点击水杯');
-    } else if (sid===7) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="mouth">${svgFace(260,290)}</div>
-      <div style="position:absolute;bottom:8%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="towel">${svgTowel(180,130)}</div>`;
-      objects += `<div class="demo-element demo-brush-7 demo-ghost" aria-hidden="true" style="bottom:8%;right:5%;">${svgTowel(180,130)}</div>`;
-      guide = arrowHTML('leftright', '36%', '20%', '拖拽毛巾到嘴巴上擦一擦');
-    }
-    return stepStageHTML(objects, guide, levelId, sid);
-  }
-
-  if (levelId==='wash') {
-    if (sid===1) {
-      // Faucet is in the upper-center area of the photo background
-      objects = `<div style="position:absolute;top:28%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target invisible-target" data-target="faucet"
-        onselectstart="return false"><div style="width:100px;height:80px;border-radius:16px;"></div></div>
-      <div style="position:absolute;bottom:15%;left:40%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-wash-1 demo-ghost" aria-hidden="true" style="bottom:15%;left:40%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('up', '22%', '45%', '拖拽小手向上推水龙头');
-    } else if (sid===2||sid===6) {
-      objects = `<div style="position:absolute;top:34%;left:50%;transform:translateX(-50%);z-index:5;">
-        <div style="width:80px;height:80px;border-radius:50%;background:rgba(255,140,66,0.0);"></div></div>`;
-      if (sid===2) {
-        objects += `<div class="demo-element demo-wash-2 demo-ghost" aria-hidden="true" style="top:25%;left:50%;">${svgHand(72,72)}</div>
-        <div class="demo-element demo-water-flow" aria-hidden="true" style="top:31%;left:50%;"></div>`;
-      } else {
-        objects += `<div class="demo-element demo-wash-6 demo-ghost" aria-hidden="true" style="top:50%;left:50%;">${svgTowel(160,115)}</div>
-        <div class="demo-element demo-water-flow" aria-hidden="true" style="top:31%;left:50%;"></div>`;
-      }
-      guide = arrowHTML(arrow, '30%', '46%', sid===2?'点击水龙头接水':'点击水龙头冲洗');
-    } else if (sid===3||sid===4) {
-      objects = `<div style="position:absolute;top:35%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="towel">${svgTowel(220,155)}</div>
-      <div style="position:absolute;top:8%;right:8%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-wash-${sid} demo-ghost" aria-hidden="true" style="top:8%;right:8%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('updown', '28%', '32%', '拖拽小手到毛巾上搓一搓');
-    } else if (sid===5) {
-      objects = `<div style="position:absolute;top:15%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target" data-target="face">${svgFace(220,240)}</div>
-      <div style="position:absolute;top:12%;right:5%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-wash-5 demo-ghost" aria-hidden="true" style="top:20%;left:50%;">${svgTowel(160,115)}</div>`;
-      guide = arrowHTML('updown', '42%', '22%', '拖拽小手到脸上擦一擦');
-    } else if (sid===7) {
-      objects = `<div style="position:absolute;top:28%;left:50%;transform:translateX(-50%);z-index:3;" class="drag-target invisible-target" data-target="faucet">
-        <div style="width:100px;height:80px;border-radius:16px;"></div></div>
-      <div style="position:absolute;top:5%;left:38%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-wash-7 demo-ghost" aria-hidden="true" style="top:5%;left:38%;">${svgHand(72,72)}</div>
-      <div class="demo-element demo-water-fade" aria-hidden="true" style="top:31%;left:50%;"></div>`;
-      guide = arrowHTML('down', '22%', '45%', '拖拽小手向下推水龙头');
-    }
-    return stepStageHTML(objects, guide, levelId, sid);
-  }
-
-  if (levelId==='dress') {
-    if (sid===1) {
-      objects = `<div style="position:absolute;top:12%;left:50%;transform:translateX(-50%);z-index:5;">${svgJacket(240,250)}</div>`;
-      objects += `<div class="demo-element demo-dress-1" aria-hidden="true" style="top:12%;left:50%;">${svgJacket(240,250)}</div>`;
-      guide = arrowHTML(arrow, '62%', '36%', '点击衣服');
-    } else if (sid===2) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:5;">${svgJacket(255,265)}</div>`;
-      objects += `<div class="demo-element demo-dress-2" aria-hidden="true" style="top:8%;left:50%;">${svgJacket(255,265)}</div>`;
-      guide = arrowHTML(arrow, '50%', '38%', '点击正面');
-    } else if (sid===3) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:22%;left:14%;z-index:5;" class="drag-target invisible-target" data-target="sleeve-left"><div style="width:70px;height:90px;border-radius:14px;"></div></div>
-      <div style="position:absolute;top:48%;left:4%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-3 demo-ghost" aria-hidden="true" style="top:48%;left:86%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('left', '48%', '8%', '拖拽小手到左边袖口');
-    } else if (sid===4) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:22%;right:14%;z-index:5;" class="drag-target invisible-target" data-target="sleeve-right"><div style="width:70px;height:90px;border-radius:14px;"></div></div>
-      <div style="position:absolute;top:48%;right:4%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-4 demo-ghost" aria-hidden="true" style="top:48%;left:4%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('right', '48%', '62%', '拖拽小手到右边袖口');
-    } else if (sid===5) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:40%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="jacket-body"><div style="width:90px;height:70px;border-radius:14px;"></div></div>
-      <div style="position:absolute;top:0;left:38%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-5 demo-ghost" aria-hidden="true" style="top:0;left:38%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('down', '32%', '42%', '拖拽小手往下拉衣服');
-    } else if (sid===6) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:38%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="zipper"><div style="width:40px;height:90px;border-radius:14px;"></div></div>
-      <div style="position:absolute;bottom:5%;left:40%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-6 demo-ghost" aria-hidden="true" style="top:80%;left:40%;">${svgHand(72,72)}</div>`;
-      guide = arrowHTML('up', '50%', '43%', '拖拽小手往上拉拉链');
-    } else if (sid===7) {
-      objects = `<div style="position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:1;">${svgJacket(255,265)}</div>
-      <div style="position:absolute;top:5%;left:50%;transform:translateX(-50%);z-index:5;" class="drag-target invisible-target" data-target="collar"><div style="width:100px;height:50px;border-radius:14px;"></div></div>
-      <div style="position:absolute;top:14%;right:8%;z-index:10;" class="draggable-item interactive-target" data-item="hand">${svgHand(72,72)}</div>`;
-      objects += `<div class="demo-element demo-dress-7 demo-ghost" aria-hidden="true" style="top:14%;left:82%;">${svgHand(72,72)}</div>
-      <div class="persistent-state state-final-collar-sparkle" aria-hidden="true"><svg viewBox="0 0 140 175" aria-hidden="true"><text x="38" y="43" fill="#FFD93D" font-size="24">✦</text><text x="82" y="43" fill="#FFD93D" font-size="24">✦</text></svg></div>`;
-      guide = arrowHTML('leftright', '16%', '28%', '拖拽小手到领口整理');
-    }
-    return stepStageHTML(objects, guide, levelId, sid);
-  }
-  return '';
+  const builders = {
+    laundry: buildLaundryScene,
+    'fold-clothes': buildClothesFoldingScene,
+    'fold-umbrella': buildUmbrellaFoldingScene
+  };
+  return builders[levelId]?.(step) || '';
 }
 
 /* ================================================================
@@ -1712,6 +1794,20 @@ function attachGestureListeners(step, area) {
   const ac = new AbortController();
   state.stepAbortController = ac;
   const {signal} = ac;
+
+  if (LEVELS[state.currentLevel]?.id === 'fold-umbrella' && step.id) {
+    attachUmbrellaGesture(step, area, signal);
+    return;
+  }
+
+  if (LEVELS[state.currentLevel]?.id === 'laundry' && step.id) {
+    attachLaundryGesture(step, area, signal);
+    return;
+  }
+  if (LEVELS[state.currentLevel]?.id === 'fold-clothes' && step.id === 2) {
+    attachFoldSmoothingGesture(area, signal);
+    return;
+  }
 
   const expected = step.gesture;
 
@@ -1754,6 +1850,8 @@ function attachGestureListeners(step, area) {
           item.classList.add('dragging');
           item.classList.remove('snap-back');
           item.style.transition = 'none';
+          dragStartLeft = parseFloat(item.style.left);
+          dragStartTop = parseFloat(item.style.top);
           state.isGestureActive = true;
           e.preventDefault();
           return;
@@ -1803,8 +1901,8 @@ function attachGestureListeners(step, area) {
         const itemArea = ir.width * ir.height;
         const ratio = overlapArea / itemArea;
 
-        if (ratio > 0.35) {
-          handleStepSuccess(area);
+        if (ratio > 0.35 && Math.hypot(parseFloat(dragItem.style.left) - dragStartLeft, parseFloat(dragItem.style.top) - dragStartTop) >= 40) {
+          advanceStepProgress(area);
           dragItem = null;
           return;
         }
@@ -1826,7 +1924,11 @@ function attachGestureListeners(step, area) {
     if (dist < 18) { det = 'tap'; }
     else if (Math.abs(dx) > Math.abs(dy)) { det = dx > 0 ? 'swipe-right' : 'swipe-left'; }
     else { det = dy > 0 ? 'swipe-down' : 'swipe-up'; }
-    if (checkMatch(det, expected)) { handleStepSuccess(area); }
+    if (checkMatch(
+      det, expected,
+      { x: state.gestureStartX, y: state.gestureStartY }, last,
+      gestureTargetCenter(area)
+    )) { advanceStepProgress(area); }
     else { handleStepWrong(area); }
   }, {signal});
 
@@ -1847,6 +1949,8 @@ function attachGestureListeners(step, area) {
           item.classList.add('dragging');
           item.classList.remove('snap-back');
           item.style.transition = 'none';
+          dragStartLeft = parseFloat(item.style.left);
+          dragStartTop = parseFloat(item.style.top);
           state.isGestureActive = true;
           return;
         }
@@ -1881,8 +1985,8 @@ function attachGestureListeners(step, area) {
         const tr = target.getBoundingClientRect();
         const overlapX = Math.max(0, Math.min(ir.right, tr.right) - Math.max(ir.left, tr.left));
         const overlapY = Math.max(0, Math.min(ir.bottom, tr.bottom) - Math.max(ir.top, tr.top));
-        if ((overlapX * overlapY) / (ir.width * ir.height) > 0.35) {
-          handleStepSuccess(area);
+        if ((overlapX * overlapY) / (ir.width * ir.height) > 0.35 && Math.hypot(parseFloat(dragItem.style.left) - dragStartLeft, parseFloat(dragItem.style.top) - dragStartTop) >= 40) {
+          advanceStepProgress(area);
           dragItem = null;
           return;
         }
@@ -1902,14 +2006,249 @@ function attachGestureListeners(step, area) {
     if (dist < 18) { det = 'tap'; }
     else if (Math.abs(dx) > Math.abs(dy)) { det = dx > 0 ? 'swipe-right' : 'swipe-left'; }
     else { det = dy > 0 ? 'swipe-down' : 'swipe-up'; }
-    if (checkMatch(det, expected)) { handleStepSuccess(area); }
+    if (checkMatch(
+      det, expected,
+      { x: state.gestureStartX, y: state.gestureStartY }, last,
+      gestureTargetCenter(area)
+    )) { advanceStepProgress(area); }
     else { handleStepWrong(area); }
   }, {signal});
 }
 
-function checkMatch(det, exp) {
+function attachFoldSmoothingGesture(area, signal) {
+  const item = area.querySelector('.interactive-target');
+  const stage = area.querySelector('.step-stage');
+  let start = null;
+  const point = e => {
+    const p = e.touches?.[0] || e.changedTouches?.[0] || e;
+    return { x:p.clientX, y:p.clientY };
+  };
+  const beginsOnGarment = p => {
+    const rect = item?.getBoundingClientRect();
+    return rect && p.x >= rect.left && p.x <= rect.right && p.y >= rect.top && p.y <= rect.bottom;
+  };
+  const begin = e => {
+    const p = point(e);
+    if (!beginsOnGarment(p)) return;
+    initAudio(); AnimationController.pause(stage); start = p; e.preventDefault?.();
+  };
+  const end = e => {
+    if (!start) return;
+    const last = point(e), dx = last.x - start.x, dy = last.y - start.y;
+    start = null;
+    if (dy >= 40 && dy > Math.abs(dx)) advanceStepProgress(area);
+    else handleStepWrong(area);
+  };
+  for (const [event, callback] of [['touchstart',begin],['touchend',end],['mousedown',begin],['mouseup',end]]) {
+    area.addEventListener(event, callback, { signal, passive:false });
+  }
+}
+
+function attachLaundryGesture(step, area, signal) {
+  const item = area.querySelector('.interactive-target');
+  const stage = area.querySelector('.step-stage');
+  const partner = area.querySelector('.laundry-partner-hand');
+  const sid = step.id;
+  const readyAt = Date.now() + (sid === 5 ? 900 : 0);
+  let start = null, last = null, origin = null, dragOrigin = null, busy = false, finished = false;
+  let dwellTimer = null, actionTimer = null;
+  const clearDwell = () => {
+    if (dwellTimer !== null) clearTimeout(dwellTimer);
+    dwellTimer = null;
+    stage?.classList.remove('laundry-rinsing');
+  };
+  const resetPosition = () => {
+    if (item && origin) {
+      item.style.transition = 'transform .3s ease';
+      item.style.transform = '';
+      if (sid === 1 || sid === 6) { item.style.left = origin.left + 'px'; item.style.top = origin.top + 'px'; }
+    }
+    if (partner) partner.style.transform = '';
+  };
+  const complete = () => {
+    if (signal.aborted || state.stepCompleted.has(state.currentStep)) return;
+    finished = true;
+    stage?.classList.add('laundry-complete');
+    advanceStepProgress(area);
+  };
+  const overlap = () => {
+    const target = area.querySelector('.drag-target');
+    if (!item || !target) return false;
+    const a = item.getBoundingClientRect(), b = target.getBoundingClientRect();
+    const width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+    const height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+    return width * height / (a.width * a.height) >= 0.35;
+  };
+  const rinse = () => {
+    if (!overlap()) { clearDwell(); return; }
+    if (dwellTimer !== null) return;
+    stage?.classList.add('laundry-rinsing');
+    dwellTimer = setTimeout(() => { if (overlap()) complete(); }, 2000);
+  };
+  const point = e => {
+    const p = e.touches?.[0] || e.changedTouches?.[0] || e;
+    return { x:p.clientX, y:p.clientY };
+  };
+  const begin = e => {
+    initAudio();
+    AnimationController.pause(stage);
+    if (!item || signal.aborted || busy || Date.now() < readyAt || state.stepCompleted.has(state.currentStep)) return;
+    const p = point(e), rect = item.getBoundingClientRect();
+    if (p.x < rect.left || p.x > rect.right || p.y < rect.top || p.y > rect.bottom) return;
+    clearDwell();
+    start = last = p;
+    const bounds = area.getBoundingClientRect();
+    dragOrigin = { left:rect.left - bounds.left, top:rect.top - bounds.top };
+    if (!origin) origin = dragOrigin;
+    item.style.transition = 'none';
+    e.preventDefault?.();
+  };
+  const move = e => {
+    if (!start || signal.aborted) return;
+    last = point(e);
+    const dx = last.x - start.x, dy = last.y - start.y;
+    if (sid === 1 || sid === 6) {
+      const bounds = area.getBoundingClientRect(), rect = item.getBoundingClientRect();
+      item.style.left = Math.max(0, Math.min(bounds.width - rect.width, dragOrigin.left + dx)) + 'px';
+      item.style.top = Math.max(0, Math.min(bounds.height - rect.height, dragOrigin.top + dy)) + 'px';
+      if (sid === 6) rinse();
+    } else if (sid >= 4) {
+      item.style.transform = `translate(${dx}px,${dy}px) rotate(${sid === 7 ? dx / 3 : 0}deg)`;
+      if (partner) partner.style.transform = `translate(${-dx}px,${-dy}px) rotate(${-dx / 3}deg)`;
+    }
+    e.preventDefault?.();
+  };
+  const end = () => {
+    if (!start || signal.aborted) return;
+    const dx = last.x - start.x, dy = last.y - start.y;
+    const inward = sid === 7 && isMovingTowardTarget(start, last, gestureTargetCenter(area));
+    start = null;
+    if (sid === 6 && overlap()) { rinse(); return; }
+    if (sid === 1 && overlap()) { complete(); return; }
+    if ((sid === 2 || sid === 3) && Math.hypot(dx,dy) < 18) {
+      busy = true;
+      stage?.classList.add(sid === 2 ? 'laundry-filling' : 'laundry-soaping');
+      actionTimer = setTimeout(complete, 1200);
+      return;
+    }
+    resetPosition();
+    if (((sid === 4 || sid === 5) && Math.abs(dx) >= 40 && Math.abs(dx) >= Math.abs(dy)) || inward) {
+      if (sid === 7) complete();
+      else {
+        advanceStepProgress(area);
+        if (StepProgress.current === StepProgress.goal) {
+          const shirt = stage?.querySelector('.laundry-shirt img');
+          if (shirt) shirt.src = 'assets/laundry/shirt-clean.png';
+        }
+      }
+    } else handleStepWrong(area);
+  };
+  const cancel = () => { start = null; clearDwell(); if (!finished) resetPosition(); };
+  signal.addEventListener('abort', () => { clearTimeout(actionTimer); cancel(); });
+  for (const [event, callback] of [['touchstart',begin],['touchmove',move],['touchend',end],['touchcancel',cancel],['mousedown',begin],['mousemove',move],['mouseup',end],['mouseleave',cancel]]) {
+    area.addEventListener(event, callback, { signal, passive:false });
+  }
+}
+
+function attachUmbrellaGesture(step, area, signal) {
+  const sid = step.id, stage = area.querySelector('.step-stage');
+  const panels = [...area.querySelectorAll('[data-umbrella-panel]')];
+  const item = area.querySelector('.interactive-target'), target = area.querySelector('.drag-target');
+  let start = null, last = null, origin = null, busy = false, timer = null;
+  const renderPanels = () => {
+    panels.forEach((panel,index) => {
+      panel.classList.toggle('active',sid===4 && index===StepProgress.current);
+      panel.classList.toggle('interactive-target',sid===4 && index===StepProgress.current);
+      panel.classList.toggle('smoothed',index<StepProgress.current);
+    });
+    const demo = stage?.querySelector('.umbrella-demo');
+    if (sid===4 && demo) demo.style.left = `${18+52*Math.min(5,StepProgress.current)}px`;
+  };
+  if (sid===4) renderPanels();
+  const point = e => { const p = e.touches?.[0] || e.changedTouches?.[0] || e; return {x:p.clientX,y:p.clientY}; };
+  const reset = () => {
+    if (item && origin) {
+      item.style.transition = 'left .25s ease,top .25s ease';
+      item.style.left = origin.left+'px'; item.style.top = origin.top+'px';
+    }
+  };
+  const complete = () => {
+    if (signal.aborted || state.stepCompleted.has(state.currentStep)) return;
+    busy = true;
+    stage?.classList.remove('umbrella-rolling','umbrella-turning');
+    advanceStepProgress(area);
+  };
+  const begin = e => {
+    if (signal.aborted || busy || state.stepCompleted.has(state.currentStep)) return;
+    const current = sid===4 ? panels[StepProgress.current] : item;
+    if (!current) return;
+    const p=point(e), rect=current.getBoundingClientRect();
+    if (p.x<rect.left || p.x>rect.right || p.y<rect.top || p.y>rect.bottom) return;
+    initAudio(); AnimationController.pause(stage);
+    start=last=p;
+    if (target && item) {
+      const bounds=area.querySelector('.umbrella-object').getBoundingClientRect();
+      origin={left:rect.left-bounds.left,top:rect.top-bounds.top};
+      item.style.transition='none';
+    }
+    e.preventDefault?.();
+  };
+  const move = e => {
+    if (!start || busy || signal.aborted) return;
+    last=point(e);
+    if (target && item) {
+      item.style.left=origin.left+last.x-start.x+'px';
+      item.style.top=origin.top+last.y-start.y+'px';
+    }
+    e.preventDefault?.();
+  };
+  const end = () => {
+    if (!start || busy || signal.aborted) return;
+    const dx=last.x-start.x,dy=last.y-start.y;
+    let valid=false;
+    if (target && item) {
+      const a=item.getBoundingClientRect(),b=target.getBoundingClientRect();
+      const overlap=Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top))/(a.width*a.height);
+      const direction=sid===1 ? dy>=40 && dy>=Math.abs(dx) : sid===2 ? dy<=-40 && -dy>=Math.abs(dx) : isMovingTowardTarget(start,last,{x:b.left+b.width/2,y:b.top+b.height/2});
+      valid=direction && overlap+Number.EPSILON>=.35;
+    } else if (sid===4) valid=dy>=40 && dy>=Math.abs(dx);
+    else valid=Math.abs(dx)>=40 && Math.abs(dx)>=Math.abs(dy) && (sid!==6 || dx>0);
+    start=null;
+    if (!valid) { reset(); handleStepWrong(area); return; }
+    if (sid===3 || sid===6) {
+      busy=true;
+      stage?.classList.add(sid===6?'umbrella-rolling':'umbrella-turning');
+      timer=setTimeout(complete,sid===6?1500:600);
+    } else if (sid===4) {
+      advanceStepProgress(area); renderPanels();
+    } else complete();
+  };
+  const cancel=()=>{ start=null; if (!busy) reset(); };
+  signal.addEventListener('abort',()=>{ clearTimeout(timer); cancel(); });
+  for (const [event,callback] of [['touchstart',begin],['touchmove',move],['touchend',end],['touchcancel',cancel],['mousedown',begin],['mousemove',move],['mouseup',end],['mouseleave',cancel]]) area.addEventListener(event,callback,{signal,passive:false});
+}
+
+function gestureTargetCenter(area) {
+  const target = area.querySelector('[data-gesture-target]') || area;
+  const rect = target.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function isMovingTowardTarget(start, end, targetCenter) {
+  const moveX = end.x - start.x, moveY = end.y - start.y;
+  const targetX = targetCenter.x - start.x, targetY = targetCenter.y - start.y;
+  const moveLength = Math.hypot(moveX, moveY);
+  const targetLength = Math.hypot(targetX, targetY);
+  return moveLength >= 40 && targetLength > 0 &&
+    (moveX * targetX + moveY * targetY) / (moveLength * targetLength) >= 0.35;
+}
+
+function checkMatch(det, exp, start, end, targetCenter) {
   if(exp==='drag') return det==='drag'; // drag is handled separately, this is fallback
   if(exp==='tap') return det==='tap';
+  if(exp==='repeat-horizontal'||exp==='roll-horizontal'||exp==='swipe-lr') return det==='swipe-left'||det==='swipe-right';
+  if(exp==='repeat-vertical') return det==='swipe-up'||det==='swipe-down';
+  if(exp==='push-inward') return !!start && !!end && !!targetCenter && isMovingTowardTarget(start, end, targetCenter);
   if(exp==='swipe-up') return det==='swipe-up'||det==='swipe-down';
   if(exp==='swipe-down') return det==='swipe-down'||det==='swipe-up';
   if(exp==='swipe-left') return det==='swipe-left'||det==='swipe-right';
@@ -1919,6 +2258,21 @@ function checkMatch(det, exp) {
   return true;
 }
 
+function advanceStepProgress(area) {
+  if (StepProgress.current >= StepProgress.goal) return;
+  const progress = StepProgress.advance();
+  if (StepProgress.goal > 1) {
+    const step = LEVELS[state.currentLevel].steps[state.currentStep];
+    UnifiedDataManager.logEvent('substep_complete', {
+      substepIndex: progress.current,
+      substepGoal: progress.goal,
+      panelNumber: step.target === 'umbrella-panel' ? progress.current : null
+    });
+  }
+  StepProgress.render(area);
+  if (progress.complete) handleStepSuccess(area);
+}
+
 /* ================================================================
    STEP RESULTS
    ================================================================ */
@@ -1926,17 +2280,16 @@ function handleStepSuccess(area) {
   const level=LEVELS[state.currentLevel];
   state.stepCompleted.add(state.currentStep);
   SkillSceneState.complete(level.id, level.steps[state.currentStep].id);
-  if (level.id === 'brush' && level.steps[state.currentStep].id === 7) {
-    const stage = area.querySelector('.step-stage');
-    if (stage) stage.classList.add('brush-final-clean');
+  if (level.id === 'fold-clothes') {
+    area.querySelector('.step-stage')?.insertAdjacentHTML('afterbegin', buildClothesFoldingPersistentState(state.currentStep + 2));
+    const touch = area.querySelector('.interactive-target');
+    if (touch && state.currentStep > 0) touch.style.opacity = '0';
   }
-  if (level.id === 'dress' && level.steps[state.currentStep].id === 7) {
-    const stage = area.querySelector('.step-stage');
-    if (stage) stage.classList.add('dress-final-collar');
-  }
+  if (level.id === 'laundry') area.querySelector('.step-stage')?.classList.add('laundry-complete');
+  if (level.id === 'fold-umbrella') area.querySelector('.step-stage')?.classList.add('umbrella-complete');
   area.classList.add('success'); playSuccessSound();
   const p=['太棒了！做得真好！','真厉害！继续加油！','非常好！你真聪明！','好棒哦！就是这样！','太好了！给你点赞！'];
-  speak(p[Math.floor(Math.random()*p.length)]);
+  speak(state.currentStep === 6 && level.id === 'laundry' ? '衣服洗干净啦' : state.currentStep === 6 && level.id === 'fold-umbrella' ? '雨伞整理得真整齐' : state.currentStep === 6 && level.id === 'fold-clothes' ? '衣服叠得真整齐' : p[Math.floor(Math.random()*p.length)]);
   spawnParticles(8); renderProgressDots();
   // Show "next step" button instead of auto-advancing
   const btn = document.getElementById('next-step-btn');
@@ -1959,7 +2312,7 @@ function goNextStep() {
   if (state.currentStep < level.steps.length - 1) {
     loadStep(state.currentStep + 1);
   } else {
-    handleLevelComplete();
+    finishCurrentLevel();
   }
 }
 
@@ -1976,12 +2329,14 @@ function handleStepWrong(area) {
   setTimeout(()=>bubble.remove(), 800);
   const e=['没关系，再试一次哦！','差一点点，再来一次吧！','加油，你可以的！再试试看。','慢慢来，不着急，再试一次。'];
   speak(e[Math.floor(Math.random()*e.length)]);
-  setTimeout(()=>area.classList.remove('wrong'), 600);
+  sceneTimeout(()=>area.classList.remove('wrong'), 600);
 }
 
-function handleLevelComplete() {
-  const level=LEVELS[state.currentLevel]; playCelebrationSound();
-  saveRecord(level.id, level.name, level.icon);
+function finishCurrentLevel() {
+  const level = LEVELS[state.currentLevel];
+  if (!level) return;
+  if (UnifiedDataManager.active) UnifiedDataManager.endSession();
+  playCelebrationSound();
   document.getElementById('celebration-title').textContent=`${level.icon} ${level.name}完成啦！`;
   document.getElementById('celebration-sub').textContent='你真的太厉害了！';
   document.getElementById('celebration').classList.add('active');
@@ -2034,7 +2389,7 @@ function spawnCanvasConfetti() {
   const ctx = canvas.getContext('2d');
   const colors = ['#FFD93D','#FF6B9D','#4D96FF','#6BCB77','#FF9DC4','#80B8FF','#FFE88C'];
   const particles = [];
-  for (let i=0; i<120; i++) {
+  for (let i=0; i<50; i++) {
     particles.push({
       x: Math.random()*canvas.width,
       y: Math.random()*canvas.height - canvas.height,
@@ -2071,52 +2426,52 @@ function spawnCanvasConfetti() {
    每项生活技能的任务分析，对应 ABA 教学的 Task Analysis
    ================================================================ */
 const TASK_ANALYSIS = {
-  brush: {
-    taskId: 'brush',
-    taskName: '刷牙',
-    taskDomain: '个人卫生',
-    targetStimulus: '牙刷、牙膏、水杯、毛巾',
-    setting: '浴室',
+  laundry: {
+    taskId: 'laundry',
+    taskName: '清洗衣服',
+    taskDomain: '日常生活技能',
+    targetStimulus: '脏衣服、水盆、水龙头、洗衣液',
+    setting: '洗衣区',
     steps: [
-      { stepId: 1, behavior: '找到牙刷', targetSD: '牙刷出现在画面中', responseDef: '用手指点击牙刷图片', masteryCriterion: '独立完成点击' },
-      { stepId: 2, behavior: '挤牙膏', targetSD: '牙膏在牙刷上方', responseDef: '由上向下滑动牙膏', masteryCriterion: '完成向下滑动手势' },
-      { stepId: 3, behavior: '拿起牙刷', targetSD: '牙刷在洗漱台旁', responseDef: '点击牙刷', masteryCriterion: '独立点击' },
-      { stepId: 4, behavior: '刷左边牙齿', targetSD: '牙刷在右下角，目标框在嘴部左侧', responseDef: '拖拽牙刷到左侧嘴部目标区', masteryCriterion: '重叠≥35%' },
-      { stepId: 5, behavior: '刷右边牙齿', targetSD: '牙刷在左下角，目标框在嘴部右侧', responseDef: '拖拽牙刷到右侧嘴部目标区', masteryCriterion: '重叠≥35%' },
-      { stepId: 6, behavior: '漱口', targetSD: '水杯在画面中', responseDef: '点击水杯', masteryCriterion: '独立点击' },
-      { stepId: 7, behavior: '擦嘴巴', targetSD: '毛巾在右下角', responseDef: '拖拽毛巾到嘴部', masteryCriterion: '重叠≥35%' }
+      { stepId: 1, behavior: '把脏衣服放进水盆', targetSD: '脏衣服和发光水盆', responseDef: '将衣服拖进水盆', masteryCriterion: '衣服与水盆重叠达到35%' },
+      { stepId: 2, behavior: '用水浸湿衣服', targetSD: '水龙头', responseDef: '点击水龙头', masteryCriterion: '点击后完成注水动画' },
+      { stepId: 3, behavior: '加入洗衣液', targetSD: '洗衣液按压瓶头', responseDef: '点击按压瓶头一次', masteryCriterion: '正确点击一次' },
+      { stepId: 4, behavior: '揉洗衣服正面', targetSD: '衣服正面和左右箭头', responseDef: '在衣服正面来回拖动卡通小手', masteryCriterion: '累计完成3次宽松的左右揉搓' },
+      { stepId: 5, behavior: '揉洗衣服背面', targetSD: '翻面后的衣服和左右箭头', responseDef: '继续来回揉搓', masteryCriterion: '翻面动画后完成3次揉搓' },
+      { stepId: 6, behavior: '用清水冲洗', targetSD: '水流区域', responseDef: '将衣服拖到水流下', masteryCriterion: '衣服在水流区域停留约2秒' },
+      { stepId: 7, behavior: '拧出衣服里的水', targetSD: '双手图标和衣服', responseDef: '完成一次宽松的相反方向拖动', masteryCriterion: '完成一次宽松的相反方向拖动' }
     ]
   },
-  wash: {
-    taskId: 'wash',
-    taskName: '洗脸',
-    taskDomain: '个人卫生',
-    targetStimulus: '水龙头、毛巾',
-    setting: '浴室',
+  'fold-clothes': {
+    taskId: 'fold-clothes',
+    taskName: '折叠衣服',
+    taskDomain: '日常生活技能',
+    targetStimulus: '长袖卫衣、桌面',
+    setting: '桌面',
     steps: [
-      { stepId: 1, behavior: '打开水龙头', targetSD: '水龙头标记区域', responseDef: '拖拽小手到水龙头向上推', masteryCriterion: '重叠≥35%' },
-      { stepId: 2, behavior: '接水', targetSD: '出水区域', responseDef: '点击出水处', masteryCriterion: '独立点击' },
-      { stepId: 3, behavior: '打湿毛巾', targetSD: '毛巾在画面中', responseDef: '上下搓动毛巾', masteryCriterion: '完成上下滑动手势' },
-      { stepId: 4, behavior: '拧干毛巾', targetSD: '毛巾在画面中', responseDef: '上下搓动毛巾', masteryCriterion: '完成上下滑动手势' },
-      { stepId: 5, behavior: '擦脸', targetSD: '人物脸部区域', responseDef: '拖拽小手到脸上', masteryCriterion: '重叠≥35%' },
-      { stepId: 6, behavior: '冲洗毛巾', targetSD: '出水区域', responseDef: '点击出水处', masteryCriterion: '独立点击' },
-      { stepId: 7, behavior: '关水龙头', targetSD: '水龙头标记区域', responseDef: '拖拽小手到水龙头向下推', masteryCriterion: '重叠≥35%' }
+      { stepId: 1, behavior: '把衣服平铺在桌面', targetSD: '桌面中央的衣服轮廓', responseDef: '将衣服拖到桌面中央', masteryCriterion: '衣服进入中央大目标区' },
+      { stepId: 2, behavior: '抚平衣服', targetSD: '衣服和向下箭头', responseDef: '从上到下拖动小手', masteryCriterion: '完成一次从上到下的滑动' },
+      { stepId: 3, behavior: '折画面左侧袖子', targetSD: '画面左侧袖子和中间轮廓区', responseDef: '将左侧袖子拖到衣服中间的轮廓区', masteryCriterion: '袖子与目标区重叠达到35%' },
+      { stepId: 4, behavior: '折画面右侧袖子', targetSD: '画面右侧袖子和衣服中间', responseDef: '将右侧袖子拖到衣服中间', masteryCriterion: '袖子与目标区重叠达到35%' },
+      { stepId: 5, behavior: '折画面左侧衣身', targetSD: '画面左侧衣身和中央目标区', responseDef: '将左侧衣身向中间折叠', masteryCriterion: '左侧衣身进入中央目标区' },
+      { stepId: 6, behavior: '折画面右侧衣身', targetSD: '画面右侧衣身和中央目标区', responseDef: '将右侧衣身向中间折叠', masteryCriterion: '右侧衣身进入中央目标区' },
+      { stepId: 7, behavior: '把下摆向上折', targetSD: '衣服下摆和上半部目标区', responseDef: '将衣服下半部向领口方向拖动', masteryCriterion: '下摆进入上半部目标区' }
     ]
   },
-  dress: {
-    taskId: 'dress',
-    taskName: '穿衣',
-    taskDomain: '个人卫生',
-    targetStimulus: '外套',
-    setting: '卧室',
+  'fold-umbrella': {
+    taskId: 'fold-umbrella',
+    taskName: '收整折叠伞',
+    taskDomain: '日常生活技能',
+    targetStimulus: '六片手动折叠伞、固定伞带',
+    setting: '整理区',
     steps: [
-      { stepId: 1, behavior: '找到衣服', targetSD: '外套在画面中心', responseDef: '点击外套', masteryCriterion: '独立点击' },
-      { stepId: 2, behavior: '分清正反面', targetSD: '外套正面展示', responseDef: '点击外套正面', masteryCriterion: '独立点击' },
-      { stepId: 3, behavior: '伸左手进袖子', targetSD: '左边袖口标记', responseDef: '拖拽小手到左袖口', masteryCriterion: '重叠≥35%' },
-      { stepId: 4, behavior: '伸右手进袖子', targetSD: '右边袖口标记', responseDef: '拖拽小手到右袖口', masteryCriterion: '重叠≥35%' },
-      { stepId: 5, behavior: '拉好衣服', targetSD: '衣服中间标记', responseDef: '向下拖拽', masteryCriterion: '重叠≥35%' },
-      { stepId: 6, behavior: '拉上拉链', targetSD: '拉链区域', responseDef: '向上拖拽', masteryCriterion: '重叠≥35%' },
-      { stepId: 7, behavior: '整理衣领', targetSD: '领口标记', responseDef: '左右拖拽手到领口', masteryCriterion: '重叠≥35%' }
+      { stepId: 1, behavior: '收拢伞架', targetSD: '加大的伞架滑块和收伞目标位置', responseDef: '将伞架滑块向下拖动', masteryCriterion: '滑块向下进入收伞目标位置' },
+      { stepId: 2, behavior: '缩短伞杆', targetSD: '加粗的伞头和伞柄位置', responseDef: '将伞杆缓慢推短', masteryCriterion: '伞杆缩短到发光位置' },
+      { stepId: 3, behavior: '让扣带朝外', targetSD: '雨伞和固定伞带', responseDef: '转动雨伞，使固定伞带出现在画面正面', masteryCriterion: '扣带进入正面目标位置' },
+      { stepId: 4, behavior: '逐片理顺伞布', targetSD: '依次发光的六片伞布', responseDef: '沿每片伞骨从上向下滑动', masteryCriterion: '六片伞布分别完成一次向下整理' },
+      { stepId: 5, behavior: '把伞片合拢', targetSD: '理好的伞片边缘和伞杆中间', responseDef: '将伞片边缘依次向伞杆中间拖动', masteryCriterion: '所有伞片靠拢伞杆' },
+      { stepId: 6, behavior: '沿同一方向卷好伞布', targetSD: '伞布和环形箭头', responseDef: '沿环形箭头拖动伞布', masteryCriterion: '完成约一圈半的宽松环绕动作' },
+      { stepId: 7, behavior: '绕好扣带并扣住', targetSD: '固定带和加大的粘扣位置', responseDef: '将固定带拖过伞身', masteryCriterion: '固定带与粘扣目标区重叠达到35%' }
     ]
   }
 };
@@ -2205,8 +2560,12 @@ function resetPromptState() {
 }
 
 function applyPromptLevel(level) {
-  const step = LEVELS[state.currentLevel].steps[state.currentStep];
+  const step = LEVELS[state.currentLevel]?.steps[state.currentStep];
+  if (!step) return;
+  if (currentTrainingMode.id === 'assessment') level = 0;
   const area = document.getElementById('interaction-area');
+  const stage = document.getElementById('scene')?.querySelector('.step-stage') || AnimationController.currentStage;
+  if (stage) stage.dataset.promptLevel = String(level);
 
   switch(level) {
     case PROMPT_LEVELS.INDEPENDENT.level:
@@ -2215,7 +2574,7 @@ function applyPromptLevel(level) {
       break;
     case PROMPT_LEVELS.VISUAL.level:
       // Level 1: Visual Prompt — 目标区域高亮
-      if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1000); }
+      if (area) { area.classList.add('success'); sceneTimeout(()=>area.classList.remove('success'), 1000); }
       UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 1, promptName: 'Visual', promptDescription:'视觉提示-目标高亮', stepId: step.id, proceduralFidelity: true, escalationSequence: 1 });
       break;
     case PROMPT_LEVELS.GESTURAL.level:
@@ -2225,23 +2584,24 @@ function applyPromptLevel(level) {
       break;
     case PROMPT_LEVELS.VERBAL.level:
       // 目标区域高亮 + 重复语音
-      if (area) { area.classList.add('success'); setTimeout(()=>area.classList.remove('success'), 1500); }
+      if (area) { area.classList.add('success'); sceneTimeout(()=>area.classList.remove('success'), 1500); }
       speak(step.voice);
       UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 3, promptName: 'Verbal', promptDescription:'语音提示-播放指令', stepId: step.id, proceduralFidelity: true, escalationSequence: 3 });
       break;
     case PROMPT_LEVELS.DEMONSTRATION.level:
-      // 自动完成（记录为全辅助）
       UnifiedDataManager.logEvent('prompt_escalation', { promptLevel: 4, promptName: 'Demonstration', promptDescription:'示范提示-高亮+语音', stepId: step.id, proceduralFidelity: true, escalationSequence: 4 });
-      promptState.promptUsed = 4;
-      handleStepSuccess(area);
+      promptState.currentLevel = 4;
+      AnimationController.schedule(stage);
       return;
   }
-  promptState.promptUsed = level;
+  promptState.promptUsed = Math.max(promptState.promptUsed, level);
 }
 
 function hideAllArrows() {
   const scene = document.getElementById('scene');
   if (!scene) return;
+  const stage = scene.querySelector('.step-stage') || AnimationController.currentStage;
+  if (stage) stage.dataset.promptLevel = '0';
   const arrows = scene.querySelectorAll('.arrow-badge, .tap-ring, [class*="anim-"]');
   arrows.forEach(a => { a.style.opacity = '0'; a.style.transition = 'opacity 0.3s'; });
   // Also hide labels
@@ -2252,6 +2612,9 @@ function hideAllArrows() {
 function showAllArrows() {
   const scene = document.getElementById('scene');
   if (!scene) return;
+  const stage = scene.querySelector('.step-stage') || AnimationController.currentStage;
+  if (stage) stage.dataset.promptLevel = String(Math.max(2, promptState.currentLevel));
+  promptState.promptUsed = Math.max(2, promptState.promptUsed);
   const arrows = scene.querySelectorAll('.arrow-badge, .tap-ring, [class*="anim-"]');
   arrows.forEach(a => { a.style.opacity = ''; });
   const labels = scene.querySelectorAll('.arrow-label');
@@ -2307,10 +2670,9 @@ function applyTrainingMode(mode) {
 }
 
 function startPromptEscalation() {
+  if (currentTrainingMode.id === 'assessment') { resetPromptState(); applyPromptLevel(0); return; }
   if (!promptState.enabled) {
-    const step = LEVELS[state.currentLevel].steps[state.currentStep];
     showAllArrows();
-    setTimeout(() => speak(step.voice), 350);
     return;
   }
 
@@ -2351,7 +2713,7 @@ function scheduleNextPrompt() {
   if (nextLevel > currentTrainingMode.maxLevel) return; // 已达训练模式上限
 
   const delay = Object.values(PROMPT_LEVELS)[nextLevel].delay;
-  promptState.escalationTimer = setTimeout(() => {
+  promptState.escalationTimer = sceneTimeout(() => {
     promptState.currentLevel = nextLevel;
     applyPromptLevel(nextLevel);
     scheduleNextPrompt();
@@ -2420,7 +2782,6 @@ const UnifiedDataManager = {
         totalErrors: summary.totalErrors, avgPromptLevel: summary.avgPromptLevel,
         participantID: summary.participantID
       });
-      if (summaries.length > 50) summaries.splice(0, summaries.length - 50);
       localStorage.setItem(key, JSON.stringify(summaries));
     } catch(e) {}
 
@@ -2461,7 +2822,7 @@ const UnifiedDataManager = {
   onStepComplete(success) {
     const level = LEVELS[state.currentLevel];
     const step = level.steps[state.currentStep];
-    const skillMap = { brush: 'tooth brushing', wash: 'face washing', dress: 'dressing' };
+    const skillMap = { laundry: 'clothes washing', 'fold-clothes': 'clothes folding', 'fold-umbrella': 'folding umbrella' };
 
     const record = {
       participantID: ResearchMode.active ? ResearchMode.childId : '',
@@ -2642,7 +3003,7 @@ const ResearchMode = {
   active: false,
   childId: null,
   phase: null,       // 'baseline' | 'intervention' | 'maintenance'
-  skillId: null,     // 'brush' | 'wash' | 'dress'
+  skillId: null,     // 'laundry' | 'fold-clothes' | 'fold-umbrella'
   sessionNum: 1,
   date: null,
 
@@ -2707,7 +3068,7 @@ const ResearchMode = {
 
     const phaseLabels = { baseline: 'Baseline', intervention: 'Intervention', maintenance: 'Maintenance' };
     const phaseLabelsCN = { baseline: '基线期', intervention: '干预期', maintenance: '维持期' };
-    const skillLabels = { brush: '刷牙', wash: '洗脸', dress: '穿衣' };
+    const skillLabels = { laundry: '清洗衣服', 'fold-clothes': '折叠衣服', 'fold-umbrella': '收整折叠伞' };
     const participantID = `${this.childId}_${this.phase}_S${String(this.sessionNum).padStart(2,'0')}`;
 
     // Update status bar
@@ -2744,7 +3105,7 @@ const ResearchMode = {
 
     // Close setup panel, then start the research skill
     this.closeSetup();
-    const skillIdx = { brush: 0, wash: 1, dress: 2 }[this.skillId];
+    const skillIdx = NEW_LEVEL_IDS.indexOf(this.skillId);
     startLevel(skillIdx);
   },
 
@@ -3026,7 +3387,7 @@ handleStepSuccess = function(area) {
   // Procedural fidelity: was this success at the correct prompt level?
   UnifiedDataManager.events[UnifiedDataManager.events.length - 1].proceduralFidelity =
     promptState.promptUsed <= PROMPT_LEVELS.DEMONSTRATION.level;
-  resetPromptState();
+  clearSceneTimers();
   _originalHandleStepSuccess(area);
 };
 
@@ -3062,17 +3423,7 @@ loadStep = function(idx) {
     promptProtocol: 'Least-to-Most',
     startingLevel: promptState.currentLevel
   });
-  setTimeout(() => startPromptEscalation(), 200);
-};
-
-// 包装原始 handleLevelComplete，注入 Session 结束
-const _originalHandleLevelComplete = handleLevelComplete;
-handleLevelComplete = function() {
-  _originalHandleLevelComplete();
-  // 延迟一下等庆祝弹窗显示后再结束 session
-  setTimeout(() => {
-    UnifiedDataManager.endSession();
-  }, 1000);
+  sceneTimeout(() => startPromptEscalation(), 200);
 };
 
 // 包装原始 goHome，确保 session 正确结束
