@@ -23,6 +23,7 @@ const TRANSPARENT_ITEM_ASSETS = [
   'assets/umbrella/umbrella-folded.png'
 ];
 const REQUIRED_ASSETS = [...BACKGROUND_ASSETS, ...TRANSPARENT_ITEM_ASSETS];
+const HOME_MAP_ASSET = 'assets/home/home-skills-island.png';
 
 function imageProperties(file) {
   const output = execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', '-g', 'hasAlpha', file], { encoding: 'utf8' });
@@ -30,6 +31,30 @@ function imageProperties(file) {
     [...output.matchAll(/^\s+(pixelWidth|pixelHeight|hasAlpha):\s+(.+)$/gm)].map(([, key, value]) => [key, value])
   );
 }
+
+test('home screen uses one local three-skill island map and accessible scene buttons', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.ok(fs.existsSync(path.join(ROOT, HOME_MAP_ASSET)));
+  assert.match(html, /url\(['"]assets\/home\/home-skills-island\.png['"]\)/);
+  assert.doesNotMatch(html, /cartoon-home-sample\.png/);
+
+  const startScreen = html.match(/<div id="start-screen"[\s\S]*?<\/div>\s*\n\s*<!-- ===== GAME SCREEN ===== -->/)?.[0] || '';
+  const sceneButtons = [...startScreen.matchAll(/<button[^>]+class="level-card"[^>]+data-level="(\d)"[^>]+aria-label="([^"]+)"[^>]*>/g)];
+  assert.deepEqual(sceneButtons.map(match => [match[1], match[2]]), [
+    ['0', '开始清洗衣服训练'],
+    ['1', '开始折叠衣服训练'],
+    ['2', '开始收整折叠伞训练']
+  ]);
+  assert.match(startScreen, /class="title-icon"/);
+});
+
+test('home map scene buttons are full-size touch targets with explicit narrow-screen layout', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.match(html, /\.level-cards\s*\{[^}]*position\s*:\s*absolute[^}]*grid-template-columns\s*:\s*repeat\(3,\s*1fr\)/s);
+  assert.match(html, /\.level-card\s*\{[^}]*min-height\s*:\s*44px/s);
+  assert.match(html, /\.level-card:focus-visible\s*\{/);
+  assert.match(html, /@media\s*\(max-width:\s*700px\)[\s\S]*?\.level-cards\s*\{[^}]*grid-template-columns\s*:\s*1fr/s);
+});
 
 function createElement() {
   const classes = new Set();

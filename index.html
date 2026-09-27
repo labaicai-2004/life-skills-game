@@ -104,10 +104,10 @@ html, body {
 /* ===== START SCREEN ===== */
 .start-bg {
   position:absolute; inset:0;
-  background:linear-gradient(180deg,#7DD7FF 0%,#AEE5F0 58%,#8FCB69 58%,#B6DE7A 100%); z-index:-1;
+  background:#54C8F4 url('assets/home/home-skills-island.png') center/cover no-repeat; z-index:-1;
 }
 .title-area {
-  text-align:center; margin:8px 0 0; padding:8px 26px 10px;
+  z-index:3; text-align:center; margin:8px 0 0; padding:8px 26px 10px;
   background:rgba(255,255,255,0.94); border:4px solid #5C3D2E; border-radius:22px;
   box-shadow:0 6px 0 rgba(92,61,46,0.22);
 }
@@ -119,22 +119,36 @@ html, body {
 .title-text { display:inline-block; font-size:var(--font-xl); font-weight:800; color:var(--text); letter-spacing:3px; vertical-align:middle; }
 .title-sub { font-size:var(--font-sm); color:var(--text-light); margin-top:-3px; }
 
-.level-cards { display:flex; gap:18px; flex-wrap:wrap; justify-content:center; max-width:720px; width:100%; margin-top:auto; margin-bottom:18px; }
-.level-card {
-  flex:1; min-width:170px; max-width:210px;
-  background:rgba(255,255,255,0.96); border:4px solid #5C3D2E; border-radius:20px;
-  padding:10px 16px 12px; text-align:center; cursor:pointer;
-  box-shadow:0 7px 0 rgba(92,61,46,0.24); transition:transform 0.18s cubic-bezier(0.68,-0.55,0.265,1.55), box-shadow 0.18s;
-  position:relative; overflow:hidden;
+.level-cards {
+  position:absolute; inset:18% 4% 13%; display:grid; grid-template-columns:repeat(3, 1fr);
+  gap:2%; width:auto; z-index:2; pointer-events:none;
 }
-.level-card:active { transform:scale(0.97) translateY(3px); box-shadow:0 3px 0 rgba(92,61,46,0.24); }
-.level-card .card-icon { font-size:46px; display:inline-block; margin-right:8px; vertical-align:middle; }
-.level-card .card-title { display:inline-block; font-size:26px; font-weight:700; color:var(--text); vertical-align:middle; }
+.level-card {
+  appearance:none; min-width:0; min-height:44px; padding:0 8px 8%;
+  display:flex; align-items:flex-end; justify-content:center;
+  background:transparent; border:0; border-radius:24px; color:var(--text);
+  font-family:inherit; text-align:center; cursor:pointer; pointer-events:auto;
+  position:relative; transition:transform 0.18s ease;
+}
+.level-card::before {
+  content:''; position:absolute; inset:4%; border:4px solid transparent; border-radius:24px;
+  transition:border-color 0.18s ease, background-color 0.18s ease;
+}
+.level-card:hover::before { border-color:rgba(255,255,255,0.72); background:rgba(255,255,255,0.08); }
+.level-card:active { transform:scale(0.98) translateY(2px); }
+.level-card:focus-visible { outline:5px solid #FF8C42; outline-offset:2px; }
+.level-card .card-icon { display:none; }
+.level-card .card-title {
+  position:relative; display:inline-flex; align-items:center; justify-content:center;
+  min-height:54px; padding:8px 22px; white-space:nowrap;
+  font-size:clamp(20px,2.3vw,30px); font-weight:700; color:#4B321F;
+  background:#FFF0B8; border:4px solid #5C3D2E; border-radius:15px;
+  box-shadow:0 7px 0 #A96E36, 0 10px 18px rgba(64,42,25,0.18);
+  transition:transform 0.18s ease, box-shadow 0.18s ease;
+}
+.level-card:active .card-title { transform:translateY(3px); box-shadow:0 3px 0 #A96E36, 0 5px 10px rgba(64,42,25,0.14); }
 .level-card .card-hint { display:none; }
-.level-card .card-top { height:8px; position:absolute; top:0;left:0;right:0; }
-.level-card:nth-child(1) .card-top { background:linear-gradient(135deg,var(--yellow),#FFE88C); }
-.level-card:nth-child(2) .card-top { background:linear-gradient(135deg,var(--blue),#80B8FF); }
-.level-card:nth-child(3) .card-top { background:linear-gradient(135deg,var(--pink),#FF9DC4); }
+.level-card .card-top { display:none; }
 
 /* ===== GAME SCREEN ===== */
 .game-bg { position:absolute; inset:0; background:linear-gradient(180deg,#FFF9E6 0%,#FFF3D6 100%); z-index:-1; }
@@ -977,12 +991,28 @@ html, body {
 /* Canvas confetti layer */
 #confetti-canvas { position:fixed; inset:0; z-index:103; pointer-events:none; }
 
-@media (max-width:640px) {
-  .level-cards { flex-direction:column; align-items:center; gap:16px; }
-  .level-card { max-width:100%; width:100%; padding:22px 18px; }
-  .level-card .card-icon { font-size:54px; }
+@media (max-width:700px) {
+  #start-screen { justify-content:flex-start; padding:14px; }
+  .start-bg { background-position:center; }
+  .title-area { margin-top:0; padding:6px 18px 8px; }
+  .title-text { font-size:30px; }
+  .title-sub { font-size:14px; }
+  .level-cards {
+    inset:25% 8% 10%; grid-template-columns:1fr; grid-template-rows:repeat(3, 1fr); gap:10px;
+  }
+  .level-card { width:100%; min-height:64px; padding:0; align-items:center; }
+  .level-card::before { inset:0; background:rgba(255,255,255,0.28); border-color:rgba(255,255,255,0.64); }
+  .level-card .card-title { min-width:76%; min-height:48px; font-size:21px; }
   .interaction-area { min-height:260px; }
-  .title-icon { font-size:50px; }
+  .title-icon { font-size:38px; }
+}
+@media (max-height:600px) and (min-width:701px) {
+  .title-area { padding:5px 20px 7px; }
+  .title-icon { font-size:34px; }
+  .title-text { font-size:32px; }
+  .title-sub { font-size:14px; }
+  .level-cards { inset:17% 4% 9%; }
+  .level-card .card-title { min-height:48px; font-size:22px; }
 }
 @media (min-width:1024px) {
   .interaction-area { min-height:380px; }
@@ -1065,18 +1095,18 @@ html, body {
     <p class="title-sub">每天进步一点点</p>
   </div>
   <div class="level-cards">
-    <div class="level-card" data-level="0" onclick="startLevel(0)">
+    <button type="button" class="level-card" data-level="0" aria-label="开始清洗衣服训练" onclick="startLevel(0)">
       <div class="card-top"></div><span class="card-icon">🧺</span>
       <div class="card-title">清洗衣服</div><div class="card-hint">学习把衣服洗干净</div>
-    </div>
-    <div class="level-card" data-level="1" onclick="startLevel(1)">
+    </button>
+    <button type="button" class="level-card" data-level="1" aria-label="开始折叠衣服训练" onclick="startLevel(1)">
       <div class="card-top"></div><span class="card-icon">👕</span>
       <div class="card-title">折叠衣服</div><div class="card-hint">学习把衣服叠整齐</div>
-    </div>
-    <div class="level-card" data-level="2" onclick="startLevel(2)">
+    </button>
+    <button type="button" class="level-card" data-level="2" aria-label="开始收整折叠伞训练" onclick="startLevel(2)">
       <div class="card-top"></div><span class="card-icon">☂️</span>
       <div class="card-title">收整折叠伞</div><div class="card-hint">学习把雨伞收整齐</div>
-    </div>
+    </button>
   </div>
   <div class="parent-entry" onclick="showRecords()" title="学习记录">📋</div>
 </div>
