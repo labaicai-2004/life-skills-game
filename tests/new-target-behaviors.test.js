@@ -53,6 +53,7 @@ test('home map scene buttons are full-size touch targets with explicit narrow-sc
   assert.match(html, /\.level-cards\s*\{[^}]*position\s*:\s*absolute[^}]*grid-template-columns\s*:\s*repeat\(3,\s*1fr\)/s);
   assert.match(html, /\.level-card\s*\{[^}]*min-height\s*:\s*44px/s);
   assert.match(html, /\.level-card:focus-visible\s*\{/);
+  assert.match(html, /\.title-icon\s*\{[^}]*min-width\s*:\s*44px[^}]*min-height\s*:\s*44px/s);
   assert.match(html, /@media\s*\(max-width:\s*700px\)[\s\S]*?\.level-cards\s*\{[^}]*grid-template-columns\s*:\s*1fr/s);
 });
 

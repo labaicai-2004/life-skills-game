@@ -111,7 +111,10 @@ html, body {
   background:rgba(255,255,255,0.94); border:4px solid #5C3D2E; border-radius:22px;
   box-shadow:0 6px 0 rgba(92,61,46,0.22);
 }
-.title-icon { font-size:42px; display:inline-block; margin-right:8px; animation:titleBounce 2s infinite; vertical-align:middle; }
+.title-icon {
+  min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center;
+  font-size:42px; margin-right:8px; animation:titleBounce 2s infinite; vertical-align:middle;
+}
 @keyframes titleBounce {
   0%,100% { transform:translateY(0); }
   50% { transform:translateY(-14px); }
