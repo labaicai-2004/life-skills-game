@@ -85,6 +85,7 @@ function loadRuntime() {
   const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   const elements = new Map();
   const spoken = [];
+  const audioSources = [];
   const selectedPhase = createElement();
   const selectedSkill = createElement();
   selectedPhase.dataset.phase = 'intervention';
@@ -115,7 +116,11 @@ function loadRuntime() {
   };
   const context = {
     AbortController,
-    Audio: class { play() { return { catch() {} }; } pause() {} },
+    Audio: class {
+      constructor(src) { this.src = src; }
+      play() { audioSources.push(this.src); return { catch() {} }; }
+      pause() {}
+    },
     Blob: class {},
     Date: ControlledDate,
     JSON,
@@ -133,9 +138,9 @@ function loadRuntime() {
     window: { addEventListener() {}, matchMedia() { return { matches: false }; }, speechSynthesis }
   };
   context.globalThis = context;
-  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, FOLD_LAYOUT: typeof FOLD_LAYOUT === 'undefined' ? undefined : FOLD_LAYOUT, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, attachGestureListeners, checkMatch, isMovingTowardTarget: typeof isMovingTowardTarget === 'undefined' ? undefined : isMovingTowardTarget, gestureTargetCenter: typeof gestureTargetCenter === 'undefined' ? undefined : gestureTargetCenter, applyPromptLevel, PROMPT_LEVELS, speak, state };`, context);
+  vm.runInNewContext(`${script}\n;globalThis.__testApi = { LEVELS, VOICE_MAP, STEP_STATE_KEYS, TASK_ANALYSIS, NEW_LEVEL_IDS, FOLD_LAYOUT: typeof FOLD_LAYOUT === 'undefined' ? undefined : FOLD_LAYOUT, ResearchMode, UnifiedDataManager, StepProgress: typeof StepProgress === 'undefined' ? undefined : StepProgress, attachGestureListeners, checkMatch, isMovingTowardTarget: typeof isMovingTowardTarget === 'undefined' ? undefined : isMovingTowardTarget, gestureTargetCenter: typeof gestureTargetCenter === 'undefined' ? undefined : gestureTargetCenter, applyPromptLevel, PROMPT_LEVELS, speak, state };`, context);
   vm.runInNewContext('Object.assign(globalThis.__testApi, { buildScene, SkillSceneState, buildPersistentStateHTML });', context);
-  return { api: context.__testApi, getElement, selectedSkill, spoken,
+  return { api: context.__testApi, getElement, selectedSkill, spoken, audioSources,
     advance(ms) {
       now += ms;
       for (const [id, timer] of [...timers]) if (timer.due <= now) { timers.delete(id); timer.callback(); }
@@ -243,7 +248,7 @@ test('folding successful drags update the current scene and final picture immedi
     assert.equal(r.complete(),true);
     assert.match(r.stage.insertedHTML || '',new RegExp(`state-fold-${name}`));
     assert.equal(r.item.style.opacity,'0','completed handle is removed from the garment');
-    if(step===7) assert.equal(r.spoken.at(-1).text,'衣服叠得真整齐');
+    if(step===7) assert.equal(r.audioSources.at(-1),'voice/v31.wav');
   }
 });
 
@@ -429,7 +434,7 @@ for (const kind of ['mouse','touch']) {
       const r=umbrellaGesture(7,kind);
       r.stroke(240,145,dx,24);assert.equal(r.complete(),expected);
       assert.equal(r.stage.classList.contains('umbrella-complete'),expected);
-      if(expected) assert.equal(r.spoken.at(-1).text,'雨伞整理得真整齐');
+      if(expected) assert.equal(r.audioSources.at(-1),'voice/v32.wav');
     }
   });
   test(`umbrella ${kind} cancel and aborted roll never complete a step`, () => {
@@ -643,7 +648,7 @@ for (const kind of ['mouse', 'touch']) {
     r.dispatch('start', 50); r.dispatch('move', 100);
     assert.match(r.partner.style.transform, /translate\(-50px/);
     r.dispatch('end', 100); assert.equal(r.complete(), true);
-    assert.equal(r.spoken.at(-1).text, '衣服洗干净啦');
+    assert.equal(r.audioSources.at(-1), 'voice/v30.wav');
   });
 }
 
@@ -745,9 +750,14 @@ test('retired behavior preview page is not shipped with the current game', () =>
   assert.equal(fs.existsSync(path.join(ROOT, 'style-preview.html')), false);
 });
 
-test('voice directory ships only the nine recordings used by the current game', () => {
-  const recordings = fs.readdirSync(path.join(ROOT, 'voice')).filter(name => name.endsWith('.m4a')).sort();
-  assert.deepEqual(recordings, Array.from({ length: 9 }, (_, index) => `v${index + 21}.m4a`));
+test('voice directory ships one valid fixed recording for every game phrase', () => {
+  const recordings = fs.readdirSync(path.join(ROOT, 'voice')).filter(name => /\.(?:m4a|wav)$/.test(name)).sort();
+  assert.deepEqual(recordings, Array.from({ length: 36 }, (_, index) => `v${String(index).padStart(2, '0')}.wav`));
+  for (const recording of recordings) {
+    const data = fs.readFileSync(path.join(ROOT, 'voice', recording));
+    assert.equal(data.subarray(0, 4).toString(), 'RIFF', `${recording} must be a WAV file`);
+    assert.ok(data.length > 1000, `${recording} must contain audible data`);
+  }
 });
 
 test('buildScene routes only the three approved intervention levels', () => {
@@ -900,19 +910,30 @@ test('new intervention targets retain the approved state, task analysis, and voi
   );
 });
 
-test('new instructions and level rewards use Chinese speech when no recording exists', () => {
-  const { api, spoken } = loadRuntime();
+test('all game speech uses fixed recordings and never falls back to a device voice', () => {
+  const { api, spoken, audioSources } = loadRuntime();
   const instructions = api.LEVELS.flatMap(level => level.steps.map(step => step.voice));
+  const feedback = [
+    '太棒了！做得真好！', '真厉害！继续加油！', '非常好！你真聪明！', '好棒哦！就是这样！', '太好了！给你点赞！',
+    '没关系，再试一次哦！', '差一点点，再来一次吧！', '加油，你可以的！再试试看。', '慢慢来，不着急，再试一次。',
+    '衣服洗干净啦', '衣服叠得真整齐', '雨伞整理得真整齐'
+  ];
   const rewards = api.LEVELS.map(level => `太厉害了！你已经学会${level.name}了！`);
+  const phrases = [...instructions, ...feedback, ...rewards];
 
-  [...instructions, ...rewards].forEach(text => api.speak(text));
+  phrases.forEach(text => api.speak(text));
 
-  assert.equal(spoken.length, 24);
-  for (const utterance of spoken) {
-    assert.equal(utterance.lang, 'zh-CN');
-    assert.equal(utterance.rate, 0.75);
-    assert.equal(utterance.voice?.name, 'Tingting');
+  assert.equal(spoken.length, 0);
+  assert.deepEqual(Object.keys(api.VOICE_MAP), phrases);
+  assert.deepEqual(audioSources, Array.from({ length: 36 }, (_, index) => `voice/v${String(index).padStart(2, '0')}.wav`));
+  for (const file of Object.values(api.VOICE_MAP)) {
+    assert.equal(fs.existsSync(path.join(ROOT, file)), true, `${file} must exist`);
   }
+
+  api.speak('未绑定测试语音');
+  assert.equal(spoken.length, 0);
+  assert.equal(audioSources.length, 36);
+  assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), /speechSynthesis|SpeechSynthesisUtterance/);
 });
 
 test('new study IDs start their matching level and save their contracted skill labels', () => {

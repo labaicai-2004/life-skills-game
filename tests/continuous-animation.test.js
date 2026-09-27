@@ -176,7 +176,8 @@ function loadAnimationRuntime(sourceMutation = source => source, options = {}) {
   const context = {
     AbortController,
     Audio: class {
-      play() { return { catch() {} }; }
+      constructor(src) { this.src = src; }
+      play() { spoken.push(this.src); return { catch() {} }; }
       pause() {}
     },
     Blob: class {},
@@ -527,7 +528,7 @@ test('rapid level switch leaves only one prompt chain and no prior instruction',
   r.advanceClock(400);r.runTimersThroughNow();
   r.advanceClock(400);r.runTimersThroughNow();
   assert.ok(r.spoken.length>0);
-  assert.ok(r.spoken.every(text=>text==='把衣服平平地放在桌上。'));
+  assert.ok(r.spoken.every(source=>source==='voice/v07.wav'));
   assert.equal(r.spoken.length,1,'one initialized scene schedules one voice');
 });
 

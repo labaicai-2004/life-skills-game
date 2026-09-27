@@ -2,14 +2,14 @@
 
 ## 技术架构
 
-应用为单文件网页：HTML、CSS 和 JavaScript 均在 `index.html`，不使用框架、npm、CDN 或第三方库。运行图片均为项目内 PNG；语音使用 Web Speech API，音效使用 Web Audio API，学习和研究记录保存在 LocalStorage。目标为 iPad Safari（iOS 15+），桌面 Chrome/Safari 用于调试。
+应用为单文件网页：HTML、CSS 和 JavaScript 均在 `index.html`，不使用框架、npm、CDN 或第三方库。运行图片均为项目内 PNG；语音使用项目内固定 WAV 录音，音效使用 Web Audio API，学习和研究记录保存在 LocalStorage。目标为 iPad Safari（iOS 15+），桌面 Chrome/Safari 用于调试。
 
 | 层级 | 技术 | 用途 |
 |---|---|---|
 | 页面与样式 | HTML5、CSS3 | 屏幕切换、响应式布局、手绘卡通场景、动画与防意外选择 |
 | 游戏逻辑 | 原生 JavaScript（ES6+） | 三关数据、步骤状态、手势、提示、奖励和完成流程 |
 | 触控 | Touch Events + Mouse Events + AbortController | iPad 触摸与桌面鼠标的统一监听及及时清理 |
-| 语音与音效 | SpeechSynthesis、Web Audio API | 中文女声 0.75 倍语速、柔和成功/庆祝音效 |
+| 语音与音效 | 本地 WAV、HTML Audio、Web Audio API | 固定婷婷女声慢速录音、柔和成功/庆祝音效 |
 | 数据 | LocalStorage | 会话、研究记录、步骤记录和子步骤记录；旧记录保留 |
 
 ## 文件结构
@@ -57,7 +57,7 @@
 |---|---|---|
 | Touch Events | 单点触摸与拖动 | 支持 |
 | Mouse Events | 桌面调试 | 支持 |
-| SpeechSynthesis | 中文语音播报 | iOS 7+ |
+| HTML Audio + PCM WAV | 固定婷婷中文语音播报 | iOS 15+ |
 | Web Audio API | 本地生成音效 | 支持 |
 | CSS Custom Properties / Animations | 主题、提示和步骤过渡 | iOS 9.3+ |
 | AbortController | 清理步骤监听 | iOS 12.2+ |
