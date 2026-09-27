@@ -741,6 +741,10 @@ test('three live scene builders and static page images use existing new artwork 
   for (const background of BACKGROUND_ASSETS) assert.match(html, new RegExp(background.replaceAll('.', '\\.')));
 });
 
+test('retired behavior preview page is not shipped with the current game', () => {
+  assert.equal(fs.existsSync(path.join(ROOT, 'style-preview.html')), false);
+});
+
 test('buildScene routes only the three approved intervention levels', () => {
   const { api } = loadRuntime();
   for (const level of api.LEVELS) assert.match(api.buildScene(level.id, level.steps[0]), /step-stage/);
