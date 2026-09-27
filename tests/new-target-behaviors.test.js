@@ -745,6 +745,11 @@ test('retired behavior preview page is not shipped with the current game', () =>
   assert.equal(fs.existsSync(path.join(ROOT, 'style-preview.html')), false);
 });
 
+test('voice directory ships only the nine recordings used by the current game', () => {
+  const recordings = fs.readdirSync(path.join(ROOT, 'voice')).filter(name => name.endsWith('.m4a')).sort();
+  assert.deepEqual(recordings, Array.from({ length: 9 }, (_, index) => `v${index + 21}.m4a`));
+});
+
 test('buildScene routes only the three approved intervention levels', () => {
   const { api } = loadRuntime();
   for (const level of api.LEVELS) assert.match(api.buildScene(level.id, level.steps[0]), /step-stage/);
