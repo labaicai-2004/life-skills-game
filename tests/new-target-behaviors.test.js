@@ -300,6 +300,21 @@ test('folding demonstration hand stays anchored to the tabletop garment', () => 
   assert.match(css,/\.interaction-area:has\(\.step-stage\[data-level="fold-clothes"\]\) \{ min-height:410px/);
 });
 
+test('sleeve and body edges lift toward the viewer during real and demonstration folds', () => {
+  const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+  for(const [side,edge] of [['left',-50],['right',50]]) {
+    for(const part of ['sleeve','body']) {
+      const declarations=[...html.matchAll(new RegExp(`\\.folding-${side}-${part} \\{([^}]+)\\}`,'g'))].map(m=>m[1]).find(s=>s.includes('rotateY'));
+      const degrees=Number(declarations.match(/rotateY\(calc\(var\([^)]*\) \* (-?\d+)deg/)[1]);
+      const liftedZ=-Math.sin(degrees*.5*Math.PI/180)*edge;
+      assert.ok(liftedZ>0,`${side} ${part} must lift out of the screen, not behind the shirt`);
+    }
+    const demo=html.match(new RegExp(`@keyframes foldPreview${side==='left'?'Left':'Right'} \\{[^\\n]+`))[0];
+    const degree=Number([...demo.matchAll(/rotateY\((-?\d+)deg\)/g)][1][1]);
+    assert.ok(-Math.sin(degree*.5*Math.PI/180)*edge>0,`${side} demonstration also lifts forward`);
+  }
+});
+
 function umbrellaPanelMarkup(api) {
   const scene=api.buildScene('fold-umbrella',api.LEVELS[2].steps[3]);
   return [...scene.matchAll(/<div class="umbrella-panel ([^"]*)" data-umbrella-panel="(\d+)" style="([^"]*)"><svg viewBox="([^"]*)"[^>]*>([\s\S]*?)<\/svg><\/div>/g)].map(match=>({

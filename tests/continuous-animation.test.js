@@ -117,6 +117,7 @@ function loadAnimationRuntime(sourceMutation = source => source, options = {}) {
   const timers = [];
   const storage = new Map();
   const spoken = [];
+  const voicePlayers = [];
   let now = 1_750_000_000_000;
   class ControlledDate extends Date {
     constructor(...args) { super(...(args.length ? args : [now])); }
@@ -177,9 +178,10 @@ function loadAnimationRuntime(sourceMutation = source => source, options = {}) {
   const context = {
     AbortController,
     Audio: class {
-      constructor(src) { this.src = src; }
-      play() { spoken.push(this.src); return { catch() {} }; }
-      pause() {}
+      constructor(src) { this.src = src; voicePlayers.push(this); this.paused=true; }
+      load() {}
+      play() { this.paused=false; spoken.push(this.src); return { catch() {} }; }
+      pause() { this.paused=true; }
     },
     Blob: class {},
     Date: ControlledDate,
@@ -239,6 +241,7 @@ function loadAnimationRuntime(sourceMutation = source => source, options = {}) {
     elements,
     timers,
     spoken,
+    voicePlayers,
     localStorage,
     advanceClock(milliseconds) { now += milliseconds; },
     runTimersThroughNow() {
@@ -513,6 +516,7 @@ test('the original startLevel clears before state assignment and loadStep', () =
 
 test('leaving within 100ms cancels prompt initialization and old instruction speech', () => {
   const r=loadAnimationRuntime();
+  r.api.ResearchMode.active=true;
   r.api.startLevel(0);
   r.advanceClock(100);r.api.goHome();
   const events=r.api.UnifiedDataManager.events.length;
@@ -522,15 +526,40 @@ test('leaving within 100ms cancels prompt initialization and old instruction spe
   assert.equal(r.api.UnifiedDataManager.events.length,events);
 });
 
-test('rapid level switch leaves only one prompt chain and no prior instruction', () => {
+test('ordinary level switch speaks immediately and stops the previous instruction', () => {
   const r=loadAnimationRuntime();
-  r.api.promptState.enabled=false;
-  r.api.startLevel(0);r.advanceClock(100);r.api.startLevel(1);
+  r.api.startLevel(0);
+  assert.deepEqual(r.spoken,['voice/v00.wav']);
+  const previous=r.voicePlayers.find(v=>v.src==='voice/v00.wav');
+  r.advanceClock(100);r.api.startLevel(1);
+  assert.equal(previous.paused,true);
   r.advanceClock(400);r.runTimersThroughNow();
   r.advanceClock(400);r.runTimersThroughNow();
-  assert.ok(r.spoken.length>0);
-  assert.ok(r.spoken.every(source=>source==='voice/v07.wav'));
-  assert.equal(r.spoken.length,1,'one initialized scene schedules one voice');
+  assert.deepEqual(r.spoken,['voice/v00.wav','voice/v07.wav'],'no delayed duplicate or old instruction');
+});
+
+test('next ordinary step interrupts speech before the old scene exits', () => {
+  const r=loadAnimationRuntime();
+  r.api.startLevel(0);
+  const previous=r.voicePlayers.find(v=>v.src==='voice/v00.wav');
+  const old=r.elements.scene.lastChild;
+  r.elements.scene.querySelector=selector=>selector==='.step-stage'?old:null;
+  r.api.loadStep(1);
+  assert.equal(previous.paused,true);
+  assert.deepEqual(r.spoken,['voice/v00.wav','voice/v01.wav']);
+  old.dispatch('animationend');
+  assert.equal(r.spoken.length,2);
+});
+
+test('ordinary practice regains immediate voice after leaving research assessment', () => {
+  const r=loadAnimationRuntime(),{api}=r;
+  api.ResearchMode.active=true;api.setTrainingMode(api.TrainingModes.ASSESSMENT);
+  api.startLevel(0);assert.deepEqual(r.spoken,[]);
+  api.goHome();api.startLevel(1);
+  assert.deepEqual(r.spoken,['voice/v07.wav']);
+  assert.equal(r.elements.scene.lastChild.dataset.promptLevel,'2');
+  r.advanceClock(200);r.runTimersThroughNow();
+  assert.equal(r.elements.scene.lastChild.dataset.promptLevel,'2');
 });
 
 test('stale exit animation cannot attach a previous stage after returning home', () => {
@@ -559,6 +588,7 @@ test('completion before delayed prompt initialization cannot restart prompting',
 
 test('practice prompt remains visible when the new stage enters after 250ms exit', () => {
   const r=loadAnimationRuntime(),{api,elements}=r;
+  api.ResearchMode.active=true;
   api.setTrainingMode(api.TrainingModes.PRACTICE);
   api.startLevel(1);
   const old=elements.scene.lastChild;
@@ -747,7 +777,7 @@ test('two passive demonstrations after real step initialization do not write eve
   const beforeEvents = api.UnifiedDataManager.events.length;
   const beforeRecords = JSON.parse(localStorage.getItem('researchRecords') || '[]').length;
   assert.deepEqual(Array.from(api.UnifiedDataManager.events, event => event.event), [
-    'session_start', 'step_start', 'ltm_chain_start'
+    'session_start', 'step_start'
   ]);
 
   runtime.advanceClock(2000);

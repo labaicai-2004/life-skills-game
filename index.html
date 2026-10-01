@@ -263,13 +263,24 @@ html, body {
 .laundry-basin { left:35%; top:36%; width:48%; height:55%; }
 .laundry-shirt { position:absolute; left:46%; top:39%; width:26%; height:40%; z-index:5; }
 .laundry-shirt-start { left:5%; top:18%; }
-.laundry-faucet { left:56%; top:18%; width:88px; height:88px; }
+.laundry-faucet { left:calc(60% - 64px); top:12%; width:128px; height:112px; z-index:6; filter:drop-shadow(0 5px 3px #624C3D35); }
+.laundry-faucet svg { width:100%; height:100%; pointer-events:none; }
+.faucet-handle { transform-box:fill-box; transform-origin:center; transition:transform .3s ease; }
+.laundry-filling .faucet-handle,.laundry-rinsing .faucet-handle { transform:rotate(-25deg); }
 .laundry-detergent { left:9%; top:32%; width:110px; height:145px; }
 .laundry-hand { left:44%; top:48%; width:88px; height:88px; z-index:9; }
 .laundry-partner-hand { left:66%; top:48%; width:88px; height:88px; z-index:8; pointer-events:none; }
 .laundry-hand svg, .laundry-partner-hand svg { width:100%; height:100%; }
-.laundry-water-target { left:48%; top:27%; width:30%; height:50%; z-index:3; }
-.laundry-water { position:absolute; left:58%; top:26%; width:11%; height:44%; border-radius:30px; background:repeating-linear-gradient(90deg,#B5ECFFB0 0 10px,#70CEF2B0 12px 16px); pointer-events:none; opacity:0; z-index:4; }
+.laundry-water-target { left:calc(60% - 15px); top:calc(12% + 94px); width:80px; height:44%; z-index:3; }
+.laundry-water { position:absolute; left:calc(60% + 22px); top:calc(12% + 90px); width:25px; height:44%; border-radius:0 0 14px 14px; background:repeating-linear-gradient(0deg,#DFF8FFE0 0 5px,#79D2EBD0 8px,#A7E7F4B0 24px,#79D2EBD0 36px); background-size:100% 42px; border-left:2px solid #EDFCFFB0; border-right:2px solid #52AED680; box-sizing:border-box; pointer-events:none; opacity:0; z-index:7; }
+.laundry-water::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 40% 30%,#FFFFFFE0 0 2px,transparent 4px); background-size:15px 42px; }
+.laundry-water::after { content:''; position:absolute; left:50%; bottom:-8px; width:100px; height:24px; border:3px solid #7BCFDFC0; border-radius:50%; background:radial-gradient(ellipse,#D9F8FF90,transparent 65%); transform:translateX(-50%); }
+.laundry-filling .laundry-water,.laundry-rinse-stream { animation:laundryWaterFlow .8s linear infinite; }
+.laundry-filling .laundry-water::before,.laundry-rinse-stream::before { animation:laundryWaterFlow .65s linear infinite; }
+.laundry-filling .laundry-water::after,.laundry-rinse-stream::after { animation:laundryWaterRipple 1.2s ease-out infinite; }
+@keyframes laundryWaterFlow { from { background-position:0 0; } to { background-position:0 84px; } }
+@keyframes laundryWaterRipple { from { transform:translateX(-50%) scale(.55); opacity:.9; } to { transform:translateX(-50%) scale(1.15); opacity:.25; } }
+@media (prefers-reduced-motion:reduce) { .laundry-water,.laundry-water::before,.laundry-water::after { animation:none!important; } .faucet-handle { transition:none; } }
 .laundry-bubbles { position:absolute; left:44%; top:43%; width:30%; height:25%; z-index:7; pointer-events:none; opacity:0; border-radius:50%; background:radial-gradient(circle at 15% 50%,#fff 0 12px,transparent 14px),radial-gradient(circle at 45% 65%,#fff 0 16px,transparent 18px),radial-gradient(circle at 70% 40%,#fff 0 13px,transparent 15px),radial-gradient(circle at 90% 75%,#fff 0 10px,transparent 12px); }
 .state-laundry-wet ~ .laundry-shirt { filter:brightness(.88) saturate(1.08); }
 .state-laundry-soapy ~ .laundry-bubbles { opacity:.9; }
@@ -391,11 +402,11 @@ html, body {
 .folding-cloth { perspective:650px; }
 .folding-center { position:absolute; left:125px; top:0; width:50px; height:270px; }
 .folding-left-body,.folding-right-body { position:absolute; top:0; width:50px; height:270px; transform-style:preserve-3d; }
-.folding-left-body { left:75px; transform-origin:100% 50%; transform:rotateY(calc(var(--fold-left-body) * -180deg)); z-index:2; }
-.folding-right-body { left:175px; transform-origin:0% 50%; transform:rotateY(calc(var(--fold-right-body) * 180deg)); z-index:3; }
+.folding-left-body { left:75px; transform-origin:100% 50%; transform:rotateY(calc(var(--fold-left-body) * 180deg)); z-index:2; }
+.folding-right-body { left:175px; transform-origin:0% 50%; transform:rotateY(calc(var(--fold-right-body) * -180deg)); z-index:3; }
 .folding-left-sleeve,.folding-right-sleeve { position:absolute; top:0; width:75px; height:270px; }
-.folding-left-sleeve { left:-75px; transform-origin:100% 50%; transform:rotateY(calc(var(--fold-left-sleeve) * -180deg)); }
-.folding-right-sleeve { left:50px; transform-origin:0% 50%; transform:rotateY(calc(var(--fold-right-sleeve) * 180deg)); }
+.folding-left-sleeve { left:-75px; transform-origin:100% 50%; transform:rotateY(calc(var(--fold-left-sleeve) * 180deg)); }
+.folding-right-sleeve { left:50px; transform-origin:0% 50%; transform:rotateY(calc(var(--fold-right-sleeve) * -180deg)); }
 .folding-texture { position:absolute; inset:0; overflow:hidden; }
 .folding-texture img { position:absolute; top:0; width:300px; height:270px; max-width:none; }
 .folding-center > .folding-texture img { left:-125px; }
@@ -426,8 +437,8 @@ html, body {
 .folding-demo-garment img { object-fit:contain; pointer-events:none; }
 .step-stage.demo-running:not(.demo-paused) .folding-demo-garment { opacity:1; }
 .step-stage.demo-running:not(.demo-paused) .folding-garment { opacity:.18; }
-@keyframes foldPreviewLeft { 0%,20%,100% { transform:rotateY(0deg); } 60%,82% { transform:rotateY(-180deg); } }
-@keyframes foldPreviewRight { 0%,20%,100% { transform:rotateY(0deg); } 60%,82% { transform:rotateY(180deg); } }
+@keyframes foldPreviewLeft { 0%,20%,100% { transform:rotateY(0deg); } 60%,82% { transform:rotateY(180deg); } }
+@keyframes foldPreviewRight { 0%,20%,100% { transform:rotateY(0deg); } 60%,82% { transform:rotateY(-180deg); } }
 @keyframes foldPreviewHem { 0%,20%,100% { transform:translateZ(3px) rotateX(0deg); } 60%,82% { transform:translateZ(3px) rotateX(-180deg); } }
 @keyframes foldPreviewSmooth { 0%,20%,100% { opacity:.7; } 60%,82% { opacity:0; } }
 .step-stage.demo-running:not(.demo-paused)[data-step="1"] .folding-demo-garment .folding-upper { animation:foldPlaceLand 3s ease-in-out infinite; }
@@ -1467,7 +1478,7 @@ const AnimationController = {
     this.configureStagePaths(stage);
     if (!stage || !AnimationPolicy.isEnabled() ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (state.currentLevel >= 0 && promptState.enabled && promptState.currentLevel < 4) return;
+    if (state.currentLevel >= 0 && ResearchMode.active && promptState.enabled && promptState.currentLevel < 4) return;
     this.timer = setTimeout(() => {
       if (this.currentStage === stage && stage.isConnected) {
         stage.dataset.promptLevel = '4';
@@ -1652,19 +1663,39 @@ const VOICE_MAP = {
 };
 
 let currentAudio = null;
+const voicePlayers = new Map();
+let voicePlaybackId = 0;
+
+function prepareVoice(text) {
+  const file = VOICE_MAP[text];
+  if (!file) return null;
+  if (!voicePlayers.has(file)) {
+    const audio = new Audio(file);
+    audio.preload = 'auto';
+    audio.load?.();
+    voicePlayers.set(file, audio);
+  }
+  return voicePlayers.get(file);
+}
+
+function stopVoice() {
+  voicePlaybackId++;
+  if (currentAudio) currentAudio.pause();
+  currentAudio = null;
+  BackgroundMusic.duck(false);
+}
 
 function speak(text, onEnd) {
+  stopVoice();
   if (state.muted) { if(onEnd) onEnd(); return; }
-  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-  BackgroundMusic.duck(false);
-
-  const file = VOICE_MAP[text];
-  if (!file) { if (onEnd) onEnd(); return; }
-  const audio = new Audio(file);
+  const audio = prepareVoice(text);
+  if (!audio) { if (onEnd) onEnd(); return; }
+  const playbackId = voicePlaybackId;
+  audio.currentTime = 0;
   currentAudio = audio;
-  // Late callbacks from interrupted speech must not restore music over a newer voice.
+  // Reused players can reject an interrupted play after the next replay has started.
   const finish = () => {
-    if (currentAudio !== audio) return;
+    if (currentAudio !== audio || playbackId !== voicePlaybackId) return;
     currentAudio = null;
     BackgroundMusic.duck(false);
     if (onEnd) onEnd();
@@ -1678,7 +1709,7 @@ function speak(text, onEnd) {
 function toggleMute() {
   state.muted = !state.muted;
   document.getElementById('volume-btn').textContent = state.muted?'🔇':'🔊';
-  if (state.muted && currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (state.muted) stopVoice();
   BackgroundMusic.duck(false);
   BackgroundMusic.sync();
 }
@@ -1702,7 +1733,7 @@ function goHome() {
   clearSceneTimers();
   if (state.stepAbortController) { state.stepAbortController.abort(); state.stepAbortController = null; }
   AnimationController.clear();
-  if(currentAudio) { currentAudio.pause(); currentAudio = null; }
+  stopVoice();
   state.currentLevel=-1; state.currentStep=0; state.stepCompleted=new Set();
   SkillSceneState.reset();
   showScreen('start-screen');
@@ -1715,6 +1746,7 @@ function startLevel(idx) {
   BackgroundMusic.sync();
   SkillSceneState.reset();
   showScreen('game-screen'); renderProgressDots(); loadStep(0);
+  Object.keys(VOICE_MAP).forEach(prepareVoice);
 }
 function renderProgressDots() {
   const total=LEVELS[state.currentLevel].steps.length;
@@ -1733,6 +1765,7 @@ function renderProgressDots() {
    ================================================================ */
 function loadStep(idx) {
   clearSceneTimers();
+  stopVoice();
   state.currentStep=idx;
   const version = state.sceneVersion;
   // Abort previous step's gesture listeners immediately
@@ -1766,14 +1799,14 @@ function loadStep(idx) {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = newHTML;
   const newStage = wrapper.firstElementChild;
-  newStage.dataset.promptLevel = !promptState.enabled && currentTrainingMode.id !== 'assessment' ? '2' : '0';
+  newStage.dataset.promptLevel = !ResearchMode.active || (!promptState.enabled && currentTrainingMode.id !== 'assessment') ? '2' : '0';
   if (newStage.dataset.promptLevel === '2') promptState.promptUsed = Math.max(promptState.promptUsed, 2);
 
   let swapped = false;
   function swapStage() {
     if (swapped || version !== state.sceneVersion || state.currentLevel < 0) return;
     swapped = true;
-    if (promptState.enabled) newStage.dataset.promptLevel = String(promptState.currentLevel);
+    if (ResearchMode.active && promptState.enabled) newStage.dataset.promptLevel = String(promptState.currentLevel);
     if (oldStage) oldStage.remove();
     scene.appendChild(newStage);
     requestAnimationFrame(() => {
@@ -1799,10 +1832,10 @@ function loadStep(idx) {
     swapStage();
   }
 
-  if (!promptState.enabled && currentTrainingMode.id !== 'assessment') sceneTimeout(() => {
+  if (!ResearchMode.active || (!promptState.enabled && currentTrainingMode.id !== 'assessment')) {
     promptState.promptUsed = Math.max(promptState.promptUsed, 3);
     speak(step.voice);
-  }, 350);
+  }
 }
 
 /* ================================================================
@@ -1874,7 +1907,7 @@ function buildLaundryScene(step) {
   const sid = step.id;
   const image = (file, alt = '') => `<img src="assets/laundry/${file}.png" alt="${alt}" draggable="false">`;
   const hand = `<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#A77454" stroke-width="3"/></svg>`;
-  const faucet = `<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M12 76V39Q12 20 32 20H54Q76 20 76 41V55H59V41Q59 36 53 36H34Q28 36 28 43V76Z" fill="#A7CBD0" stroke="#624C3D" stroke-width="4" stroke-linejoin="round"/><path d="M22 20V10M9 10H37M9 78H32M59 55H77" fill="none" stroke="#624C3D" stroke-width="6" stroke-linecap="round"/><path d="M9 8H37" stroke="#E8B76A" stroke-width="7" stroke-linecap="round"/></svg>`;
+  const faucet = `<svg viewBox="0 0 128 112" aria-hidden="true"><defs><linearGradient id="faucet-metal" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#88B5C2"/><stop offset=".45" stop-color="#E5F5F5"/><stop offset="1" stop-color="#94BCC9"/></linearGradient></defs><ellipse cx="32" cy="103" rx="26" ry="6" fill="#624C3D25"/><path d="M32 94V49Q32 35 47 35H76Q98 35 98 57V85" fill="none" stroke="#624C3D" stroke-width="28" stroke-linejoin="round"/><path d="M32 94V49Q32 35 47 35H76Q98 35 98 57V85" fill="none" stroke="url(#faucet-metal)" stroke-width="21" stroke-linejoin="round"/><path d="M28 90V50Q28 41 39 40H72" fill="none" stroke="#F3FFFF" stroke-width="4" stroke-linecap="round"/><rect x="10" y="93" width="44" height="12" rx="5" fill="#B7D3D7" stroke="#624C3D" stroke-width="3"/><path d="M32 35V23" stroke="#624C3D" stroke-width="9"/><g class="faucet-handle"><rect x="7" y="9" width="50" height="15" rx="7" fill="#E8B76A" stroke="#624C3D" stroke-width="3"/><path d="M16 14H46" stroke="#FFF2BF" stroke-width="3" stroke-linecap="round"/></g><ellipse class="faucet-outlet" cx="98" cy="86" rx="12" ry="5" fill="#56879B" stroke="#624C3D" stroke-width="3"/><ellipse cx="98" cy="86" rx="7" ry="2" fill="#C7EBF5"/></svg>`;
   const clean = SkillSceneState.has('laundry', 'backRubbed');
   const shirt = image(clean ? 'shirt-clean' : 'shirt-dirty', '长袖上衣');
   const isDrag = sid === 1 || sid === 6;
@@ -2889,11 +2922,13 @@ function applyTrainingMode(mode) {
 }
 
 function startPromptEscalation() {
-  if (currentTrainingMode.id === 'assessment') { resetPromptState(); applyPromptLevel(0); return; }
-  if (!promptState.enabled) {
+  if (!ResearchMode.active || !promptState.enabled) {
+    if (ResearchMode.active && currentTrainingMode.id === 'assessment') { resetPromptState(); applyPromptLevel(0); return; }
     showAllArrows();
     return;
   }
+
+  if (currentTrainingMode.id === 'assessment') { resetPromptState(); applyPromptLevel(0); return; }
 
   resetPromptState();
 
@@ -3726,7 +3761,7 @@ loadStep = function(idx) {
     masteryCriterion: ta?.steps[idx]?.masteryCriterion
   });
   // Start LTM prompting chain with procedural fidelity marker
-  UnifiedDataManager.logEvent('ltm_chain_start', {
+  if (ResearchMode.active) UnifiedDataManager.logEvent('ltm_chain_start', {
     promptProtocol: 'Least-to-Most',
     startingLevel: promptState.currentLevel
   });

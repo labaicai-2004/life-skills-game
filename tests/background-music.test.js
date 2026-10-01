@@ -58,3 +58,18 @@ test('music is a complete local WAV and research defaults to an opt-in checkbox'
   assert.doesNotMatch(html, /id="research-music"[^>]*checked/);
   assert.match(html, /BackgroundMusic.enabled = ResearchMode.active \? document.getElementById\('research-music'\)\?\.checked === true : true/);
 });
+
+test('replaying a preloaded voice starts at the beginning and ignores its old rejected play', () => {
+  const players=[], rejections=[], ducks=[];
+  const context={state:{muted:false},BackgroundMusic:{duck(value){ducks.push(value);}},
+    Audio:class{constructor(src){this.src=src;players.push(this);}load(){}pause(){}play(){return {catch(fn){rejections.push(fn);}};}}};
+  const speech=html.slice(html.indexOf('let currentAudio ='),html.indexOf('function toggleMute('));
+  vm.runInNewContext(`const VOICE_MAP={one:'one.wav'};${speech};globalThis.speak=speak;`,context);
+  context.speak('one');players[0].currentTime=2;
+  context.speak('one');
+  assert.equal(players.length,1,'reuse loaded recording rather than create a new player');
+  assert.equal(players[0].currentTime,0);
+  rejections[0]();
+  assert.equal(ducks.at(-1),true,'an interrupted play failure must not unduck current replay');
+  players[0].onended();assert.equal(ducks.at(-1),false);
+});
