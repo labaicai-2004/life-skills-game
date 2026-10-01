@@ -159,13 +159,19 @@ html, body {
   width:100%; max-width:800px; display:flex; align-items:center;
   justify-content:space-between; padding:14px 18px;
 }
-.back-btn, .volume-btn {
+.back-btn, .volume-btn, .music-btn {
   width:50px; height:50px; border-radius:50%; border:none;
   background:var(--card); box-shadow:var(--shadow);
   font-size:26px; cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:transform 0.15s cubic-bezier(0.68,-0.55,0.265,1.55);
 }
 .back-btn:active, .volume-btn:active { transform:scale(1.1); }
+.audio-buttons { display:flex; gap:8px; }
+.music-btn { font-size:16px; font-weight:700; color:var(--text); }
+.music-btn[aria-pressed="false"] { opacity:0.65; }
+.music-option { display:flex; align-items:center; gap:12px; min-height:48px; cursor:pointer; }
+.music-option input { width:24px; height:24px; }
+@media(max-width:420px) { .top-bar { padding:10px 8px; } .progress-dots { gap:5px; } .progress-dot { width:12px; height:12px; } }
 
 .progress-dots { display:flex; gap:8px; align-items:center; }
 .progress-dot {
@@ -1120,7 +1126,10 @@ html, body {
   <div class="top-bar">
     <button class="back-btn" onclick="goHome()" aria-label="返回">🏠</button>
     <div class="progress-dots" id="progress-dots"></div>
-    <button class="volume-btn" id="volume-btn" onclick="toggleMute()" aria-label="声音">🔊</button>
+    <div class="audio-buttons">
+      <button type="button" class="music-btn" id="music-btn" onclick="BackgroundMusic.toggle()" aria-label="关闭背景音乐" aria-pressed="true">♫</button>
+      <button class="volume-btn" id="volume-btn" onclick="toggleMute()" aria-label="声音">🔊</button>
+    </div>
   </div>
   <div class="step-title-area">
     <div class="step-number" id="step-number-label"></div>
@@ -1191,6 +1200,10 @@ html, body {
     <div class="research-field">
       <label>📅 日期 (Date)</label>
       <input type="date" id="research-date">
+    </div>
+    <div class="research-field">
+      <label class="music-option" for="research-music"><input type="checkbox" id="research-music">播放木琴背景音乐</label>
+      <div style="font-size:13px;">研究训练默认关闭，按本次课程安排选择。</div>
     </div>
     <button class="research-start-btn" id="research-start-btn" disabled onclick="startResearchSession()">开始研究训练</button>
     <button class="records-btn clear" id="research-current-data-btn" disabled style="margin-top:12px;width:100%;" onclick="showDashboard(document.getElementById('research-child-id').value.trim())">📋 查看当前儿童数据</button>
@@ -1449,10 +1462,88 @@ const AnimationController = {
    AUDIO
    ================================================================ */
 function initAudio() {
-  if (state.audioCtx) return;
-  try { state.audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
-  catch(e) { state.audioCtx = null; }
+  if (!state.audioCtx) {
+    try { state.audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+    catch(e) { state.audioCtx = null; }
+  }
+  if (state.audioCtx) {
+    state.audioCtx.resume?.().catch?.(() => {});
+    BackgroundMusic.prepare();
+  }
 }
+
+// iPad ignores media-element volume, so music uses a Web Audio gain node.
+const BackgroundMusic = {
+  enabled: true,
+  buffer: null,
+  source: null,
+  gain: null,
+  loading: null,
+  speaking: false,
+
+  prepare() {
+    const ctx = state.audioCtx;
+    if (!ctx || this.loading) return;
+    this.loading = fetch('music/xylophone.wav')
+      .then(response => { if (!response.ok) throw new Error('Music unavailable'); return response.arrayBuffer(); })
+      .then(data => ctx.decodeAudioData(data))
+      .then(buffer => { this.buffer = buffer; this.sync(); })
+      .catch(() => { this.loading = null; });
+  },
+
+  updateButton() {
+    const button = document.getElementById('music-btn');
+    if (!button) return;
+    button.textContent = this.enabled ? '♫' : '♫ 关';
+    button.setAttribute('aria-pressed', String(this.enabled));
+    button.setAttribute('aria-label', this.enabled ? '关闭背景音乐' : '开启背景音乐');
+  },
+
+  sync() {
+    const ctx = state.audioCtx;
+    this.updateButton();
+    if (!this.enabled || state.muted || state.currentLevel < 0 || document.hidden) {
+      this.stop();
+      return;
+    }
+    if (!ctx || !this.buffer || this.source) return;
+    try {
+      this.gain = ctx.createGain();
+      this.gain.gain.value = this.speaking ? 0.018 : 0.12;
+      this.gain.connect(ctx.destination);
+      this.source = ctx.createBufferSource();
+      this.source.buffer = this.buffer;
+      this.source.loop = true;
+      this.source.connect(this.gain);
+      this.source.start();
+    } catch(e) { this.stop(); }
+  },
+
+  stop() {
+    if (this.source) {
+      try { this.source.stop(); } catch(e) {}
+      this.source.disconnect();
+      this.source = null;
+    }
+    if (this.gain) { this.gain.disconnect(); this.gain = null; }
+  },
+
+  duck(speaking) {
+    this.speaking = speaking;
+    if (!this.gain) return;
+    const now = state.audioCtx.currentTime;
+    this.gain.gain.cancelScheduledValues(now);
+    this.gain.gain.setTargetAtTime(speaking ? 0.018 : 0.12, now, 0.06);
+  },
+
+  toggle() {
+    this.enabled = !this.enabled;
+    initAudio();
+    this.sync();
+    if (UnifiedDataManager.active) UnifiedDataManager.logEvent('background_music_change', { backgroundMusic: this.enabled ? 'xylophone' : 'off' });
+  }
+};
+document.addEventListener('visibilitychange', () => BackgroundMusic.sync());
 
 function playTone(freq, dur, type, vol) {
   type=type||'sine'; vol=vol||0.12;
@@ -1526,20 +1617,31 @@ let currentAudio = null;
 function speak(text, onEnd) {
   if (state.muted) { if(onEnd) onEnd(); return; }
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  BackgroundMusic.duck(false);
 
   const file = VOICE_MAP[text];
   if (!file) { if (onEnd) onEnd(); return; }
   const audio = new Audio(file);
   currentAudio = audio;
-  audio.onended = () => { currentAudio = null; if (onEnd) onEnd(); };
-  audio.onerror = () => { currentAudio = null; if (onEnd) onEnd(); };
-  audio.play().catch(() => { currentAudio = null; if (onEnd) onEnd(); });
+  // Late callbacks from interrupted speech must not restore music over a newer voice.
+  const finish = () => {
+    if (currentAudio !== audio) return;
+    currentAudio = null;
+    BackgroundMusic.duck(false);
+    if (onEnd) onEnd();
+  };
+  BackgroundMusic.duck(true);
+  audio.onended = finish;
+  audio.onerror = finish;
+  audio.play().catch(finish);
 }
 
 function toggleMute() {
   state.muted = !state.muted;
   document.getElementById('volume-btn').textContent = state.muted?'🔇':'🔊';
   if (state.muted && currentAudio) { currentAudio.pause(); currentAudio = null; }
+  BackgroundMusic.duck(false);
+  BackgroundMusic.sync();
 }
 
 function replayVoice() {
@@ -1556,6 +1658,8 @@ function showScreen(id) {
   const el=document.getElementById(id); if(el) el.classList.add('active');
 }
 function goHome() {
+  BackgroundMusic.stop();
+  BackgroundMusic.duck(false);
   clearSceneTimers();
   if (state.stepAbortController) { state.stepAbortController.abort(); state.stepAbortController = null; }
   AnimationController.clear();
@@ -1568,6 +1672,8 @@ function startLevel(idx) {
   AnimationController.clear();
   initAudio();
   state.currentLevel=idx; state.currentStep=0; state.stepCompleted=new Set();
+  BackgroundMusic.enabled = ResearchMode.active ? document.getElementById('research-music')?.checked === true : true;
+  BackgroundMusic.sync();
   SkillSceneState.reset();
   showScreen('game-screen'); renderProgressDots(); loadStep(0);
 }
@@ -3038,6 +3144,8 @@ const ResearchMode = {
 
   // Open setup panel (hidden entry via long-press on title)
   openSetup() {
+    const musicOption = document.getElementById('research-music');
+    if (musicOption) musicOption.checked = false;
     const overlay = document.getElementById('research-overlay');
     if (overlay) overlay.classList.add('active');
     const dateInput = document.getElementById('research-date');
@@ -3114,6 +3222,7 @@ const ResearchMode = {
     // Store research metadata on UnifiedDataManager for this session
     UnifiedDataManager._researchMeta = {
       researchMode: true,
+      backgroundMusic: document.getElementById('research-music')?.checked ? 'xylophone' : 'off',
       childId: this.childId,
       participantID: this.childId,
       experimentalPhase: this.phase,

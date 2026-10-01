@@ -65,6 +65,7 @@ function createElement() {
     dataset: {},
     style: { setProperty() {}, getPropertyValue() { return ''; } },
     addEventListener() {},
+    setAttribute() {},
     appendChild() {},
     click() {},
     remove() {},

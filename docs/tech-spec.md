@@ -14,6 +14,8 @@
 
 ## 文件结构
 
+背景音乐使用本地 `music/xylophone.wav`，通过 Web Audio 解码为 AudioBuffer 循环播放并经 GainNode 控制音量，兼容 iPad 对 HTMLMediaElement.volume 的限制。音频首次真实点击后加载，加载或解码失败不阻断训练；同时只保留一个音乐声源，语音播放时压低增益，退出和后台时停止。素材由 `scripts/generate-xylophone.py` 以 Python 标准库可重复生成。
+
 ```
 生活技能 数字化严肃游戏/
 ├── index.html

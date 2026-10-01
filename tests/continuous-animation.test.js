@@ -21,6 +21,7 @@ function createElement() {
       getPropertyValue(name) { return styleValues.get(name) || ''; }
     },
     dataset: {},
+    setAttribute() {},
     isConnected: true,
     addEventListener(type, handler, options = {}) {
       const entries = listeners.get(type) || [];
