@@ -66,7 +66,11 @@ test('replaying a preloaded voice starts at the beginning and ignores its old re
   const speech=html.slice(html.indexOf('let currentAudio ='),html.indexOf('function toggleMute('));
   vm.runInNewContext(`const VOICE_MAP={one:'one.wav'};${speech};globalThis.speak=speak;`,context);
   context.speak('one');players[0].currentTime=2;
+  assert.equal(players[0].playbackRate,1.2,'instruction plays twenty percent faster');
+  assert.equal(players[0].preservesPitch,true,'faster playback retains the female voice pitch');
+  players[0].playbackRate=1;
   context.speak('one');
+  assert.equal(players[0].playbackRate,1.2,'replay also restores the agreed speech speed');
   assert.equal(players.length,1,'reuse loaded recording rather than create a new player');
   assert.equal(players[0].currentTime,0);
   rejections[0]();

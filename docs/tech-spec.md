@@ -39,6 +39,8 @@
 
 ## 代码结构
 
+2026-10-01 更新：洗衣第 7 步复用 `laundry-rub-shirt` 大衣物布局但不创建污渍层；双手及中央手势目标由该步 CSS 定位，完成变换保留 `translateX(-50%)`。每次 `speak()`（含缓存重播）设置 `playbackRate=1.2`、`preservesPitch=true` 与 Safari 兼容音高属性，仅影响固定录音播放，不调整研究等待计时或数据字段。
+
 `LEVELS` 定义三个任务：`laundry`、`fold-clothes`、`fold-umbrella`，各七步。`STEP_STATE_KEYS` 和 `SkillSceneState` 保存同一关内的已完成视觉状态；`StepProgress` 支持默认一次动作、洗衣正反面各 3 次揉洗及六片伞布逐次整理。`buildLaundryScene()`、`buildClothesFoldingScene()` 和 `buildUmbrellaFoldingScene()` 生成三关内容，`buildScene()` 只分派给这三种场景；`loadStep()` 保持背景稳定并切换步骤层。
 
 `attachGestureListeners()` 为通用入口，洗衣、折衣和折伞使用各自的最小手势处理器。拖放要求超过 35% 的物品重叠；滑动有效距离为 40px，且须满足该步骤的正确方向。双手拧衣服还须向目标中心移动；伞的六片整理仅接受当前高亮片上由上至下的有效滑动；卷伞在正确方向滑动后由动画完成约 1.5 圈。全部触控目标不小于 44×44pt。

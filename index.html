@@ -282,6 +282,9 @@ html, body {
 .laundry-detergent { left:9%; top:32%; width:110px; height:145px; }
 .laundry-hand { left:44%; top:48%; width:88px; height:88px; z-index:9; }
 .laundry-partner-hand { left:66%; top:48%; width:88px; height:88px; z-index:8; pointer-events:none; }
+.step-stage[data-step="7"] .laundry-hand { left:calc(50% - 135px); top:48%; width:100px; height:110px; }
+.step-stage[data-step="7"] .laundry-partner-hand { left:calc(50% + 30px); top:48%; width:100px; height:110px; }
+.step-stage[data-step="7"] [data-gesture-target] { left:calc(50% - 22px); top:48%; width:44px; height:110px; }
 .laundry-hand svg, .laundry-partner-hand svg { width:100%; height:100%; }
 .laundry-water-target { left:calc(60% - 15px); top:calc(12% + 94px); width:80px; height:44%; z-index:3; }
 .laundry-water { position:absolute; left:calc(60% + 22px); top:calc(12% + 90px); width:25px; height:44%; border-radius:0 0 14px 14px; background:repeating-linear-gradient(0deg,#DFF8FFE0 0 5px,#79D2EBD0 8px,#A7E7F4B0 24px,#79D2EBD0 36px); background-size:100% 42px; border-left:2px solid #EDFCFFB0; border-right:2px solid #52AED680; box-sizing:border-box; pointer-events:none; opacity:0; z-index:7; }
@@ -303,7 +306,7 @@ html, body {
 .laundry-rinsing .laundry-bubbles { animation:laundryFoamOut 2s linear forwards; }
 .laundry-complete[data-step="6"] .laundry-bubbles { opacity:0; }
 .laundry-auto-flip .laundry-shirt:not(.laundry-rub-shirt) img { animation:laundryFlip .9s ease-in-out; }
-.laundry-complete[data-step="7"] .laundry-shirt { transform:scaleX(.78) rotate(-6deg); transition:transform .6s; }
+.laundry-complete[data-step="7"] .laundry-shirt { transform:translateX(-50%) scaleX(.78) rotate(-6deg); transition:transform .6s; }
 .laundry-sparkle { position:absolute; top:34%; left:51%; color:#FFC83D; font-size:44px; opacity:0; z-index:10; pointer-events:none; }
 .laundry-complete[data-step="7"] .laundry-sparkle { opacity:1; }
 .laundry-drops { position:absolute; top:74%; left:51%; color:#66BFE4; font-size:30px; pointer-events:none; }
@@ -1708,6 +1711,9 @@ function speak(text, onEnd) {
   if (!audio) { if (onEnd) onEnd(); return; }
   const playbackId = voicePlaybackId;
   audio.currentTime = 0;
+  audio.playbackRate = 1.2;
+  audio.preservesPitch = true;
+  audio.webkitPreservesPitch = true;
   currentAudio = audio;
   // Reused players can reject an interrupted play after the next replay has started.
   const finish = () => {
@@ -1932,13 +1938,13 @@ function buildLaundryScene(step) {
   const shirt = image(clean || rubbing ? 'shirt-clean' : 'shirt-dirty', '长袖上衣') + stains;
   const isDrag = sid === 1 || sid === 6;
   let objects = `<div class="laundry-object laundry-basin ${sid === 1 ? 'drag-target' : ''}" ${sid === 1 ? 'data-target="basin"' : 'aria-hidden="true"'}>${image('wash-basin')}</div>`;
-  objects += `<div class="laundry-shirt ${rubbing ? 'laundry-rub-shirt' : ''} ${isDrag ? 'laundry-shirt-start draggable-item interactive-target' : ''}" ${isDrag ? 'data-item="shirt"' : 'aria-hidden="true"'}>${shirt}</div>`;
+  objects += `<div class="laundry-shirt ${rubbing || sid === 7 ? 'laundry-rub-shirt' : ''} ${isDrag ? 'laundry-shirt-start draggable-item interactive-target' : ''}" ${isDrag ? 'data-item="shirt"' : 'aria-hidden="true"'}>${shirt}</div>`;
   objects += `<div class="laundry-object laundry-faucet ${sid === 2 ? 'interactive-target' : ''}" ${sid === 2 ? 'data-item="faucet"' : 'aria-hidden="true"'}>${faucet}</div>`;
   if (sid === 3) objects += `<div class="laundry-object laundry-detergent interactive-target" data-item="detergent">${image('detergent','洗衣液')}</div>`;
   objects += `<div class="laundry-water ${sid === 6 ? 'laundry-rinse-stream' : ''}" aria-hidden="true"></div><div class="laundry-bubbles" aria-hidden="true"></div>`;
   if (sid === 4 || sid === 5 || sid === 7) objects += `<div class="laundry-object laundry-hand interactive-target" data-item="hand">${hand}</div>`;
   if (sid === 6) objects += '<div class="laundry-object laundry-water-target drag-target" data-target="water" aria-hidden="true"></div>';
-  if (sid === 7) objects += `<div class="laundry-object laundry-partner-hand" aria-hidden="true">${hand}</div><div class="laundry-object" data-gesture-target style="left:63%;top:45%;width:44px;height:88px;pointer-events:none;" aria-hidden="true"></div><div class="laundry-drops" aria-hidden="true">💧 💧</div><div class="laundry-sparkle" aria-hidden="true">✦ ✦</div>`;
+  if (sid === 7) objects += `<div class="laundry-object laundry-partner-hand" aria-hidden="true">${hand}</div><div class="laundry-object" data-gesture-target style="pointer-events:none;" aria-hidden="true"></div><div class="laundry-drops" aria-hidden="true">💧 💧</div><div class="laundry-sparkle" aria-hidden="true">✦ ✦</div>`;
   const demoClass = isDrag ? 'laundry-shirt laundry-shirt-start' : sid === 2 ? 'laundry-faucet' : sid === 3 ? 'laundry-detergent' : 'laundry-hand';
   const demo = `<div class="demo-element demo-laundry-${sid} demo-ghost laundry-object ${demoClass}" aria-hidden="true">${isDrag ? shirt : hand}</div>`;
   const labels = ['拖进水盆 ↓','点一下水龙头','按一下洗衣液','← 揉一揉 →','← 再揉一揉 →','放在水流下，等一等','向中间轻轻拧 →'];

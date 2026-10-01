@@ -25,6 +25,15 @@ const TRANSPARENT_ITEM_ASSETS = [
 const REQUIRED_ASSETS = [...BACKGROUND_ASSETS, ...TRANSPARENT_ITEM_ASSETS];
 const HOME_MAP_ASSET = 'assets/home/home-skills-island.png';
 
+test('laundry wringing uses the large clean shirt without rubbing stains', () => {
+  const {api}=loadRuntime();
+  api.SkillSceneState.complete('laundry',5);
+  const scene=api.buildScene('laundry',api.LEVELS[0].steps[6]);
+  assert.match(scene,/laundry-shirt laundry-rub-shirt/);
+  assert.match(scene,/shirt-clean\.png/);
+  assert.doesNotMatch(scene,/class="laundry-stains"/);
+});
+
 function imageProperties(file) {
   const output = execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', '-g', 'hasAlpha', file], { encoding: 'utf8' });
   return Object.fromEntries(
