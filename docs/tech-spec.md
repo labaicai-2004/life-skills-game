@@ -39,6 +39,8 @@
 
 ## 代码结构
 
+折叠伞清晰度更新：`umbrella-core` 为七步共用原生 SVG，旧 PNG 图层不再显示但暂保留历史资源。层次为伞杆 1、伞布 3、卷绕纹理 4、伞帽 5、扣带 6、手指及真实操作层 7–10。`umbrellaRoll` 仅沿中心缩窄与轻微偏斜，不再 rotateY；纹理按三次半圈视觉周期移动，保留 1500ms 完成时机。桌面整体 1.25 倍放大时，指针位移除以显示比例再更新本地坐标，成功方向仍按实际 40px、35% 判断。缩杆由 `--umbrella-shorten` 跟随真实向上拖动且限制为 0–54px，握持手的横向偏移抵消，取消时恢复。理布真实手层只在接触时显示，不改六片进度及研究事件。
+
 2026-10-01 更新：洗衣第 7 步复用 `laundry-rub-shirt` 大衣物布局但不创建污渍层；双手及中央手势目标由该步 CSS 定位，完成变换保留 `translateX(-50%)`。每次 `speak()`（含缓存重播）设置 `playbackRate=1.2`、`preservesPitch=true` 与 Safari 兼容音高属性，仅影响固定录音播放，不调整研究等待计时或数据字段。
 
 `LEVELS` 定义三个任务：`laundry`、`fold-clothes`、`fold-umbrella`，各七步。`STEP_STATE_KEYS` 和 `SkillSceneState` 保存同一关内的已完成视觉状态；`StepProgress` 支持默认一次动作、洗衣正反面各 3 次揉洗及六片伞布逐次整理。`buildLaundryScene()`、`buildClothesFoldingScene()` 和 `buildUmbrellaFoldingScene()` 生成三关内容，`buildScene()` 只分派给这三种场景；`loadStep()` 保持背景稳定并切换步骤层。

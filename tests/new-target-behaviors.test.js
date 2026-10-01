@@ -440,6 +440,20 @@ test('umbrella shaft scene shows a passive upper stabilizing hand and one moving
   assert.equal((scene.match(/interactive-target/g)||[]).length,1);
 });
 
+for(const kind of ['mouse','touch']) {
+  test(`umbrella ${kind} shaft preview stays on its axis and cancellation restores its length`,()=>{
+    const r=umbrellaGesture(2,kind),values={};
+    r.stage.style.setProperty=(key,value)=>{values[key]=value;};
+    r.item.firstElementChild={style:{}};
+    r.dispatch('start',180,280);r.dispatch('move',230,230);
+    assert.equal(values['--umbrella-shorten'],'50px');
+    assert.equal(r.item.firstElementChild.style.transform,'translate(-50px,0px)');
+    r.dispatch('cancel',230,230);
+    assert.equal(values['--umbrella-shorten'],'0px');
+    assert.equal(r.complete(),false);
+  });
+}
+
 for (const kind of ['mouse','touch']) {
   test(`umbrella ${kind} follows real visible panel rectangles and rejects blank space`, () => {
     const r=umbrellaGesture(4,kind),panels=umbrellaPanelMarkup(r.api);
