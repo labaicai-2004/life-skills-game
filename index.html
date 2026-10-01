@@ -263,6 +263,18 @@ html, body {
 .laundry-basin { left:35%; top:36%; width:48%; height:55%; }
 .laundry-shirt { position:absolute; left:46%; top:39%; width:26%; height:40%; z-index:5; }
 .laundry-shirt-start { left:5%; top:18%; }
+.laundry-rub-shirt { left:50%; top:20%; width:72%; height:64%; max-width:440px; max-height:360px; transform:translateX(-50%); }
+.laundry-stains { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.laundry-stain { opacity:1; transition:opacity .55s ease; }
+.laundry-stain.washed { opacity:0; }
+.step-stage[data-step="4"] .laundry-hand,.step-stage[data-step="5"] .laundry-hand { left:calc(50% - 150px); top:50%; width:110px; height:120px; }
+.step-stage[data-step="4"] .laundry-bubbles,.step-stage[data-step="5"] .laundry-bubbles { opacity:0; }
+.step-stage[data-step="4"] .laundry-faucet,.step-stage[data-step="5"] .laundry-faucet { opacity:.45; }
+.laundry-auto-flip .laundry-rub-shirt { animation:laundryTurnBack .9s ease-in-out; }
+.laundry-auto-flip .laundry-stains { animation:laundryBackReveal .9s ease-in-out; }
+@keyframes laundryTurnBack { 0% { transform:translateX(-50%) rotateY(0); } 50% { transform:translateX(-50%) rotateY(90deg); } 100% { transform:translateX(-50%) rotateY(0); } }
+@keyframes laundryBackReveal { 0%,49% { opacity:0; } 60%,100% { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .laundry-stain { transition:none; } .laundry-auto-flip .laundry-rub-shirt,.laundry-auto-flip .laundry-stains { animation:none; } }
 .laundry-faucet { left:calc(60% - 64px); top:12%; width:128px; height:112px; z-index:6; filter:drop-shadow(0 5px 3px #624C3D35); }
 .laundry-faucet svg { width:100%; height:100%; pointer-events:none; }
 .faucet-handle { transform-box:fill-box; transform-origin:center; transition:transform .3s ease; }
@@ -290,7 +302,7 @@ html, body {
 .laundry-soaping .laundry-bubbles { animation:laundryFoamIn 1.2s ease-out forwards; }
 .laundry-rinsing .laundry-bubbles { animation:laundryFoamOut 2s linear forwards; }
 .laundry-complete[data-step="6"] .laundry-bubbles { opacity:0; }
-.laundry-auto-flip .laundry-shirt img { animation:laundryFlip .9s ease-in-out; }
+.laundry-auto-flip .laundry-shirt:not(.laundry-rub-shirt) img { animation:laundryFlip .9s ease-in-out; }
 .laundry-complete[data-step="7"] .laundry-shirt { transform:scaleX(.78) rotate(-6deg); transition:transform .6s; }
 .laundry-sparkle { position:absolute; top:34%; left:51%; color:#FFC83D; font-size:44px; opacity:0; z-index:10; pointer-events:none; }
 .laundry-complete[data-step="7"] .laundry-sparkle { opacity:1; }
@@ -1297,6 +1309,10 @@ function svgHand(w, h) {
   return `<svg width="${w}" height="${h}" viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#624C3D" stroke-width="3"/></svg>`;
 }
 
+function laundryHand() {
+  return `<svg viewBox="0 0 120 132" aria-hidden="true"><path d="M44 124L40 104Q31 96 24 86L9 68Q4 59 12 54Q19 51 26 59L38 72L24 38Q20 29 28 26Q35 23 39 31L51 57L43 17Q42 8 50 7Q59 5 61 16L67 54L69 12Q70 3 78 5Q86 6 85 16L83 57L93 28Q98 19 105 23Q111 26 107 35L98 74Q104 100 93 111L91 125Z" fill="#F2C09C" stroke="#80533D" stroke-width="3" stroke-linejoin="round"/><path d="M43 80Q57 70 76 75M51 94Q65 101 82 91M50 113H83" fill="none" stroke="#C78E69" stroke-width="2" stroke-linecap="round"/><path d="M29 37L35 35M48 27L55 26M73 26L80 26M95 39L102 42M16 64L21 60" fill="none" stroke="#C78E69" stroke-width="2" stroke-linecap="round"/><path d="M47 18L55 17M73 16L80 17M29 32L34 31M99 29L103 31M11 59L15 56" stroke="#FFE5D0" stroke-width="4" stroke-linecap="round"/></svg>`;
+}
+
 /* ================================================================
    GAME DATA
    ================================================================ */
@@ -1906,13 +1922,17 @@ function buildLaundryPersistentState(stepId) {
 function buildLaundryScene(step) {
   const sid = step.id;
   const image = (file, alt = '') => `<img src="assets/laundry/${file}.png" alt="${alt}" draggable="false">`;
-  const hand = `<svg viewBox="0 0 88 88" aria-hidden="true"><path d="M22 46V24Q22 16 29 18V12Q32 5 38 12V8Q46 2 49 12V16Q56 9 60 19V39Q73 30 77 39Q81 45 69 58L63 78H29L19 62Q6 47 11 41Q16 37 22 46Z" fill="#F2C09C" stroke="#A77454" stroke-width="3"/></svg>`;
+  const hand = laundryHand();
   const faucet = `<svg viewBox="0 0 128 112" aria-hidden="true"><defs><linearGradient id="faucet-metal" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#88B5C2"/><stop offset=".45" stop-color="#E5F5F5"/><stop offset="1" stop-color="#94BCC9"/></linearGradient></defs><ellipse cx="32" cy="103" rx="26" ry="6" fill="#624C3D25"/><path d="M32 94V49Q32 35 47 35H76Q98 35 98 57V85" fill="none" stroke="#624C3D" stroke-width="28" stroke-linejoin="round"/><path d="M32 94V49Q32 35 47 35H76Q98 35 98 57V85" fill="none" stroke="url(#faucet-metal)" stroke-width="21" stroke-linejoin="round"/><path d="M28 90V50Q28 41 39 40H72" fill="none" stroke="#F3FFFF" stroke-width="4" stroke-linecap="round"/><rect x="10" y="93" width="44" height="12" rx="5" fill="#B7D3D7" stroke="#624C3D" stroke-width="3"/><path d="M32 35V23" stroke="#624C3D" stroke-width="9"/><g class="faucet-handle"><rect x="7" y="9" width="50" height="15" rx="7" fill="#E8B76A" stroke="#624C3D" stroke-width="3"/><path d="M16 14H46" stroke="#FFF2BF" stroke-width="3" stroke-linecap="round"/></g><ellipse class="faucet-outlet" cx="98" cy="86" rx="12" ry="5" fill="#56879B" stroke="#624C3D" stroke-width="3"/><ellipse cx="98" cy="86" rx="7" ry="2" fill="#C7EBF5"/></svg>`;
   const clean = SkillSceneState.has('laundry', 'backRubbed');
-  const shirt = image(clean ? 'shirt-clean' : 'shirt-dirty', '长袖上衣');
+  const rubbing = sid === 4 || sid === 5;
+  const faceClean = SkillSceneState.has('laundry',sid === 4 ? 'frontRubbed' : 'backRubbed');
+  const stainShape = '<path d="M-23 -9Q-16 -24 -5 -16Q7 -28 15 -13Q32 -8 20 5Q27 23 9 20Q-4 30 -13 15Q-30 17 -23 -9Z"/><circle cx="-29" cy="-20" r="4"/><circle cx="29" cy="12" r="3"/><circle cx="-18" cy="29" r="3"/>';
+  const stains = rubbing ? `<svg class="laundry-stains" viewBox="0 0 440 360" aria-hidden="true" fill="#A8794B" stroke="#815737" stroke-width="1.5"><g fill="#F1FDFF" stroke="none" opacity=".6"><circle cx="165" cy="312" r="11"/><circle cx="182" cy="316" r="7"/><circle cx="278" cy="312" r="12"/><circle cx="293" cy="315" r="6"/></g>${[[195,165],[290,215],[230,265]].map(([x,y],index)=>`<g class="laundry-stain${faceClean ? ' washed' : ''}" data-stain="${index}" transform="translate(${x} ${y})">${stainShape}</g>`).join('')}</svg>` : '';
+  const shirt = image(clean || rubbing ? 'shirt-clean' : 'shirt-dirty', '长袖上衣') + stains;
   const isDrag = sid === 1 || sid === 6;
   let objects = `<div class="laundry-object laundry-basin ${sid === 1 ? 'drag-target' : ''}" ${sid === 1 ? 'data-target="basin"' : 'aria-hidden="true"'}>${image('wash-basin')}</div>`;
-  objects += `<div class="laundry-shirt ${isDrag ? 'laundry-shirt-start draggable-item interactive-target' : ''}" ${isDrag ? 'data-item="shirt"' : 'aria-hidden="true"'}>${shirt}</div>`;
+  objects += `<div class="laundry-shirt ${rubbing ? 'laundry-rub-shirt' : ''} ${isDrag ? 'laundry-shirt-start draggable-item interactive-target' : ''}" ${isDrag ? 'data-item="shirt"' : 'aria-hidden="true"'}>${shirt}</div>`;
   objects += `<div class="laundry-object laundry-faucet ${sid === 2 ? 'interactive-target' : ''}" ${sid === 2 ? 'data-item="faucet"' : 'aria-hidden="true"'}>${faucet}</div>`;
   if (sid === 3) objects += `<div class="laundry-object laundry-detergent interactive-target" data-item="detergent">${image('detergent','洗衣液')}</div>`;
   objects += `<div class="laundry-water ${sid === 6 ? 'laundry-rinse-stream' : ''}" aria-hidden="true"></div><div class="laundry-bubbles" aria-hidden="true"></div>`;
@@ -2388,10 +2408,7 @@ function attachLaundryGesture(step, area, signal) {
       if (sid === 7) complete();
       else {
         advanceStepProgress(area);
-        if (StepProgress.current === StepProgress.goal) {
-          const shirt = stage?.querySelector('.laundry-shirt img');
-          if (shirt) shirt.src = 'assets/laundry/shirt-clean.png';
-        }
+        stage?.querySelectorAll('.laundry-stain').forEach((stain,index)=>stain.classList.toggle('washed',index < StepProgress.current));
       }
     } else handleStepWrong(area);
   };

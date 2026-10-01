@@ -157,6 +157,8 @@ function laundryGesture(stepId, kind = 'mouse') {
   const item = createElement();
   const target = createElement();
   const partner = createElement();
+  const stains = Array.from({length:3},createElement);
+  stage.querySelectorAll = selector => selector === '.laundry-stain' ? stains : [];
   item.style.left = '0px'; item.style.top = '0px';
   item.getBoundingClientRect = () => {
     const left = parseFloat(item.style.left) || 0, top = parseFloat(item.style.top) || 0;
@@ -177,7 +179,7 @@ function laundryGesture(stepId, kind = 'mouse') {
     const type = kind === 'mouse' ? { start: 'mousedown', move: 'mousemove', end: 'mouseup', cancel: 'mouseleave' }[phase] : { start: 'touchstart', move: 'touchmove', end: 'touchend', cancel: 'touchcancel' }[phase];
     listeners.get(type)?.({ clientX: x, clientY: y, touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }], preventDefault() {} });
   };
-  return { ...runtime, item, partner, stage, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
+  return { ...runtime, item, partner, stage, stains, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
 }
 
 function foldingGesture(stepId, kind = 'mouse', width = 750, height = 380) {
@@ -616,10 +618,36 @@ for (const kind of ['mouse', 'touch']) {
 test('laundry back remains dirty until its own rubbing is completed', () => {
   const { api } = loadRuntime();
   api.SkillSceneState.complete('laundry', 4);
-  assert.match(api.buildScene('laundry', api.LEVELS[0].steps[4]), /shirt-dirty\.png/);
+  const back=api.buildScene('laundry', api.LEVELS[0].steps[4]);
+  assert.equal([...back.matchAll(/data-stain="\d"/g)].length,3);
+  assert.doesNotMatch(back,/laundry-stain washed/);
   api.SkillSceneState.complete('laundry', 5);
+  const finished=api.buildScene('laundry', api.LEVELS[0].steps[4]);
+  assert.equal([...finished.matchAll(/laundry-stain washed/g)].length,3);
   assert.match(api.buildScene('laundry', api.LEVELS[0].steps[5]), /shirt-clean\.png/);
 });
+
+for(const kind of ['mouse','touch']) for(const stepId of [4,5]) {
+  test(`laundry step ${stepId} ${kind} removes one stain per valid rub and none on cancellation`,()=>{
+    const r=laundryGesture(stepId,kind);if(stepId===5)r.advance(900);
+    r.dispatch('start',50,50);r.dispatch('move',110,50);r.dispatch('cancel',110,50);
+    assert.equal(r.stains.filter(s=>s.classList.contains('washed')).length,0);
+    r.dispatch('start',50,50);r.dispatch('move',50,110);r.dispatch('end',50,110);
+    assert.equal(r.stains.filter(s=>s.classList.contains('washed')).length,0);
+    for(let count=1;count<=3;count++){
+      r.dispatch('start',50,50);r.dispatch('move',110,50);r.dispatch('end',110,50);
+      assert.equal(r.stains.filter(s=>s.classList.contains('washed')).length,count);
+      assert.equal(r.complete(),count===3);
+      if(count===1){
+        r.dispatch('start',50,50);r.dispatch('move',110,50);r.dispatch('cancel',110,50);
+        assert.equal(r.stains.filter(s=>s.classList.contains('washed')).length,1);
+        assert.equal(r.api.StepProgress.current,1);
+      }
+    }
+    r.dispatch('start',50,50);r.dispatch('move',110,50);r.dispatch('end',110,50);
+    assert.equal(r.stains.filter(s=>s.classList.contains('washed')).length,3);
+  });
+}
 
 for (const kind of ['mouse', 'touch']) {
   test(`laundry ${kind} drag accepts 35 percent basin overlap and rejects less`, () => {
