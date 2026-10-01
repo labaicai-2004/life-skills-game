@@ -380,30 +380,69 @@ html, body {
 @keyframes umbrellaTurn { 0% { transform:rotateY(0deg); } 50% { transform:rotateY(90deg); } 100% { transform:rotateY(180deg); } }
 @keyframes umbrellaRoll { 0% { transform:scaleX(.25) rotateY(0deg); } 100% { transform:scaleX(.19) rotateY(540deg); } }
 .folding-table { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
-.folding-garment { position:absolute; left:50%; top:12%; width:300px; height:270px; transform:translateX(-50%); z-index:5; }
+.folding-garment { position:absolute; left:50%; top:40%; width:300px; height:270px; transform:translateX(-50%); z-index:5; perspective:650px; }
 .folding-garment img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
-.folding-base { transition:opacity .35s ease; }
-.folding-layer { position:absolute; inset:0; opacity:0; pointer-events:none; transform-origin:center; }
-.state-fold-smooth ~ .folding-garment .folding-smooth { opacity:.22; filter:brightness(1.18); }
-.state-fold-left-sleeve ~ .folding-garment .folding-left-sleeve { opacity:1; clip-path:polygon(0 18%,38% 18%,48% 72%,12% 72%); transform:translateX(74px) rotate(8deg); }
-.state-fold-right-sleeve ~ .folding-garment .folding-right-sleeve { opacity:1; clip-path:polygon(62% 18%,100% 18%,88% 72%,52% 72%); transform:translateX(-74px) rotate(-8deg); }
-.state-fold-left-body ~ .folding-garment .folding-left-body { opacity:1; clip-path:polygon(18% 36%,50% 36%,50% 98%,18% 98%); transform:translateX(63px); }
-.state-fold-right-body ~ .folding-garment .folding-right-body { opacity:1; clip-path:polygon(50% 36%,82% 36%,82% 98%,50% 98%); transform:translateX(-63px); }
-.state-fold-hem-up ~ .folding-garment .folding-final { opacity:1; }
-.state-fold-hem-up ~ .folding-garment .folding-base { opacity:0; }
-.state-fold-left-sleeve ~ .folding-garment { clip-path:inset(0 0% 0 24%); }
-.state-fold-right-sleeve ~ .folding-garment { clip-path:inset(0 24% 0 24%); }
-.state-fold-left-body ~ .folding-garment { clip-path:inset(0 24% 0 42%); }
-.state-fold-right-body ~ .folding-garment { clip-path:inset(0 42% 0 42%); }
-.state-fold-hem-up ~ .folding-garment { clip-path:none; }
-.state-fold-hem-up ~ .folding-garment .folding-layer:not(.folding-final) { opacity:0; }
+.interaction-area:has(.step-stage[data-level="fold-clothes"]) { min-height:410px; }
+.folding-garment .folding-finished { position:absolute; left:75px; top:0; width:150px; height:180px; opacity:0; filter:drop-shadow(0 5px 3px #624C3D45); }
+.state-fold-hem-up ~ .folding-garment .folding-finished { opacity:1; transition:opacity .3s ease .85s; }
+.step-stage .state-fold-hem-up ~ .folding-garment > :not(.folding-finished) { opacity:0; transition:opacity .3s ease .85s,transform .85s cubic-bezier(.2,.65,.25,1); }
+.step-stage[data-level="fold-clothes"] { --fold-left-sleeve:0; --fold-right-sleeve:0; --fold-left-body:0; --fold-right-body:0; --fold-hem-up:0; --fold-smooth:0; }
+.folding-cloth,.folding-upper,.folding-hem { position:absolute; inset:0; width:300px; height:270px; transform-style:preserve-3d; pointer-events:none; }
+.folding-cloth { perspective:650px; }
+.folding-center { position:absolute; left:125px; top:0; width:50px; height:270px; }
+.folding-left-body,.folding-right-body { position:absolute; top:0; width:50px; height:270px; transform-style:preserve-3d; }
+.folding-left-body { left:75px; transform-origin:100% 50%; transform:rotateY(calc(var(--fold-left-body) * -180deg)); z-index:2; }
+.folding-right-body { left:175px; transform-origin:0% 50%; transform:rotateY(calc(var(--fold-right-body) * 180deg)); z-index:3; }
+.folding-left-sleeve,.folding-right-sleeve { position:absolute; top:0; width:75px; height:270px; }
+.folding-left-sleeve { left:-75px; transform-origin:100% 50%; transform:rotateY(calc(var(--fold-left-sleeve) * -180deg)); }
+.folding-right-sleeve { left:50px; transform-origin:0% 50%; transform:rotateY(calc(var(--fold-right-sleeve) * 180deg)); }
+.folding-texture { position:absolute; inset:0; overflow:hidden; }
+.folding-texture img { position:absolute; top:0; width:300px; height:270px; max-width:none; }
+.folding-center > .folding-texture img { left:-125px; }
+.folding-left-body > .folding-texture img { left:-75px; }
+.folding-right-body > .folding-texture img { left:-175px; }
+.folding-left-sleeve > .folding-texture img { left:0; }
+.folding-right-sleeve > .folding-texture img { left:-225px; }
+.folding-upper { filter:drop-shadow(0 5px 3px #624C3D35); }
+.folding-left-sleeve > .folding-texture { filter:brightness(calc(1 - var(--fold-left-sleeve) * .1)); }
+.folding-right-sleeve > .folding-texture { filter:brightness(calc(1 - var(--fold-right-sleeve) * .08)); }
+.folding-left-body > .folding-texture { filter:brightness(calc(1 - var(--fold-left-body) * .07)); }
+.folding-right-body > .folding-texture { filter:brightness(calc(1 - var(--fold-right-body) * .05)); }
+.folding-hem { opacity:0; clip-path:inset(135px 0 0 0); transform-origin:150px 135px; transform:translateZ(3px) rotateX(calc(var(--fold-hem-up) * -180deg)); filter:drop-shadow(0 3px 2px #624C3D55); }
+.step-stage[data-step="7"] .folding-upper { clip-path:inset(0 0 135px 0); }
+.step-stage[data-step="7"] .folding-hem { opacity:1; }
+.folding-creases { position:absolute; left:105px; top:100px; width:90px; height:90px; opacity:calc(.7 * (1 - var(--fold-smooth))); background:repeating-linear-gradient(165deg,transparent 0 21px,#A6453035 24px,transparent 28px); clip-path:polygon(5% 0,90% 12%,100% 90%,0 100%); pointer-events:none; }
+.state-fold-smooth ~ .folding-garment,.state-fold-smooth ~ .folding-demo-garment { --fold-smooth:1; }
+.state-fold-left-sleeve ~ .folding-garment,.state-fold-left-sleeve ~ .folding-demo-garment { --fold-left-sleeve:1; }
+.state-fold-right-sleeve ~ .folding-garment,.state-fold-right-sleeve ~ .folding-demo-garment { --fold-right-sleeve:1; }
+.state-fold-left-body ~ .folding-garment,.state-fold-left-body ~ .folding-demo-garment { --fold-left-body:1; }
+.state-fold-right-body ~ .folding-garment,.state-fold-right-body ~ .folding-demo-garment { --fold-right-body:1; }
+.state-fold-hem-up ~ .folding-garment { --fold-hem-up:1; }
+.fold-settling .folding-garment .folding-left-sleeve,.fold-settling .folding-garment .folding-right-sleeve,.fold-settling .folding-garment .folding-left-body,.fold-settling .folding-garment .folding-right-body,.fold-settling .folding-garment .folding-hem { transition:transform .85s cubic-bezier(.2,.65,.25,1); }
+.fold-settling .folding-creases { transition:opacity .7s ease; }
+.fold-placing .folding-upper { animation:foldPlaceLand .85s ease-out; }
+@keyframes foldPlaceLand { 0% { transform:translateY(-14px) rotateX(12deg); filter:drop-shadow(0 18px 9px #624C3D45); } 100% { transform:translateY(0) rotateX(0); filter:drop-shadow(0 5px 3px #624C3D35); } }
+.folding-demo-garment { position:absolute; left:50%; top:40%; width:300px; height:270px; transform:translateX(-50%); perspective:650px; z-index:6; opacity:0; pointer-events:none; }
+.folding-demo-garment img { object-fit:contain; pointer-events:none; }
+.step-stage.demo-running:not(.demo-paused) .folding-demo-garment { opacity:1; }
+.step-stage.demo-running:not(.demo-paused) .folding-garment { opacity:.18; }
+@keyframes foldPreviewLeft { 0%,20%,100% { transform:rotateY(0deg); } 60%,82% { transform:rotateY(-180deg); } }
+@keyframes foldPreviewRight { 0%,20%,100% { transform:rotateY(0deg); } 60%,82% { transform:rotateY(180deg); } }
+@keyframes foldPreviewHem { 0%,20%,100% { transform:translateZ(3px) rotateX(0deg); } 60%,82% { transform:translateZ(3px) rotateX(-180deg); } }
+@keyframes foldPreviewSmooth { 0%,20%,100% { opacity:.7; } 60%,82% { opacity:0; } }
+.step-stage.demo-running:not(.demo-paused)[data-step="1"] .folding-demo-garment .folding-upper { animation:foldPlaceLand 3s ease-in-out infinite; }
+.step-stage.demo-running:not(.demo-paused)[data-step="2"] .folding-demo-garment .folding-creases { animation:foldPreviewSmooth 3s ease-in-out infinite; }
+.step-stage.demo-running:not(.demo-paused)[data-step="3"] .folding-demo-garment .folding-left-sleeve,.step-stage.demo-running:not(.demo-paused)[data-step="5"] .folding-demo-garment .folding-left-body { animation:foldPreviewLeft 3s ease-in-out infinite; }
+.step-stage.demo-running:not(.demo-paused)[data-step="4"] .folding-demo-garment .folding-right-sleeve,.step-stage.demo-running:not(.demo-paused)[data-step="6"] .folding-demo-garment .folding-right-body { animation:foldPreviewRight 3s ease-in-out infinite; }
+.step-stage.demo-running:not(.demo-paused)[data-step="7"] .folding-demo-garment .folding-hem { animation:foldPreviewHem 3s ease-in-out infinite; }
+@media (prefers-reduced-motion:reduce) { .fold-settling .folding-garment * { transition:none!important; } .fold-placing .folding-upper { animation:none; } }
 .folding-touch { position:absolute; z-index:9; min-width:44px; min-height:44px; border-radius:20px; background:rgba(255,217,61,.14); border:3px solid rgba(255,217,61,.65); box-shadow:0 0 18px rgba(255,217,61,.68); }
 .folding-touch::after { content:''; position:absolute; inset:-7px; border:3px dashed rgba(255,217,61,.78); border-radius:24px; animation:targetPulse 1s ease-in-out infinite; }
 .folding-target { position:absolute; left:22%; top:10%; width:56%; height:78%; z-index:4; }
 .folding-target::after { inset:18% 20%; }
 .folding-guide { position:absolute; left:50%; top:3%; transform:translateX(-50%); font-size:28px; color:#8B5E35; background:#FFFFFFE8; border-radius:22px; padding:8px 18px; z-index:11; pointer-events:none; white-space:nowrap; }
-.demo-fold-clothes-1 { left:12%; top:20%; width:230px; height:205px; }
-.demo-fold-clothes-2, .demo-fold-clothes-3, .demo-fold-clothes-4, .demo-fold-clothes-5, .demo-fold-clothes-6, .demo-fold-clothes-7 { left:50%; top:16%; width:88px; height:88px; }
+.demo-fold-clothes-1 { display:none; }
+.demo-fold-clothes-2, .demo-fold-clothes-3, .demo-fold-clothes-4, .demo-fold-clothes-5, .demo-fold-clothes-6, .demo-fold-clothes-7 { left:50%; top:40%; width:88px; height:88px; }
 @keyframes demoFoldPlace { 0%,100% { transform:translate(0,0); opacity:0; } 20%,70% { transform:translate(170px,12px); opacity:.8; } }
 @keyframes demoFoldSmooth { 0%,100% { transform:translate(-50%,0); opacity:0; } 25%,75% { transform:translate(-50%,135px); opacity:.85; } }
 @keyframes demoFoldLeftSleeve { 0%,100% { transform:translate(-115px,75px); opacity:0; } 25%,75% { transform:translate(15px,75px); opacity:.85; } }
@@ -1325,13 +1364,13 @@ const STEP_STATE_KEYS = {
 };
 
 const FOLD_LAYOUT = {
-  1: { item:{left:'0%', top:'12%', width:'300px', height:'270px', transform:'none'}, target:{left:'30%', top:'10%', width:'40%', height:'78%'} },
-  2: { item:{left:'calc(50% - 46px)', top:'calc(12% + 60px)', width:'92px', height:'150px'}, target:{left:'40%', top:'28%', width:'20%', height:'38%'} },
-  3: { item:{left:'calc(50% - 140px)', top:'calc(12% + 130px)', width:'60px', height:'70px'}, target:{left:'calc(50% - 10px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
-  4: { item:{left:'calc(50% + 80px)', top:'calc(12% + 130px)', width:'60px', height:'70px'}, target:{left:'calc(50% - 50px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
-  5: { item:{left:'calc(50% - 75px)', top:'calc(12% + 120px)', width:'50px', height:'90px'}, target:{left:'calc(50% - 10px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
-  6: { item:{left:'calc(50% + 25px)', top:'calc(12% + 120px)', width:'50px', height:'90px'}, target:{left:'calc(50% - 60px)', top:'calc(12% + 120px)', width:'60px', height:'90px'} },
-  7: { item:{left:'calc(50% - 24px)', top:'calc(12% + 190px)', width:'48px', height:'54px'}, target:{left:'calc(50% - 24px)', top:'calc(12% + 80px)', width:'48px', height:'60px'} }
+  1: { item:{left:'0%', top:'40%', width:'300px', height:'270px', transform:'none'}, target:{left:'30%', top:'10%', width:'40%', height:'78%'} },
+  2: { item:{left:'calc(50% - 46px)', top:'calc(40% + 60px)', width:'92px', height:'150px'}, target:{left:'40%', top:'50%', width:'20%', height:'38%'} },
+  3: { item:{left:'calc(50% - 140px)', top:'calc(40% + 130px)', width:'60px', height:'70px'}, target:{left:'calc(50% - 10px)', top:'calc(40% + 120px)', width:'60px', height:'90px'} },
+  4: { item:{left:'calc(50% + 80px)', top:'calc(40% + 130px)', width:'60px', height:'70px'}, target:{left:'calc(50% - 50px)', top:'calc(40% + 120px)', width:'60px', height:'90px'} },
+  5: { item:{left:'calc(50% - 75px)', top:'calc(40% + 120px)', width:'50px', height:'90px'}, target:{left:'calc(50% - 10px)', top:'calc(40% + 120px)', width:'60px', height:'90px'} },
+  6: { item:{left:'calc(50% + 25px)', top:'calc(40% + 120px)', width:'50px', height:'90px'}, target:{left:'calc(50% - 60px)', top:'calc(40% + 120px)', width:'60px', height:'90px'} },
+  7: { item:{left:'calc(50% - 24px)', top:'calc(40% + 190px)', width:'48px', height:'54px'}, target:{left:'calc(50% - 24px)', top:'calc(40% + 80px)', width:'48px', height:'60px'} }
 };
 
 const SkillSceneState = {
@@ -1868,12 +1907,16 @@ function buildClothesFoldingScene(step) {
   const style = box => Object.entries(box).map(([key, value]) => `${key}:${value}`).join(';') + ';';
   const layout = FOLD_LAYOUT[sid];
   const labels = ['拖到桌子中间', '从上往下抚平', '把这边袖子折进来', '把另一边袖子折进来', '把衣服这边折到中间', '把另一边折到中间', '把衣服下面向上折'];
-  const garment = `<div class="folding-garment ${sid === 1 ? 'draggable-item interactive-target' : ''}" data-garment="whole-sweatshirt" data-fold-action="${actions[sid - 1]}" ${sid === 1 ? `data-item="shirt" style="${style(layout.item)}"` : 'aria-hidden="true"'}><img class="folding-base" src="assets/folding/sweatshirt-flat.png" draggable="false" alt="长袖卫衣"><img class="folding-layer folding-smooth" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-sleeve" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-left-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-right-body" src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""><img class="folding-layer folding-final" src="assets/folding/sweatshirt-folded.png" draggable="false" alt=""></div>`;
+  const texture = '<div class="folding-texture"><img src="assets/folding/sweatshirt-flat.png" draggable="false" alt=""></div>';
+  const cloth = `<div class="folding-cloth"><div class="folding-center">${texture}</div><div class="folding-left-body">${texture}<div class="folding-left-sleeve">${texture}</div></div><div class="folding-right-body">${texture}<div class="folding-right-sleeve">${texture}</div></div></div>`;
+  const layers = `<div class="folding-upper">${cloth}</div><div class="folding-hem">${cloth}</div><div class="folding-creases"></div>`;
+  const garment = `<div class="folding-garment ${sid === 1 ? 'draggable-item interactive-target' : ''}" data-garment="whole-sweatshirt" data-fold-action="${actions[sid - 1]}" ${sid === 1 ? `data-item="shirt" style="${style(layout.item)}"` : 'aria-hidden="true"'}>${layers}<img class="folding-finished" src="assets/folding/sweatshirt-folded.png" draggable="false" alt=""></div>`;
+  const clothDemo = `<div class="folding-demo-garment" aria-hidden="true">${layers}</div>`;
   const target = `<div class="folding-target drag-target" data-target="shirt-center" style="${style(layout.target)}" aria-hidden="true"></div>`;
   const touch = sid === 1 ? '' : `<div class="folding-touch draggable-item interactive-target" data-item="${step.target}" data-fold-action="${actions[sid - 1]}" style="${style(layout.item)}"></div>`;
   const demoContent = sid === 1 ? '<img src="assets/folding/sweatshirt-flat.png" draggable="false" alt="">' : svgHand(88,88);
   const demo = `<div class="demo-element demo-fold-clothes-${sid} demo-ghost" aria-hidden="true">${demoContent}</div>`;
-  return `<div class="step-stage" data-level="fold-clothes" data-step="${sid}">${buildClothesFoldingPersistentState(sid)}<img class="folding-table" src="assets/folding/folding-table.png" draggable="false" alt="">${garment}${target}${touch}${demo}<div class="folding-guide" aria-hidden="true">${labels[sid - 1]}</div></div>`;
+  return `<div class="step-stage" data-level="fold-clothes" data-step="${sid}">${buildClothesFoldingPersistentState(sid)}<img class="folding-table" src="assets/folding/folding-table.png" draggable="false" alt="">${garment}${clothDemo}${target}${touch}${demo}<div class="folding-guide" aria-hidden="true">${labels[sid - 1]}</div></div>`;
 }
 
 function buildUmbrellaPersistentState(stepId) {
@@ -1939,8 +1982,8 @@ function attachGestureListeners(step, area) {
     attachLaundryGesture(step, area, signal);
     return;
   }
-  if (LEVELS[state.currentLevel]?.id === 'fold-clothes' && step.id === 2) {
-    attachFoldSmoothingGesture(area, signal);
+  if (LEVELS[state.currentLevel]?.id === 'fold-clothes') {
+    attachClothesFoldingGesture(step, area, signal);
     return;
   }
 
@@ -2150,10 +2193,12 @@ function attachGestureListeners(step, area) {
   }, {signal});
 }
 
-function attachFoldSmoothingGesture(area, signal) {
+function attachClothesFoldingGesture(step, area, signal) {
   const item = area.querySelector('.interactive-target');
   const stage = area.querySelector('.step-stage');
-  let start = null;
+  const target = area.querySelector('.drag-target');
+  const action = ['flat','smooth','left-sleeve','right-sleeve','left-body','right-body','hem-up'][step.id - 1];
+  let start = null, last = null, origin = null;
   const point = e => {
     const p = e.touches?.[0] || e.changedTouches?.[0] || e;
     return { x:p.clientX, y:p.clientY };
@@ -2163,18 +2208,57 @@ function attachFoldSmoothingGesture(area, signal) {
     return rect && p.x >= rect.left && p.x <= rect.right && p.y >= rect.top && p.y <= rect.bottom;
   };
   const begin = e => {
+    if (signal.aborted || state.stepCompleted.has(state.currentStep)) return;
     const p = point(e);
     if (!beginsOnGarment(p)) return;
-    initAudio(); AnimationController.pause(stage); start = p; e.preventDefault?.();
+    initAudio(); AnimationController.pause(stage);
+    stage?.classList.remove('fold-settling','fold-placing');
+    start = last = p;
+    const a=item.getBoundingClientRect(), bounds=stage.getBoundingClientRect();
+    origin={left:a.left-bounds.left,top:a.top-bounds.top};
+    item.style.transition='none';
+    e.preventDefault?.();
+  };
+  const preview = value => stage?.style.setProperty(`--fold-${action}`, String(value));
+  const move = e => {
+    if (!start || signal.aborted) return;
+    last=point(e);
+    const dx=last.x-start.x, dy=last.y-start.y;
+    if (step.id!==2) {
+      item.style.left=origin.left+dx+'px'; item.style.top=origin.top+dy+'px';
+      if(step.id===1) item.style.transform='none';
+    }
+    if (step.id===2) preview(Math.max(0,Math.min(.85,dy/130)));
+    else if(step.id>2 && target) {
+      const b=target.getBoundingClientRect(), a=item.getBoundingClientRect();
+      const vx=b.left+b.width/2-(a.left+a.width/2-dx), vy=b.top+b.height/2-(a.top+a.height/2-dy);
+      preview(Math.max(0,Math.min(.85,(dx*vx+dy*vy)/(vx*vx+vy*vy || 1))));
+    }
+    e.preventDefault?.();
+  };
+  const reset = () => {
+    stage?.classList.add('fold-settling'); preview(0);
+    if(item && origin) { item.style.transition='left .35s ease,top .35s ease'; item.style.left=origin.left+'px'; item.style.top=origin.top+'px'; }
   };
   const end = e => {
-    if (!start) return;
-    const last = point(e), dx = last.x - start.x, dy = last.y - start.y;
+    if (!start || signal.aborted) return;
+    const dx=last.x-start.x,dy=last.y-start.y;
+    let valid=dy>=40 && dy>Math.abs(dx);
+    if(step.id!==2 && target) {
+      const a=item.getBoundingClientRect(), b=target.getBoundingClientRect();
+      const overlap=Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top))/(a.width*a.height);
+      valid=overlap>.35 && Math.hypot(dx,dy)>=40;
+    }
     start = null;
-    if (dy >= 40 && dy > Math.abs(dx)) advanceStepProgress(area);
-    else handleStepWrong(area);
+    if(valid) {
+      stage?.classList.add('fold-settling');
+      if(step.id===1) stage?.classList.add('fold-placing');
+      advanceStepProgress(area);
+    } else { reset(); handleStepWrong(area); }
   };
-  for (const [event, callback] of [['touchstart',begin],['touchend',end],['mousedown',begin],['mouseup',end]]) {
+  const cancel=()=>{ if(!start) return; start=null; reset(); };
+  signal.addEventListener('abort',cancel);
+  for (const [event, callback] of [['touchstart',begin],['touchmove',move],['touchend',end],['touchcancel',cancel],['mousedown',begin],['mousemove',move],['mouseup',end],['mouseleave',cancel]]) {
     area.addEventListener(event, callback, { signal, passive:false });
   }
 }

@@ -185,6 +185,7 @@ function foldingGesture(stepId, kind = 'mouse', width = 750, height = 380) {
   const { api } = runtime;
   const listeners = new Map();
   const stage = createElement(), item = createElement(), target = createElement(), area = createElement();
+  stage.style.setProperty = (name, value) => { stage.style[name] = value; };
   const geometry = api.FOLD_LAYOUT[stepId];
   const touchCSS=fs.readFileSync(path.join(ROOT,'index.html'),'utf8').match(/\.folding-touch \{([^}]+)\}/)[1];
   const px = (value, size) => {
@@ -216,7 +217,7 @@ function foldingGesture(stepId, kind = 'mouse', width = 750, height = 380) {
   api.StepProgress.reset(api.LEVELS[1].steps[stepId - 1]);
   api.attachGestureListeners(api.LEVELS[1].steps[stepId - 1], area);
   const dispatch = (phase, x, y = 50) => {
-    const type = kind === 'mouse' ? { start:'mousedown', move:'mousemove', end:'mouseup' }[phase] : { start:'touchstart', move:'touchmove', end:'touchend' }[phase];
+    const type = kind === 'mouse' ? { start:'mousedown', move:'mousemove', end:'mouseup', cancel:'mouseleave' }[phase] : { start:'touchstart', move:'touchmove', end:'touchend', cancel:'touchcancel' }[phase];
     listeners.get(type)?.({ clientX:x, clientY:y, touches:[{ clientX:x, clientY:y }], changedTouches:[{ clientX:x, clientY:y }], preventDefault() {} });
   };
   return { ...runtime, item, stage, target:destination, dispatch, complete: () => api.state.stepCompleted.has(stepId - 1) };
@@ -253,19 +254,50 @@ test('folding successful drags update the current scene and final picture immedi
   }
 });
 
-test('completed fold contours shrink on each side and final artwork replaces all flat layers', () => {
+for (const kind of ['mouse', 'touch']) {
+  test(`folding ${kind} cloth follows the gesture and cancellation restores the unfolded pose`, () => {
+    const r = foldingGesture(3, kind), a = r.item.getBoundingClientRect(), b = r.target;
+    const start = {x:a.left+a.width/2,y:a.top+a.height/2}, end = {x:b.left+b.width/2,y:b.top+b.height/2};
+    r.dispatch('start',start.x,start.y);
+    r.dispatch('move',(start.x+end.x)/2,(start.y+end.y)/2);
+    assert.ok(Number(r.stage.style['--fold-left-sleeve']) > .2);
+    assert.equal(r.complete(), false);
+    r.dispatch('cancel',end.x,end.y);
+    assert.equal(Number(r.stage.style['--fold-left-sleeve']), 0);
+    assert.equal(r.complete(), false);
+    r.dispatch('end',end.x,end.y);
+    assert.equal(r.complete(), false);
+  });
+}
+
+test('folding abort removes preview and cannot complete a later scene', () => {
+  const r=foldingGesture(7), a=r.item.getBoundingClientRect(), b=r.target;
+  r.dispatch('start',a.left+a.width/2,a.top+a.height/2);
+  r.dispatch('move',b.left+b.width/2,b.top+b.height/2);
+  assert.ok(Number(r.stage.style['--fold-hem-up']) > 0);
+  r.api.state.stepAbortController.abort();
+  assert.equal(Number(r.stage.style['--fold-hem-up']),0);
+  r.dispatch('end',b.left+b.width/2,b.top+b.height/2);
+  assert.equal(r.complete(),false);
+});
+
+test('folded cloth uses hinged sleeve/body panels rather than clipping the entire garment', () => {
   const css=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
-  const names=['left-sleeve','right-sleeve','left-body','right-body'];
-  let previous=301;
-  for(const name of names) {
-    const rule=css.match(new RegExp(`\\.state-fold-${name} ~ \\.folding-garment \\{([^}]+)\\}`));
-    assert.ok(rule,`${name} must clip the entire garment, including the original silhouette`);
-    const inset=rule[1].match(/clip-path:inset\(0 ([\d.]+)% 0 ([\d.]+)%\)/);
-    assert.ok(inset);
-    const visibleWidth=300*(1-(Number(inset[1])+Number(inset[2]))/100);
-    assert.ok(visibleWidth<previous); previous=visibleWidth;
-  }
-  assert.match(css,/state-fold-hem-up ~ \.folding-garment \.folding-layer:not\(\.folding-final\)[^{]*\{[^}]*opacity:0/);
+  assert.match(css,/folding-left-sleeve \{[^}]*transform-origin:100% 50%[^}]*rotateY/);
+  assert.match(css,/folding-right-sleeve \{[^}]*transform-origin:0% 50%[^}]*rotateY/);
+  assert.match(css,/folding-hem \{[^}]*transform-origin:150px 135px[^}]*translateZ\(3px\) rotateX\(calc\(var\(--fold-hem-up\) \* -180deg\)\)/);
+  const {api}=loadRuntime(), scene=api.buildScene('fold-clothes',api.LEVELS[1].steps[4]);
+  assert.match(scene,/class="folding-left-body">[\s\S]*?class="folding-left-sleeve"/);
+  assert.match(scene,/class="folding-right-body">[\s\S]*?class="folding-right-sleeve"/);
+  assert.match(scene,/class="folding-finished"[^>]*sweatshirt-folded\.png/);
+  assert.match(css,/state-fold-hem-up ~ \.folding-garment \.folding-finished[^}]*transition:opacity \.3s ease \.85s/);
+  assert.match(css,/state-fold-hem-up ~ \.folding-garment > :not\(\.folding-finished\)[^}]*transition:opacity \.3s ease \.85s/);
+});
+
+test('folding demonstration hand stays anchored to the tabletop garment', () => {
+  const css=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+  assert.match(css,/\.demo-fold-clothes-2,[^}]*top:40%/);
+  assert.match(css,/\.interaction-area:has\(\.step-stage\[data-level="fold-clothes"\]\) \{ min-height:410px/);
 });
 
 function umbrellaPanelMarkup(api) {
@@ -507,14 +539,10 @@ test('clothes folding retains only completed folds in the next step', () => {
   }
 });
 
-test('clothes folding completed states keep visible layers on the whole garment', () => {
+test('clothes folding completed states preserve each fold angle on the whole garment', () => {
   const source = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const layers = [
-    ['smooth', 'folding-smooth'], ['left-sleeve', 'folding-left-sleeve'], ['right-sleeve', 'folding-right-sleeve'],
-    ['left-body', 'folding-left-body'], ['right-body', 'folding-right-body'], ['hem-up', 'folding-final']
-  ];
-  for (const [state, layer] of layers) {
-    assert.match(source, new RegExp(`state-fold-${state} ~ \\.folding-garment .*\\.${layer}`));
+  for (const state of ['smooth','left-sleeve','right-sleeve','left-body','right-body','hem-up']) {
+    assert.match(source, new RegExp(`state-fold-${state} ~ \\.folding-garment[^}]*--fold-${state}:1`));
   }
 });
 
