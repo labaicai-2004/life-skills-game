@@ -41,3 +41,16 @@ test('all three seven-step skills and their formal voice and music files remain 
   }
   assert.ok(fs.existsSync(path.join(root, 'music/xylophone.wav')));
 });
+
+test('offline resource list covers every shipped artwork, icon, voice, and music file', () => {
+  const worker = read('service-worker.js');
+  const assetPaths = [];
+  for (const folder of ['assets/folding', 'assets/home', 'assets/laundry', 'assets/umbrella', 'assets/icons']) {
+    for (const name of fs.readdirSync(path.join(root, folder))) {
+      if (name.endsWith('.png')) assetPaths.push(`${folder}/${name}`);
+    }
+  }
+  for (const asset of assetPaths) assert.ok(worker.includes(`./${asset}`), `uncached ${asset}`);
+  assert.ok(worker.includes('./music/xylophone.wav'));
+  assert.match(worker, /Array\.from\(\{length:36\}/);
+});
