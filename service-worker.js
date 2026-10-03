@@ -67,12 +67,59 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
     const target = request.mode === 'navigate' ? new URL('./index.html', self.registration.scope).href : url.href;
-    return await cache.match(target) || fetch(request);
+    const cached = await cache.match(target);
+    if (!cached) return fetch(request);
+    const range = request.headers?.get('range');
+    if (!range || !/\.(?:wav|mp3|m4a)$/.test(url.pathname)) return cached;
+    const match = /^bytes=(\d+)-(\d*)$/.exec(range);
+    if (!match) return cached;
+    const bytes = await cached.arrayBuffer();
+    const start = Number(match[1]);
+    const end = match[2] ? Math.min(Number(match[2]), bytes.byteLength - 1) : bytes.byteLength - 1;
+    if (start >= bytes.byteLength || start > end) {
+      return new Response(null, {status:416, headers:{'Content-Range':`bytes */${bytes.byteLength}`}});
+    }
+    return new Response(bytes.slice(start, end + 1), {
+      status:206,
+      headers:{
+        'Content-Type':cached.headers.get('Content-Type') || 'audio/wav',
+        'Content-Range':`bytes ${start}-${end}/${bytes.byteLength}`,
+        'Accept-Ranges':'bytes',
+        'Content-Length':String(end - start + 1)
+      }
+    });
   })());
 });
 
 self.addEventListener('message', event => {
   if (event.data?.type === 'OFFLINE_STATUS') {
     event.waitUntil(cacheStatus().then(status => event.ports?.[0]?.postMessage(status)));
+  }
+  if (event.data?.type === 'ACTIVATE_UPDATE') {
+    event.waitUntil((async () => {
+      const status = await cacheStatus();
+      const clients = await self.clients.matchAll({type:'window', includeUncontrolled:true});
+      let reason = '';
+      if (!status.ready) reason = 'incomplete-cache';
+      else if (clients.length !== 1) reason = 'other-windows';
+      else {
+        const idle = await new Promise(resolve => {
+          const channel = new MessageChannel();
+          const timer = setTimeout(() => resolve(false), 1500);
+          channel.port1.onmessage = reply => {
+            clearTimeout(timer);
+            resolve(reply.data?.active === false);
+          };
+          clients[0].postMessage({type:'TRAINING_STATE_QUERY'}, [channel.port2]);
+        });
+        if (!idle) reason = 'training-or-unresponsive';
+      }
+      if (reason) {
+        event.ports?.[0]?.postMessage({type:'ACTIVATE_UPDATE_RESULT', accepted:false, reason});
+        return;
+      }
+      event.ports?.[0]?.postMessage({type:'ACTIVATE_UPDATE_RESULT', accepted:true, reason:''});
+      await self.skipWaiting();
+    })());
   }
 });

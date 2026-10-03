@@ -7,10 +7,17 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'service-worker.js'), 'utf8');
 const scope = 'https://example.test/life-skills-game/';
 
-function harness({failedPath = '', initial = {}} = {}) {
+function harness({failedPath = '', initial = {}, clients = []} = {}) {
   const handlers = {};
   const cacheData = new Map(Object.entries(initial).map(([name, paths]) => [name, new Map(paths.map(p => [new URL(p, scope).href, {ok:true, url:new URL(p,scope).href, clone() {return this;}}]))]));
   let network = true;
+  let activations = 0;
+  class Channel {
+    constructor() {
+      this.port1 = {onmessage:null};
+      this.port2 = {postMessage:value => this.port1.onmessage?.({data:value})};
+    }
+  }
   const cacheApi = {
     async open(name) {
       if (!cacheData.has(name)) cacheData.set(name, new Map());
@@ -25,19 +32,20 @@ function harness({failedPath = '', initial = {}} = {}) {
     async delete(name) { return cacheData.delete(name); }
   };
   const context = {
-    URL,
+    URL, Response,
+    MessageChannel:Channel, setTimeout:(fn,ms) => setTimeout(fn, Math.min(ms,10)), clearTimeout,
     caches: cacheApi,
     fetch: async request => {
       const url = new URL(typeof request === 'string' ? request : request.url, scope).href;
       if (!network || (failedPath && url.endsWith(failedPath))) throw Error('network failed');
-      return {ok:true, url, clone() { return this; }};
+      return {ok:true, url, headers:{get() {return 'audio/wav';}}, async arrayBuffer() {return Uint8Array.from([1,2,3,4]).buffer;}, clone() { return this; }};
     },
     self: {
       location: {href: scope + 'service-worker.js', origin: 'https://example.test'},
       registration: {scope},
-      clients: {claim: async () => {}, matchAll: async () => []},
+      clients: {claim: async () => {}, matchAll: async () => clients},
       addEventListener(name, handler) { handlers[name] = handler; },
-      skipWaiting: async () => {}
+      skipWaiting: async () => {activations++;}
     }
   };
   vm.runInNewContext(source, context);
@@ -52,7 +60,7 @@ function harness({failedPath = '', initial = {}} = {}) {
     if (promise) await promise;
     return response ? response : undefined;
   }
-  return {dispatch, cacheData, setOffline() {network = false;}, scope};
+  return {dispatch, cacheData, setOffline() {network = false;}, get activations() {return activations;}, scope};
 }
 
 test('install caches all required files and offline status verifies every entry', async () => {
@@ -101,4 +109,39 @@ test('activation removes older static caches only after a complete install', asy
   await sw.dispatch('activate');
   assert.equal(sw.cacheData.size, 1);
   assert.ok(!sw.cacheData.has(old));
+});
+
+test('update requires one responsive idle client and rejects other open clients', async () => {
+  const idle = {postMessage(message, ports) {ports[0].postMessage({active:false});}};
+  const send = async sw => {
+    let answer;
+    await sw.dispatch('message', {data:{type:'ACTIVATE_UPDATE'}, ports:[{postMessage(value) {answer=value;}}]});
+    return answer;
+  };
+  const one = harness({clients:[idle]});
+  await one.dispatch('install');
+  assert.equal((await send(one)).accepted, true);
+  assert.equal(one.activations, 1);
+  const two = harness({clients:[idle,idle]});
+  await two.dispatch('install');
+  assert.equal((await send(two)).accepted, false);
+  assert.equal(two.activations, 0);
+  const active = harness({clients:[{postMessage(message,ports) {ports[0].postMessage({active:true});}}]});
+  await active.dispatch('install');
+  assert.equal((await send(active)).accepted, false);
+  assert.equal(active.activations, 0);
+  const silent = harness({clients:[{postMessage() {}}]});
+  await silent.dispatch('install');
+  assert.equal((await send(silent)).accepted, false);
+  assert.equal(silent.activations, 0);
+});
+
+test('offline voice supports Safari byte-range requests', async () => {
+  const sw = harness();
+  await sw.dispatch('install');
+  sw.setOffline();
+  const voice = await sw.dispatch('fetch', {request:{url:scope + 'voice/v02.wav', method:'GET', mode:'no-cors', headers:{get(name) {return name === 'range' ? 'bytes=1-2' : null;}}}});
+  assert.equal(voice.status, 206);
+  assert.equal(voice.headers.get('Content-Range'), 'bytes 1-2/4');
+  assert.deepEqual([...new Uint8Array(await voice.arrayBuffer())], [2,3]);
 });

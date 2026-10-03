@@ -985,6 +985,10 @@ html, body {
   max-width: 440px; width: 92%; max-height: 85vh; overflow-y: auto;
 }
 .research-panel h2 { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.offline-tools { margin-top:18px; padding:16px; border-radius:18px; background:#F0F6FF; color:var(--text); text-align:left; }
+.offline-tools p { font-size:13px; line-height:1.5; margin:8px 0; }
+.offline-tools .records-btns { flex-wrap:wrap; }
+.offline-tools [hidden] { display:none; }
 .research-panel .rp-subtitle { font-size: 13px; color: var(--text-light); margin-bottom: 20px; }
 .research-field { margin-bottom: 16px; }
 .research-field label {
@@ -1303,6 +1307,16 @@ html, body {
     <button class="research-start-btn" id="research-start-btn" disabled onclick="startResearchSession()">开始研究训练</button>
     <button class="records-btn clear" id="research-current-data-btn" disabled style="margin-top:12px;width:100%;" onclick="showDashboard(document.getElementById('research-child-id').value.trim())">📋 查看当前儿童数据</button>
     <button class="records-btn clear" style="margin-top:6px;width:100%;" onclick="showDashboard()">📊 查看全部研究数据</button>
+    <section class="offline-tools" aria-label="离线使用与安装">
+      <div class="records-title" style="font-size:18px;">📱 离线使用</div>
+      <p id="offline-status" role="status">正在检查离线资源…</p>
+      <p>在 iPad Safari 中点击“分享”，选择“添加到主屏幕”，再点击“添加”。首次安装请联网等待离线已就绪。</p>
+      <div class="records-btns">
+        <button type="button" class="records-btn clear" id="offline-retry" onclick="OfflineCoordinator.retry()">重试下载</button>
+        <button type="button" class="records-btn close" id="offline-update" hidden onclick="OfflineCoordinator.requestUpdate()">应用更新</button>
+        <button type="button" class="records-btn clear" id="offline-install" hidden onclick="OfflineCoordinator.install()">安装应用</button>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -3852,6 +3866,111 @@ goHome = function() {
   _originalGoHome();
 };
 
+const OfflineCoordinator = {
+  registration: null,
+  pendingInstall: null,
+  updateApproved: false,
+
+  isTraining() {
+    return state.currentLevel >= 0 || SessionManager.active ||
+      !!document.getElementById('celebration')?.classList?.contains?.('active');
+  },
+
+  show(message) {
+    const label = document.getElementById('offline-status');
+    if (label) label.textContent = message;
+  },
+
+  send(worker, type) {
+    return new Promise((resolve, reject) => {
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => reject(new Error('离线状态检查超时')), 5000);
+      channel.port1.onmessage = event => {
+        clearTimeout(timer);
+        channel.port1.close?.();
+        resolve(event.data);
+      };
+      worker.postMessage({type}, [channel.port2]);
+    });
+  },
+
+  async init() {
+    if (typeof navigator === 'undefined' || !navigator.serviceWorker || !['https:', 'http:'].includes(window.location.protocol)) {
+      this.show('此打开方式不支持离线安装，请使用 HTTPS 网页或本机 HTTP 预览。');
+      return;
+    }
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data?.type === 'TRAINING_STATE_QUERY') {
+        event.ports?.[0]?.postMessage({active:this.isTraining()});
+      }
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', () => this.onControllerChange());
+    window.addEventListener('online', () => this.refreshStatus());
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      this.pendingInstall = event;
+      const button = document.getElementById('offline-install');
+      if (button) button.hidden = false;
+    });
+    try {
+      this.registration = await navigator.serviceWorker.register('./service-worker.js', {scope:'./'});
+      this.registration.addEventListener?.('updatefound', () => this.refreshStatus());
+      await navigator.serviceWorker.ready;
+      await this.refreshStatus();
+    } catch (error) {
+      this.show('离线资源准备失败，请联网后重试。');
+    }
+  },
+
+  async refreshStatus() {
+    if (!this.registration) return;
+    const worker = this.registration.active || navigator.serviceWorker.controller;
+    if (!worker) { this.show('正在下载离线资源，请保持联网。'); return; }
+    try {
+      const status = await this.send(worker, 'OFFLINE_STATUS');
+      const button = document.getElementById('offline-update');
+      if (button) button.hidden = !this.registration.waiting;
+      this.show(status.ready
+        ? `离线已就绪（版本 ${status.version}）${this.registration.waiting ? '；新版待教师确认' : ''}`
+        : `离线资源未齐全（缺少 ${status.missing.length} 项），请联网重试。`);
+    } catch (error) {
+      this.show('无法确认离线资源，请联网重试。');
+    }
+  },
+
+  async retry() {
+    try { await this.registration?.update(); await this.refreshStatus(); }
+    catch (error) { this.show('重试未完成，请检查网络连接。'); }
+  },
+
+  async install() {
+    if (!this.pendingInstall) return;
+    await this.pendingInstall.prompt();
+    this.pendingInstall = null;
+    const button = document.getElementById('offline-install');
+    if (button) button.hidden = true;
+  },
+
+  async requestUpdate() {
+    if (this.isTraining()) { this.show('训练结束后再应用更新。'); return false; }
+    if (!this.registration?.waiting) { this.show('目前没有待应用的新版。'); return false; }
+    try {
+      const result = await this.send(this.registration.waiting, 'ACTIVATE_UPDATE');
+      if (!result.accepted) { this.show('请先关闭其他训练窗口，再尝试更新。'); return false; }
+      this.updateApproved = true;
+      this.show('正在应用新版，稍后会安全刷新。');
+      return true;
+    } catch (error) {
+      this.show('更新检查未完成，请稍后重试。');
+      return false;
+    }
+  },
+
+  onControllerChange() {
+    if (this.updateApproved && !this.isTraining()) window.location.reload();
+  }
+};
+
 // Init
 (function(){
   window.addEventListener('load', ()=>{
@@ -3862,6 +3981,7 @@ goHome = function() {
   });
   let welcomed=false;
   document.addEventListener('click',()=>{if(!welcomed){welcomed=true;initAudio();}},{once:false});
+  OfflineCoordinator.init();
 })();
 </script>
 </body>
