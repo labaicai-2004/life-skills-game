@@ -1316,6 +1316,11 @@ html, body {
         <button type="button" class="records-btn close" id="offline-update" hidden onclick="OfflineCoordinator.requestUpdate()">应用更新</button>
         <button type="button" class="records-btn clear" id="offline-install" hidden onclick="OfflineCoordinator.install()">安装应用</button>
       </div>
+      <p id="offline-backup-status">尚未在此浏览器备份。请定期保存研究数据。</p>
+      <div class="records-btns">
+        <button type="button" class="records-btn clear" onclick="backupData()">💾 立即备份</button>
+        <button type="button" class="records-btn clear" onclick="restoreData()">📂 导入旧记录</button>
+      </div>
     </section>
   </div>
 </div>
@@ -3728,39 +3733,198 @@ function updateObserver() {
 // Update observer every second
 setInterval(updateObserver, 1000);
 
+const DataTransfer = {
+  keys: {
+    researchRecords:'researchRecords',
+    sessionSummaries:'session_summaries',
+    researchParticipants:'researchParticipants',
+    researchSession:'researchSession',
+    lifeSkillsRecords:'life-skills-records'
+  },
+
+  read(storage) {
+    const defaults = {researchRecords:[],sessionSummaries:[],researchParticipants:[],researchSession:null,lifeSkillsRecords:{}};
+    const result = {};
+    for (const [field,key] of Object.entries(this.keys)) {
+      const raw = storage.getItem(key);
+      result[field] = raw === null ? defaults[field] : JSON.parse(raw);
+    }
+    return result;
+  },
+
+  buildBackup(storage) {
+    return {formatVersion:2, exportedAt:new Date().toISOString(), systemVersion:'Digital Serious Game Intervention System V2.0', ...this.read(storage)};
+  },
+
+  canonical(value) {
+    if (Array.isArray(value)) return `[${value.map(item => this.canonical(item)).join(',')}]`;
+    if (value && typeof value === 'object') {
+      return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${this.canonical(value[key])}`).join(',')}}`;
+    }
+    return JSON.stringify(value);
+  },
+
+  identity(record, field) {
+    if (field === 'researchRecords') {
+      if (!record.timestamp) return this.canonical(record);
+      return [record.participantID,record.taskId || record.skill,record.phase,record.sessionNumber,record.stepNumber,record.timestamp].map(value => JSON.stringify(value ?? '')).join('|');
+    }
+    return record.sessionId || [record.participantID,record.date,record.time,record.taskName].map(value => JSON.stringify(value ?? '')).join('|');
+  },
+
+  mergeRows(existing, incoming, field, duplicates, conflicts) {
+    const merged = [...existing];
+    const byIdentity = new Map(existing.map(row => [this.identity(row, field), row]));
+    for (const row of incoming) {
+      const id = this.identity(row, field);
+      const previous = byIdentity.get(id);
+      if (previous) {
+        if (this.canonical(previous) === this.canonical(row)) duplicates[field]++;
+        else conflicts[field]++;
+      } else {
+        merged.push(row);
+        byIdentity.set(id, row);
+      }
+    }
+    return merged;
+  },
+
+  previewImport(rawText, storage) {
+    const invalid = message => ({valid:false, counts:{}, duplicates:{}, conflicts:{}, merged:null, errors:[message]});
+    let source, target;
+    try { source = JSON.parse(rawText); target = this.read(storage); }
+    catch (error) { return invalid('备份文件或本机数据无法解析。'); }
+    if (!source || typeof source !== 'object' || Array.isArray(source)) return invalid('备份文件结构不正确。');
+    if (!['researchRecords','sessionSummaries','researchParticipants','researchSession','lifeSkillsRecords'].some(key => Object.prototype.hasOwnProperty.call(source,key))) return invalid('未发现可导入的记录。');
+    const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
+    for (const field of ['researchRecords','sessionSummaries']) {
+      if (source[field] !== undefined && (!Array.isArray(source[field]) || source[field].some(row => !isObject(row)))) return invalid(`${field} 格式不正确。`);
+      if (!Array.isArray(target[field]) || target[field].some(row => !isObject(row))) return invalid(`本机 ${field} 格式不正确，停止导入。`);
+    }
+    if (source.researchParticipants !== undefined && (!Array.isArray(source.researchParticipants) || source.researchParticipants.some(id => typeof id !== 'string'))) return invalid('儿童编号格式不正确。');
+    if (!Array.isArray(target.researchParticipants)) return invalid('本机儿童编号格式不正确，停止导入。');
+    if (source.researchSession !== undefined && source.researchSession !== null && !isObject(source.researchSession)) return invalid('最近会话格式不正确。');
+    if (target.researchSession !== null && !isObject(target.researchSession)) return invalid('本机最近会话格式不正确，停止导入。');
+    if (source.lifeSkillsRecords !== undefined && !isObject(source.lifeSkillsRecords)) return invalid('生活技能记录格式不正确。');
+    if (!isObject(target.lifeSkillsRecords)) return invalid('本机生活技能记录格式不正确，停止导入。');
+
+    const duplicates = {researchRecords:0,sessionSummaries:0};
+    const conflicts = {researchRecords:0,sessionSummaries:0,lifeSkillsRecords:0};
+    const merged = {...target};
+    for (const field of ['researchRecords','sessionSummaries']) {
+      merged[field] = this.mergeRows(target[field], source[field] || [], field, duplicates, conflicts);
+    }
+    merged.researchParticipants = [...new Set([...target.researchParticipants,...(source.researchParticipants || [])].map(id => String(id).trim()).filter(Boolean))];
+    merged.lifeSkillsRecords = {...target.lifeSkillsRecords};
+    for (const [key,value] of Object.entries(source.lifeSkillsRecords || {})) {
+      if (!Object.prototype.hasOwnProperty.call(merged.lifeSkillsRecords,key)) merged.lifeSkillsRecords[key] = value;
+      else if (this.canonical(merged.lifeSkillsRecords[key]) !== this.canonical(value)) conflicts.lifeSkillsRecords++;
+    }
+    if (!merged.researchSession && source.researchSession) {
+      merged.researchSession = {...source.researchSession};
+      delete merged.researchSession.active;
+    }
+    const blocked = conflicts.researchRecords + conflicts.sessionSummaries > 0;
+    return {
+      valid:!blocked,
+      counts:{researchRecords:(source.researchRecords || []).length,sessionSummaries:(source.sessionSummaries || []).length,researchParticipants:(source.researchParticipants || []).length},
+      duplicates, conflicts, merged,
+      exportedAt:typeof source.exportedAt === 'string' ? source.exportedAt : '',
+      errors:blocked ? ['发现同一记录标识但内容不同，请先保留两端备份并人工核对。'] : []
+    };
+  },
+
+  applyImport(preview, storage) {
+    if (!preview?.valid || !preview.merged) return {ok:false,restored:true,failedKeys:[]};
+    const snapshot = new Map();
+    try {
+      for (const key of Object.values(this.keys)) snapshot.set(key, storage.getItem(key));
+      for (const [field,key] of Object.entries(this.keys)) storage.setItem(key, JSON.stringify(preview.merged[field]));
+      return {ok:true,restored:true,failedKeys:[]};
+    } catch (error) {
+      const failedKeys = [];
+      for (const [key,raw] of snapshot) {
+        try { if (raw === null) storage.removeItem(key); else storage.setItem(key, raw); }
+        catch (rollbackError) { failedKeys.push(key); }
+      }
+      return {ok:false,restored:failedKeys.length === 0,failedKeys};
+    }
+  }
+};
+
 // Data Backup — JSON export
 function backupData() {
-  const data = {
-    researchRecords: JSON.parse(localStorage.getItem('researchRecords') || '[]'),
-    sessionSummaries: JSON.parse(localStorage.getItem('session_summaries') || '[]'),
-    lifeSkillsRecords: JSON.parse(localStorage.getItem('life-skills-records') || '{}'),
-    exportedAt: new Date().toISOString(),
-    systemVersion: 'Digital Serious Game Intervention System V2.0'
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  try {
+    const data = DataTransfer.buildBackup(localStorage);
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup_${data.exportedAt.slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    const sessionIds = data.sessionSummaries.map(item => item.sessionId).filter(Boolean);
+    try { localStorage.setItem('offlineBackupMeta', JSON.stringify({at:data.exportedAt,sessionIds})); } catch (error) {}
+    refreshBackupStatus();
+    return data;
+  } catch (error) {
+    const label = document.getElementById('offline-backup-status');
+    if (label) label.textContent = '备份未完成，请检查本机记录与储存空间。';
+    return null;
+  }
+}
+
+function refreshBackupStatus() {
+  const label = document.getElementById('offline-backup-status');
+  if (!label) return;
+  try {
+    const meta = JSON.parse(localStorage.getItem('offlineBackupMeta') || 'null');
+    if (!meta?.at) { label.textContent = '尚未在此浏览器备份。请定期保存研究数据。'; return; }
+    const summaries = JSON.parse(localStorage.getItem('session_summaries') || '[]');
+    const saved = new Set(meta.sessionIds || []);
+    const newer = summaries.filter(item => item.sessionId && !saved.has(item.sessionId)).length;
+    label.textContent = `上次发起备份：${meta.at.slice(0,16).replace('T',' ')}；此后新增 ${newer} 个 Session。请核对下载文件。`;
+  } catch (error) {
+    label.textContent = '无法读取备份提醒，请检查本机记录。';
+  }
 }
 
 // Data Backup — JSON restore
 function restoreData() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.json';
+  input.accept = '.json,application/json';
   input.onchange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        if (data.researchRecords) localStorage.setItem('researchRecords', JSON.stringify(data.researchRecords));
-        if (data.sessionSummaries) localStorage.setItem('session_summaries', JSON.stringify(data.sessionSummaries));
-        if (data.lifeSkillsRecords) localStorage.setItem('life-skills-records', JSON.stringify(data.lifeSkillsRecords));
-        alert('✅ 数据恢复成功！请刷新页面。');
-      } catch(err) { alert('❌ JSON格式错误，请检查文件。'); }
+      const preview = DataTransfer.previewImport(String(ev.target.result || ''), localStorage);
+      const list = document.getElementById('records-list');
+      const overlay = document.getElementById('records-overlay');
+      if (!list || !overlay) return;
+      list.innerHTML = '<div class="records-title">📂 导入预览</div><div class="records-hint" id="import-source"></div><div class="record-empty" id="import-details"></div><div class="records-btns"><button type="button" class="records-btn clear" id="import-cancel">取消</button><button type="button" class="records-btn close" id="import-confirm">确认合并</button></div>';
+      document.getElementById('import-source').textContent = `文件：${file.name}；导出时间：${preview.exportedAt || '旧版未记录'}`;
+      const conflictCount = Object.values(preview.conflicts).reduce((sum,n) => sum + n, 0);
+      document.getElementById('import-details').textContent = preview.valid
+        ? `步骤记录 ${preview.counts.researchRecords} 条，会话摘要 ${preview.counts.sessionSummaries} 条；重复步骤 ${preview.duplicates.researchRecords} 条；需保留本机计数差异 ${conflictCount} 处。现有数据不会直接覆盖。`
+        : `暂不能导入：${preview.errors.join(' ')} 步骤冲突 ${preview.conflicts.researchRecords || 0} 条，会话冲突 ${preview.conflicts.sessionSummaries || 0} 条。本机记录未改变。`;
+      document.getElementById('import-cancel').onclick = () => showDashboard();
+      const confirm = document.getElementById('import-confirm');
+      confirm.disabled = !preview.valid;
+      confirm.onclick = () => {
+        const result = DataTransfer.applyImport(preview, localStorage);
+        document.getElementById('import-details').textContent = result.ok
+          ? '合并完成。原有记录已保留，可返回研究数据页核对。'
+          : `合并未完成。${result.restored ? '原有数据已恢复。' : `以下数据需人工核对：${result.failedKeys.join('、')}`}`;
+        confirm.disabled = true;
+        refreshBackupStatus();
+      };
+      overlay.classList.add('active');
+    };
+    reader.onerror = () => {
+      const label = document.getElementById('offline-backup-status');
+      if (label) label.textContent = '无法读取所选文件，请重新选择备份。';
     };
     reader.readAsText(file);
   };
@@ -3895,6 +4059,7 @@ const OfflineCoordinator = {
   },
 
   async init() {
+    if (typeof localStorage !== 'undefined') refreshBackupStatus();
     if (typeof navigator === 'undefined' || !navigator.serviceWorker || !['https:', 'http:'].includes(window.location.protocol)) {
       this.show('此打开方式不支持离线安装，请使用 HTTPS 网页或本机 HTTP 预览。');
       return;
