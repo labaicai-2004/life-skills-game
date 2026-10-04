@@ -4079,9 +4079,25 @@ const OfflineCoordinator = {
     });
     try {
       this.registration = await navigator.serviceWorker.register('./service-worker.js', {scope:'./'});
-      this.registration.addEventListener?.('updatefound', () => this.refreshStatus());
-      await navigator.serviceWorker.ready;
-      await this.refreshStatus();
+      const watchInstall = worker => worker?.addEventListener?.('statechange', () => {
+        if (worker.state === 'redundant' && !this.registration?.active) {
+          this.show('离线资源准备失败，请联网后重试。');
+        } else if (worker.state === 'activated') {
+          this.refreshStatus();
+        }
+      });
+      watchInstall(this.registration.installing);
+      this.registration.addEventListener?.('updatefound', () => {
+        watchInstall(this.registration.installing);
+        this.refreshStatus();
+      });
+      if (this.registration.active || navigator.serviceWorker.controller) {
+        await this.refreshStatus();
+      } else {
+        this.show('正在下载离线资源，请保持联网。');
+        navigator.serviceWorker.ready.then(() => this.refreshStatus())
+          .catch(() => this.show('离线资源准备失败，请联网后重试。'));
+      }
     } catch (error) {
       this.show('离线资源准备失败，请联网后重试。');
     }

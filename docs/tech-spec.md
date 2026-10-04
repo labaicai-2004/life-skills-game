@@ -14,6 +14,14 @@
 
 ## 文件结构
 
+2026-10-04 离线补充：根目录新增 `manifest.webmanifest` 与 `service-worker.js`，`assets/icons/` 存放 192/512 像素安装图标。页面仍由单个 `index.html` 承载，不引入框架或运行时 CDN。原远程字体链接已移除；目前使用现有系统中文字体回退，桌面小屏首页已截图检查，iPad 上的字体视觉仍待实机核对。`service-worker.js` 以相对路径完整缓存首页、清单、图标、13 张运行图片、36 条正式 WAV 与木琴音乐；任一必需资源下载失败时不能宣称离线就绪，旧完整版本保持可用。缓存只包含静态资源，不包含研究记录、下载报告或第三方请求。
+
+教师可在研究设置底部看到“离线已就绪”和版本号。首次安装先在线打开 HTTPS 页面，等待该状态，再在 iPad Safari 的“分享”菜单中选“添加到主屏幕”。安装后先联网打开一次主屏幕图标，确认同样显示离线就绪，再切飞行模式验证。`file://` 不支持此安装流程；本机 `localhost` 的 HTTP 只用于桌面测试。新版资源下载完成后不会自行切换；教师在所有训练窗口退出后手动确认更新，任一窗口训练中或状态未知均保持旧版。训练中不会因 `controllerchange` 自动刷新。
+
+每次正式发布静态文件变更，都要同步更新 `service-worker.js` 中的 `STATIC_VERSION` 并检查 `STATIC_FILES` 清单；否则已经安装的页面可能继续使用旧缓存。新版安装失败时保持旧缓存和旧版运行，修复资源后再联网重试。版本升级不迁移或删除 localStorage 数据。
+
+研究数据仍留在本机 localStorage。Safari 标签页与主屏幕应用可能有独立数据空间，不能仅凭安装图标推定旧记录已迁移。迁移前在旧入口的教师面板点击“立即备份”，核对已下载的 JSON 文件；在新入口点击“导入旧记录”，先看预览、重复项与冲突，再明确确认。备份包含 `researchRecords`、`session_summaries`、`researchParticipants`、`researchSession` 和 `life-skills-records`，可读旧三键备份。相同记录跳过，同身份但内容不同的记录阻止导入；参与者合并，生活技能计数冲突保留目标端值，导入的 `researchSession` 不恢复活动训练。导入写入失败时尝试恢复原有键并报告未恢复项。教师端备份提醒记录“发起备份”的时间和此后新增的 Session 数，不等于已经核实文件落盘；请自行检查下载文件，并定期另存一份。
+
 背景音乐使用本地 `music/xylophone.wav`，通过 Web Audio 解码为 AudioBuffer 循环播放并经 GainNode 控制音量，兼容 iPad 对 HTMLMediaElement.volume 的限制。音频首次真实点击后加载，加载或解码失败不阻断训练；同时只保留一个音乐声源，语音播放时压低增益，退出和后台时停止。素材由 `scripts/generate-xylophone.py` 以 Python 标准库可重复生成。
 
 ```
@@ -73,6 +81,8 @@
 | Web Audio API | 本地生成音效 | 支持 |
 | CSS Custom Properties / Animations | 主题、提示和步骤过渡 | iOS 9.3+ |
 | AbortController | 清理步骤监听 | iOS 12.2+ |
+| Service Worker + Cache API | 完整静态缓存、离线启动与受控更新 | iOS 15+，需 HTTPS／localhost |
+| Web App Manifest + Apple touch icon | 主屏幕安装元数据与图标 | iOS 15+，由 Safari 安装 |
 
 ## 部署与本地预览
 
@@ -82,6 +92,6 @@ GitHub Pages 从 `main` 分支根目录发布：`git push` 后自动更新 https
 python3 -m http.server 8080
 ```
 
-同一 Wi-Fi 下，iPad 访问 `http://<Mac-IP>:8080/index.html`。发布前先运行两份 Node 自动检查，再用桌面浏览器和 iPad Safari 完整走查三关 21 步。
+同一 Wi-Fi 下，iPad 可用 `http://<Mac-IP>:8080/index.html` 调试普通页面；该非 localhost HTTP 地址不能代替正式 HTTPS 的离线安装验收。发布前运行 `node --test tests/*.test.js`，在桌面与 iPad Safari 分别走查三关 21 步。离线开发验收详情见 `docs/testing/2026-10-04-offline-ipad-acceptance.md`；尚未推送的工作区版本不会自动出现在 GitHub Pages。
 
-*文档版本：v2.1 | 更新日期：2026-09-19*
+*文档版本：v2.2 | 更新日期：2026-10-04*

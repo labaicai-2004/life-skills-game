@@ -66,3 +66,23 @@ test('worker refuses activation when another client exists or does not answer', 
   assert.match(worker, /clients\.matchAll/);
   assert.match(worker, /skipWaiting\(\)/);
 });
+
+test('failed first install reports failure even when serviceWorker.ready never resolves', async () => {
+  const {api, context, elements} = coordinator({waiting:false});
+  let stateChanged;
+  const installing = {
+    state:'installing',
+    addEventListener(type, listener) { if (type === 'statechange') stateChanged = listener; }
+  };
+  const registration = await context.navigator.serviceWorker.register();
+  registration.active = null;
+  registration.installing = installing;
+  context.navigator.serviceWorker.controller = null;
+  context.navigator.serviceWorker.ready = new Promise(() => {});
+  const init = api.init();
+  const settled = await Promise.race([init.then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 30))]);
+  assert.equal(settled, true, 'init must not wait forever on a failed install');
+  installing.state = 'redundant';
+  stateChanged?.();
+  assert.match(elements.get('offline-status').textContent, /失败/);
+});
