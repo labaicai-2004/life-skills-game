@@ -1317,6 +1317,8 @@ html, body {
         <button type="button" class="records-btn clear" id="offline-install" hidden onclick="OfflineCoordinator.install()">安装应用</button>
       </div>
       <p id="offline-backup-status">尚未在此浏览器备份。请定期保存研究数据。</p>
+      <p id="research-save-status" role="status">目前没有待保存的步骤记录。</p>
+      <button type="button" class="records-btn clear" id="research-save-retry" hidden onclick="UnifiedDataManager.retryPendingRecords()">重试保存步骤记录</button>
       <div class="records-btns">
         <button type="button" class="records-btn clear" onclick="backupData()">💾 立即备份</button>
         <button type="button" class="records-btn clear" onclick="restoreData()">📂 导入旧记录</button>
@@ -3087,6 +3089,7 @@ const UnifiedDataManager = {
   _stepStartTime: 0,
   _stepErrors: 0,
   _sessionRecords: [],
+  _pendingRecords: [],
 
   /* ---- Session lifecycle ---- */
   startSession(taskId, participantID) {
@@ -3166,6 +3169,42 @@ const UnifiedDataManager = {
 
   onStepError() { this._stepErrors++; },
 
+  getPendingRecords() { return [...this._pendingRecords]; },
+
+  refreshSaveStatus() {
+    const count = this._pendingRecords.length;
+    const label = document.getElementById('research-save-status');
+    const retry = document.getElementById('research-save-retry');
+    if (label) label.textContent = count
+      ? `${count} 条步骤记录未保存。请重试保存或立即备份，备份文件包含这些记录。`
+      : '目前没有待保存的步骤记录。';
+    if (retry) retry.hidden = count === 0;
+  },
+
+  retryPendingRecords() {
+    if (!this._pendingRecords.length) { this.refreshSaveStatus(); return true; }
+    try {
+      const stored = JSON.parse(localStorage.getItem('researchRecords') || '[]');
+      if (!Array.isArray(stored) || stored.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
+        throw new Error('researchRecords has an invalid shape');
+      }
+      const known = new Map(stored.map(row => [DataTransfer.identity(row, 'researchRecords'), DataTransfer.canonical(row)]));
+      for (const record of this._pendingRecords) {
+        const id = DataTransfer.identity(record, 'researchRecords');
+        const value = DataTransfer.canonical(record);
+        if (known.has(id) && known.get(id) !== value) throw new Error('researchRecords identity conflict');
+        if (!known.has(id)) { stored.push(record); known.set(id, value); }
+      }
+      localStorage.setItem('researchRecords', JSON.stringify(stored));
+      this._pendingRecords = [];
+    } catch (error) {
+      this.refreshSaveStatus();
+      return false;
+    }
+    this.refreshSaveStatus();
+    return true;
+  },
+
   onStepComplete(success) {
     const level = LEVELS[state.currentLevel];
     const step = level.steps[state.currentStep];
@@ -3188,13 +3227,8 @@ const UnifiedDataManager = {
     };
 
     this._sessionRecords.push(record);
-
-    // Single write target: researchRecords
-    try {
-      const stored = JSON.parse(localStorage.getItem('researchRecords') || '[]');
-      stored.push(record);
-      localStorage.setItem('researchRecords', JSON.stringify(stored));
-    } catch(e) {}
+    this._pendingRecords.push(record);
+    this.retryPendingRecords();
 
     // Also log as event for backward compatibility
     if (success) {
@@ -3752,8 +3786,29 @@ const DataTransfer = {
     return result;
   },
 
-  buildBackup(storage) {
-    return {formatVersion:2, exportedAt:new Date().toISOString(), systemVersion:'Digital Serious Game Intervention System V2.0', ...this.read(storage)};
+  buildBackup(storage, pendingRecords = []) {
+    const data = this.read(storage);
+    if (!Array.isArray(data.researchRecords) || data.researchRecords.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
+      throw new Error('researchRecords has an invalid shape');
+    }
+    const known = new Map(data.researchRecords.map(row => [this.identity(row, 'researchRecords'), this.canonical(row)]));
+    for (const record of pendingRecords) {
+      const id = this.identity(record, 'researchRecords');
+      const value = this.canonical(record);
+      if (known.has(id) && known.get(id) !== value) throw new Error('researchRecords identity conflict');
+      if (!known.has(id)) { data.researchRecords.push(record); known.set(id, value); }
+    }
+    return {formatVersion:2, exportedAt:new Date().toISOString(), systemVersion:'Digital Serious Game Intervention System V2.0', ...data};
+  },
+
+  buildRecoveryBackup(storage, pendingRecords) {
+    return {
+      formatVersion:2, exportedAt:new Date().toISOString(),
+      systemVersion:'Digital Serious Game Intervention System V2.0',
+      recoveryOnly:true,
+      researchRecords:[...pendingRecords],
+      unreadableResearchRecords:storage.getItem('researchRecords')
+    };
   },
 
   canonical(value) {
@@ -3854,15 +3909,37 @@ const DataTransfer = {
 
 // Data Backup — JSON export
 function backupData() {
+  const pending = UnifiedDataManager.getPendingRecords();
+  let data;
+  let recoveryOnly = false;
   try {
-    const data = DataTransfer.buildBackup(localStorage);
+    data = DataTransfer.buildBackup(localStorage, pending);
+  } catch (error) {
+    if (!pending.length) {
+      const label = document.getElementById('offline-backup-status');
+      if (label) label.textContent = '备份未完成，请检查本机记录与储存空间。';
+      return null;
+    }
+    try { data = DataTransfer.buildRecoveryBackup(localStorage, pending); recoveryOnly = true; }
+    catch (recoveryError) {
+      const label = document.getElementById('offline-backup-status');
+      if (label) label.textContent = '抢救文件未能生成。请勿关闭此页面，并联系研究者处理。';
+      return null;
+    }
+  }
+  try {
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup_${data.exportedAt.slice(0,10)}.json`;
+    a.download = `${recoveryOnly ? 'unsaved_steps' : 'backup'}_${data.exportedAt.slice(0,10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
+    if (recoveryOnly) {
+      const label = document.getElementById('offline-backup-status');
+      if (label) label.textContent = '仅包含未保存步骤的抢救文件已发起下载，原本机记录未完成备份。请核对文件并保留旧设备。';
+      return data;
+    }
     const sessionIds = data.sessionSummaries.map(item => item.sessionId).filter(Boolean);
     try { localStorage.setItem('offlineBackupMeta', JSON.stringify({at:data.exportedAt,sessionIds})); } catch (error) {}
     refreshBackupStatus();

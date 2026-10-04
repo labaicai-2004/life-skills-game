@@ -111,6 +111,15 @@ test('activation removes older static caches only after a complete install', asy
   assert.ok(!sw.cacheData.has(old));
 });
 
+test('research-save release installs beside the previously published offline cache', async () => {
+  const prior = 'life-skills-static-2026-10-03-1';
+  const sw = harness({initial:{[prior]:['./index.html']}});
+  await sw.dispatch('install');
+  assert.equal(sw.cacheData.size, 2);
+  assert.ok(sw.cacheData.has(prior));
+  assert.ok([...sw.cacheData.keys()].some(name => name !== prior && name.startsWith('life-skills-static-')));
+});
+
 test('update requires one responsive idle client and rejects other open clients', async () => {
   const idle = {postMessage(message, ports) {ports[0].postMessage({active:false});}};
   const send = async sw => {

@@ -97,9 +97,8 @@ test('quota error rolls back all changed keys or reports keys it could not resto
   assert.deepEqual(db.dump(), before);
 });
 
-test('backup and restore buttons use preview and never directly overwrite local storage', () => {
+test('restore button uses preview and never directly overwrites local storage', () => {
   const handlers = html.match(/function backupData\(\) \{[\s\S]*?\n\}\n[\s\S]*?function restoreData\(\) \{[\s\S]*?\n\}/)?.[0] || '';
-  assert.ok(handlers.includes('DataTransfer.buildBackup(localStorage)'));
   assert.ok(handlers.includes('DataTransfer.previewImport('));
   assert.ok(handlers.includes('DataTransfer.applyImport('));
   assert.ok(!handlers.includes("localStorage.setItem('researchRecords'"));

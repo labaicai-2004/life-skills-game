@@ -1,4 +1,4 @@
-const STATIC_VERSION = '2026-10-03-1';
+const STATIC_VERSION = '2026-10-04-1';
 const CACHE_NAME = `life-skills-static-${STATIC_VERSION}`;
 const STATIC_FILES = [
   './', './index.html', './manifest.webmanifest', './service-worker.js',

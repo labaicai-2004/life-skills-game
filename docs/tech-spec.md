@@ -67,6 +67,10 @@
 
 ## 数据与兼容
 
+研究步骤仍以 `researchRecords` 为主要实验数据。步骤完成时若本机存储写入失败，`UnifiedDataManager` 把原记录留在当前页面内存的待保存队列；后续步骤或教师点击“重试保存步骤记录”时一并重试。相同身份且内容完全相同的记录不会重复写入；相同身份但内容不同、旧数据结构损坏或配额不足时，保留待保存记录并在研究者面板持续提醒，不中断儿童端。待保存队列不会跨页面刷新保留，故出现提醒时须在关闭页面前重试或导出文件。
+
+教师“立即备份”会把待保存步骤合入下载的 `researchRecords`，但不会把未写入的步骤假称为已保存到本机。若原有数据无法解析或与待保存步骤冲突，仅发起 `unsaved_steps_*.json` 抢救文件下载：文件包含待保存步骤和原 `researchRecords` 原始文本，不标记为完整备份，也不更新上次备份时间。教师需核对文件并保留旧设备；正常备份与抢救文件均不上传。`session_summaries` 继续保留用于会话摘要，不能替代 `researchRecords` 分析。
+
 新研究技能值为 `clothes washing`、`clothes folding`、`folding umbrella`。步骤记录包含任务、关卡、步骤、时间、用时和提示等级；重复动作增加 `substep_complete`、当前次数、目标次数，伞布步骤增加片号。旧 `researchRecords`、`session_summaries` 和旧任务数据不改写；结束关卡只通过统一完成流程结束一次会话。
 
 `ResearchParticipants` 将已使用的儿童编号保存在 `researchParticipants`，并与 `researchRecords`、`session_summaries`、最近 `researchSession` 中的旧编号合并去重，因此升级后旧数据会自动出现为快捷选择。`getResearchRecords(participantID)` 仅在看板和导出时筛选，不改写原始记录；`buildResearchCSV(records)` 共用原字段顺序，可生成单一儿童或全部儿童的 CSV。
